@@ -110,9 +110,9 @@ export default function LeadDetail() {
   const [showConvertConfirm, setShowConvertConfirm] = useState(false);
 
   const convertToClientMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (params?: { force?: boolean }) => {
       if (!lead) throw new Error("Lead data not available");
-      const response = await apiRequest("POST", `/api/leads/${lead.id}/convert`, { force: false });
+      const response = await apiRequest("POST", `/api/leads/${lead.id}/convert`, { force: params?.force || false });
       const text = await response.text();
       try {
         return JSON.parse(text);
@@ -530,16 +530,30 @@ export default function LeadDetail() {
         </div>
         <div className="flex items-center gap-2">
           {lead?.isConverted && lead?.clientId ? (
-            <Link href={`/clients/${lead.clientId}`}>
-              <Button
-                variant="outline"
-                className="flex items-center gap-2"
-                data-testid="button-view-client"
-              >
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                View Client →
-              </Button>
-            </Link>
+            <>
+              <Link href={`/clients/${lead.clientId}`}>
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2"
+                  data-testid="button-view-client"
+                >
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  View Client →
+                </Button>
+              </Link>
+              {isAdminOrManager && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-muted-foreground"
+                  onClick={() => convertToClientMutation.mutate({ force: true })}
+                  disabled={convertToClientMutation.isPending}
+                  data-testid="button-force-reconvert"
+                >
+                  {convertToClientMutation.isPending ? "Re-converting..." : "Re-convert"}
+                </Button>
+              )}
+            </>
           ) : (
             <Button
               variant="outline"

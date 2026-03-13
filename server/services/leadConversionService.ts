@@ -9,6 +9,7 @@ import {
   clientBundles,
   clientPackages,
   packageItems,
+  bundleProducts,
   leadPipelineStages,
   taskSettings,
   clientRecurringConfig,
@@ -179,9 +180,13 @@ export async function convertLeadToClient(
         .from(quoteItems)
         .where(eq(quoteItems.quoteId, quote.id));
 
+      console.log(`[LeadConversion] Found ${items.length} quote items to transfer`);
+
       let transferredCount = 0;
 
       for (const item of items) {
+        console.log(`[LeadConversion] Processing item: type=${item.itemType}, productId=${item.productId}, bundleId=${item.bundleId}, packageId=${item.packageId}, qty=${item.quantity}, customQuantities=${JSON.stringify(item.customQuantities)}`);
+
         if (item.itemType === "product" && item.productId) {
           const existing = await tx
             .select()
@@ -214,10 +219,12 @@ export async function convertLeadToClient(
             .limit(1);
 
           if (existing.length === 0) {
+            const bundleCustomQtys = item.customQuantities as Record<string, number> | null;
+            console.log(`[LeadConversion] Inserting client bundle ${item.bundleId} with customQuantities: ${JSON.stringify(bundleCustomQtys)}`);
             await tx.insert(clientBundles).values({
               clientId: client.id,
               bundleId: item.bundleId,
-              customQuantities: item.customQuantities,
+              customQuantities: bundleCustomQtys,
             });
             transferredCount++;
           }
@@ -242,6 +249,7 @@ export async function convertLeadToClient(
             transferredCount++;
           }
 
+          const pkgCustomQtys = (item.customQuantities || {}) as Record<string, any>;
           const pkgItems = await tx
             .select()
             .from(packageItems)
@@ -261,10 +269,31 @@ export async function convertLeadToClient(
                 .limit(1);
 
               if (existingBundle.length === 0) {
+                const itemKey = pkgItem.id || `${pkgItem.itemType}-${pkgItem.bundleId}`;
+                const bundleProductQtys: Record<string, number> = {};
+
+                const bps = await tx
+                  .select({ productId: bundleProducts.productId })
+                  .from(bundleProducts)
+                  .where(eq(bundleProducts.bundleId, pkgItem.bundleId));
+
+                for (const bp of bps) {
+                  const bpKey = `${itemKey}_bp_${bp.productId}`;
+                  if (pkgCustomQtys[bpKey] !== undefined) {
+                    bundleProductQtys[bp.productId] = Number(pkgCustomQtys[bpKey]);
+                  }
+                  if (pkgCustomQtys[bp.productId] !== undefined) {
+                    bundleProductQtys[bp.productId] = Number(pkgCustomQtys[bp.productId]);
+                  }
+                }
+
+                const finalBundleQtys = Object.keys(bundleProductQtys).length > 0 ? bundleProductQtys : null;
+                console.log(`[LeadConversion] Package bundle ${pkgItem.bundleId} extracted customQuantities: ${JSON.stringify(finalBundleQtys)}`);
+
                 await tx.insert(clientBundles).values({
                   clientId: client.id,
                   bundleId: pkgItem.bundleId,
-                  customQuantities: item.customQuantities || null,
+                  customQuantities: finalBundleQtys,
                 });
                 transferredCount++;
               }
