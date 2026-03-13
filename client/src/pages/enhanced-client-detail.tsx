@@ -2203,13 +2203,13 @@ const EditableField = ({
             </p>
           ) : type === 'multiline' && value ? (
             <div className={`${className} border border-gray-200 dark:border-gray-700 group-hover:bg-gray-50 group-hover:border-primary/50 p-2 rounded-md whitespace-pre-wrap transition-colors`}>
-              {value || "Not specified"}
+              {Array.isArray(value) ? value.join(', ') : (value || "Not specified")}
             </div>
           ) : (type === 'dropdown_multiple' || type === 'checkbox') ? (
             <div className={`${className} border border-gray-200 dark:border-gray-700 group-hover:bg-gray-50 group-hover:border-primary/50 p-2 rounded-md transition-colors`}>
               {value ? (
-                value.split(',').map((item: string, index: number) => {
-                  const trimmedItem = item.trim();
+                (Array.isArray(value) ? value : String(value).split(',')).map((item: string, index: number) => {
+                  const trimmedItem = String(item).trim();
                   return trimmedItem ? (
                     <Badge key={`${trimmedItem}-${index}`} variant="secondary" className="mr-1 mb-1 text-xs">
                       {trimmedItem}
@@ -2226,7 +2226,7 @@ const EditableField = ({
             </p>
           ) : (
             <p className={`${className} border border-gray-200 dark:border-gray-700 group-hover:bg-gray-50 group-hover:border-primary/50 p-2 rounded-md transition-colors`}>
-              {value || "Not specified"}
+              {Array.isArray(value) ? value.join(', ') : (value || "Not specified")}
             </p>
           )}
         </div>
@@ -5492,7 +5492,7 @@ export default function EnhancedClientDetail() {
 
   const startEditing = useCallback((fieldId: string, currentValue: any) => {
     setEditingField(fieldId);
-    setFieldEditValue(currentValue || "");
+    setFieldEditValue(Array.isArray(currentValue) ? currentValue.join(', ') : (currentValue || ""));
   }, []);
 
   const cancelEditing = useCallback(() => {
