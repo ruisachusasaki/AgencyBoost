@@ -29151,10 +29151,19 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         .limit(1);
       const maxStep = config?.steps ? Math.max(0, (config.steps as any[]).length - 1) : 0;
       const clampedStep = Math.min(stepNum, maxStep);
+      const existingCustomFieldValues = (client.customFieldValues as Record<string, any>) || {};
+      const nonEmptyValues: Record<string, any> = {};
+      for (const [key, val] of Object.entries(values)) {
+        if (val !== undefined && val !== null && val !== '' && !(Array.isArray(val) && val.length === 0)) {
+          nonEmptyValues[key] = val;
+        }
+      }
+      const mergedCustomFieldValues = { ...existingCustomFieldValues, ...nonEmptyValues };
       await db.update(clients)
         .set({ 
           onboardingProgress: values,
-          onboardingCurrentStep: clampedStep
+          onboardingCurrentStep: clampedStep,
+          customFieldValues: mergedCustomFieldValues
         })
         .where(eq(clients.id, client.id));
       res.json({ success: true, message: "Progress saved" });
