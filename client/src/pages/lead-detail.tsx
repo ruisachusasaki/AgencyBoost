@@ -107,96 +107,48 @@ export default function LeadDetail() {
     !coreFieldNames.includes(field.name.toLowerCase())
   );
 
-  // Convert to Client mutation
+  const [showConvertConfirm, setShowConvertConfirm] = useState(false);
+
   const convertToClientMutation = useMutation({
     mutationFn: async () => {
       if (!lead) throw new Error("Lead data not available");
-      
-      // Wait for quotes to finish loading before validation
-      if (quotesLoading) {
-        throw new Error("Loading quotes data. Please wait a moment and try again.");
-      }
-      
-      // Validate quotes before conversion
-      if (leadQuotes.length === 0) {
-        throw new Error(`${lead.name} has no quotes associated to them. Please create a quote first and ensure it has been accepted.`);
-      }
-
-      // Check for accepted quotes
-      const acceptedQuotes = leadQuotes.filter(q => q.status === 'accepted');
-      
-      if (acceptedQuotes.length === 0) {
-        throw new Error(`${lead.name} has ZERO Accepted Quotes. Please go and ensure there is an ACCEPTED quote for this lead.`);
-      }
-
-      // If multiple accepted quotes, use the most recent one
-      const selectedQuote = acceptedQuotes.sort((a, b) => 
-        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-      )[0];
-      
-      // Create a client from the lead data
-      const clientData = {
-        name: lead.name,
-        email: lead.email,
-        phone: lead.phone,
-        company: lead.company,
-        industry: lead.industry,
-        website: lead.website,
-        address: lead.address,
-        city: lead.city,
-        state: lead.state,
-        zip: lead.zip,
-        country: lead.country,
-        tags: lead.tags,
-        assignedTeam: lead.assignedTo ? [lead.assignedTo] : [],
-        leadId: lead.id, // This triggers automatic deal creation in the backend
-        selectedQuoteId: selectedQuote.id, // Pass the selected quote ID for product transfer
-      };
-      
-      const response = await apiRequest("POST", "/api/clients", clientData);
+      const response = await apiRequest("POST", `/api/leads/${lead.id}/convert`);
       return await response.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       queryClient.invalidateQueries({ queryKey: [`/api/leads/${leadId}`] });
-      
-      const summary = data.taskGenerationSummary;
-      if (summary && summary.errors && summary.errors.length > 0 && summary.totalTasksCreated > 0) {
+
+      if (data.alreadyConverted) {
         toast({
-          title: "Lead converted with warnings",
-          variant: "destructive",
-          description: `Client created with ${summary.totalTasksCreated} onboarding tasks, but some tasks failed to generate. Check Settings > Products > Task Mapping.`,
-        });
-      } else if (summary && summary.errors && summary.errors.length > 0 && summary.totalTasksCreated === 0) {
-        toast({
-          title: "Lead converted with warnings",
-          variant: "destructive",
-          description: "Lead converted but tasks failed to generate. Check Settings > Products > Task Mapping.",
-        });
-      } else if (summary && summary.totalTasksCreated > 0) {
-        toast({
-          title: "Lead converted to client",
-          variant: "default",
-          description: `Lead converted successfully! ${summary.totalTasksCreated} onboarding task${summary.totalTasksCreated === 1 ? '' : 's'} created.`,
+          title: "Already converted",
+          description: "This lead has already been converted to a client.",
         });
       } else {
         toast({
           title: "Lead converted to client",
-          variant: "default",
-          description: "Lead converted successfully. No task templates found — you can set up task mapping in Settings > Products.",
+          description: "Lead converted successfully!",
         });
+        setLocation(`/clients/${data.clientId}`);
       }
-
-      setLocation(`/clients/${data.id}`);
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to convert lead to client.",
+        title: "Conversion failed",
+        description: error.message || "Failed to convert lead to client. Please contact an admin.",
         variant: "destructive",
       });
     },
   });
+
+  const handleConvertClick = () => {
+    const hasAcceptedQuote = leadQuotes.some(q => ['accepted', 'signed', 'completed'].includes(q.status));
+    if (!hasAcceptedQuote && leadQuotes.length > 0) {
+      setShowConvertConfirm(true);
+    } else {
+      convertToClientMutation.mutate();
+    }
+  };
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -568,16 +520,29 @@ export default function LeadDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={() => convertToClientMutation.mutate()}
-            disabled={convertToClientMutation.isPending || quotesLoading}
-            data-testid="button-convert-to-client"
-          >
-            <ArrowRight className="h-4 w-4" />
-            {convertToClientMutation.isPending ? "Converting..." : quotesLoading ? "Loading quotes..." : "Convert to Client"}
-          </Button>
+          {lead?.isConverted && lead?.clientId ? (
+            <Link href={`/clients/${lead.clientId}`}>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                data-testid="button-view-client"
+              >
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                View Client →
+              </Button>
+            </Link>
+          ) : (
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={handleConvertClick}
+              disabled={convertToClientMutation.isPending}
+              data-testid="button-convert-to-client"
+            >
+              <ArrowRight className="h-4 w-4" />
+              {convertToClientMutation.isPending ? "Converting..." : "Convert to Client"}
+            </Button>
+          )}
           {isAdminOrManager && (
             <Button
               variant="destructive"
@@ -1286,6 +1251,28 @@ export default function LeadDetail() {
       )}
 
       {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showConvertConfirm} onOpenChange={setShowConvertConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Convert to Client</AlertDialogTitle>
+            <AlertDialogDescription>
+              This lead's quote has not been marked as accepted. Are you sure you want to convert manually?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowConvertConfirm(false);
+                convertToClientMutation.mutate();
+              }}
+            >
+              Convert Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent data-testid="dialog-delete-lead">
           <AlertDialogHeader>

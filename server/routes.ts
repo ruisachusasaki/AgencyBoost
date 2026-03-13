@@ -3,6 +3,7 @@ import { createCalendarEvent, updateCalendarEventStatus, getEventTimeEntries, cr
 import { createOneOnOneMeetingCalendars, deleteOneOnOneMeetingCalendars, updateOneOnOneMeetingCalendars } from "./oneOnOneMeetingService";
 import { findFathomRecording } from "./fathomService";
 import { generateTasksFromTemplates } from "./taskGenerationEngine";
+import { convertLeadToClient } from "./services/leadConversionService";
 import express, { type Express, type Request } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
@@ -3094,6 +3095,18 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       console.error("Error creating client:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to create client", error: errorMessage });
+    }
+  });
+
+  app.post("/api/leads/:id/convert", requireAuth(), requirePermission('leads', 'canEdit'), async (req, res) => {
+    try {
+      const leadId = req.params.id;
+      const result = await convertLeadToClient(leadId, "manual");
+      res.json(result);
+    } catch (error) {
+      console.error("Error converting lead to client:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to convert lead to client", error: errorMessage });
     }
   });
 
