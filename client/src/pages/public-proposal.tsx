@@ -145,6 +145,9 @@ export default function PublicProposal() {
   const [signerEmail, setSignerEmail] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [hasExpandedTerms, setHasExpandedTerms] = useState(false);
+  const [hasScrolledTerms, setHasScrolledTerms] = useState(false);
+  const termsScrollRef = useRef<HTMLDivElement>(null);
   const [signatureMode, setSignatureMode] = useState<"type" | "draw">("type");
   const [typedSignature, setTypedSignature] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"card" | "ach" | null>(null);
@@ -174,6 +177,15 @@ export default function PublicProposal() {
       setStripePromise(loadStripe(data.stripePublishableKey));
     }
   }, [data?.stripePublishableKey]);
+
+  useEffect(() => {
+    if (showTerms && termsScrollRef.current && !hasScrolledTerms) {
+      const el = termsScrollRef.current;
+      if (el.scrollHeight <= el.clientHeight + 30) {
+        setHasScrolledTerms(true);
+      }
+    }
+  }, [showTerms, hasScrolledTerms]);
 
   useEffect(() => {
     if (data?.proposal?.status === "completed") {
@@ -745,32 +757,71 @@ export default function PublicProposal() {
                 {terms && (
                   <div className="border rounded-lg" id="terms-section">
                     <button
-                      onClick={() => setShowTerms(!showTerms)}
+                      onClick={() => {
+                        const newState = !showTerms;
+                        setShowTerms(newState);
+                        if (newState) setHasExpandedTerms(true);
+                      }}
                       className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50"
                     >
                       <div className="flex items-center gap-2">
                         <Shield className="h-5 w-5" style={{ color: brandColor }} />
-                        <span className="font-medium">{terms.title || "Terms & Conditions"}</span>
-                        {!showTerms && <span className="text-xs text-gray-400 ml-1">(click to read)</span>}
+                        <span className="font-medium">{terms.title || "Service Agreement"}</span>
+                        {!showTerms && <span className="text-xs text-gray-400 ml-1">(click to expand & read)</span>}
                       </div>
                       {showTerms ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </button>
                     {showTerms && (
-                      <div className="border-t p-4 max-h-96 overflow-y-auto">
+                      <div
+                        ref={termsScrollRef}
+                        className="border-t p-4 max-h-96 overflow-y-auto"
+                        onScroll={(e) => {
+                          const el = e.currentTarget;
+                          const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
+                          if (atBottom) setHasScrolledTerms(true);
+                        }}
+                      >
                         <div className="prose prose-sm max-w-none text-gray-600" dangerouslySetInnerHTML={{ __html: terms.content }} />
+                        {!hasScrolledTerms && (
+                          <div className="sticky bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white/90 to-transparent pt-6 pb-2 text-center">
+                            <p className="text-xs text-gray-500 animate-pulse flex items-center justify-center gap-1">
+                              <ChevronDown className="h-3 w-3" /> Scroll down to read the full agreement <ChevronDown className="h-3 w-3" />
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
+                )}
+
+                {terms && !hasExpandedTerms && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Please expand and read the Service Agreement above before proceeding.
+                  </p>
+                )}
+                {terms && hasExpandedTerms && !hasScrolledTerms && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Please scroll to the bottom of the Service Agreement to continue.
+                  </p>
                 )}
 
                 <div className="flex items-start gap-3">
                   <Checkbox
                     id="terms-checkbox"
                     checked={termsAccepted}
-                    onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                    onCheckedChange={(checked) => {
+                      if (terms && (!hasExpandedTerms || !hasScrolledTerms)) return;
+                      setTermsAccepted(checked === true);
+                    }}
+                    disabled={terms ? (!hasExpandedTerms || !hasScrolledTerms) : false}
                     className="mt-0.5"
                   />
-                  <Label htmlFor="terms-checkbox" className="text-sm text-gray-600 cursor-pointer leading-relaxed">
+                  <Label
+                    htmlFor="terms-checkbox"
+                    className={`text-sm leading-relaxed ${terms && (!hasExpandedTerms || !hasScrolledTerms) ? "text-gray-400 cursor-not-allowed" : "text-gray-600 cursor-pointer"}`}
+                  >
                     I have read and agree to the{" "}
                     {terms ? (
                       <span
@@ -779,12 +830,13 @@ export default function PublicProposal() {
                         onClick={(e) => {
                           e.preventDefault();
                           setShowTerms(true);
+                          if (!hasExpandedTerms) setHasExpandedTerms(true);
                           setTimeout(() => {
                             document.getElementById("terms-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
                           }, 100);
                         }}
                       >
-                        {terms.title || "Terms & Conditions"}
+                        {terms.title || "Service Agreement"}
                       </span>
                     ) : (
                       "Terms & Conditions"
@@ -798,8 +850,8 @@ export default function PublicProposal() {
                   <Button
                     onClick={handleSign}
                     className="text-white px-8"
-                    style={{ backgroundColor: brandColor }}
-                    disabled={signMutation.isPending}
+                    style={{ backgroundColor: !termsAccepted ? undefined : brandColor }}
+                    disabled={signMutation.isPending || !termsAccepted}
                   >
                     {signMutation.isPending ? (
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Signing...</>

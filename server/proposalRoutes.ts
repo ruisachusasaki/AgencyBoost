@@ -1,15 +1,140 @@
 import express, { type Express } from "express";
 import { db } from "./db";
-import { proposalTerms, quotes, quoteItems, clients, leads, staff, products, productBundles, productPackages, clientProducts, clientBundles, clientPackages, packageItems, bundleProducts, deals, leadPipelineStages, taskSettings, clientRecurringConfig, businessProfile, clientOnboardingFormConfig } from "@shared/schema";
+import { proposalTerms, quotes, quoteItems, clients, leads, staff, products, productBundles, productPackages, clientProducts, clientBundles, clientPackages, packageItems, bundleProducts, deals, leadPipelineStages, taskSettings, clientRecurringConfig, businessProfile, clientOnboardingFormConfig, documents } from "@shared/schema";
 import { eq, desc, and, sql, lt, isNull, asc } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { z } from "zod";
 import { createPaymentIntent, createACHPaymentIntent, isStripeConfigured, constructWebhookEvent, getStripe, getOrCreateCustomer, createSubscription } from "./stripe";
 import { NotificationService } from "./notification-service";
 import { generateTasksFromTemplates } from "./taskGenerationEngine";
+import PDFDocument from "pdfkit";
+import { ObjectStorageService } from "./objectStorage";
 
 function generatePublicToken(): string {
   return randomBytes(32).toString("hex");
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<\/h[1-6]>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+async function generateSignedAgreementPdf(params: {
+  quote: any;
+  quoteItemsList: any[];
+  termsContent: string;
+  termsTitle: string;
+  signerName: string;
+  signerEmail: string;
+  signerIpAddress: string;
+  signedAt: Date;
+  signatureData: string;
+  companyName: string;
+}): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    doc.fontSize(22).font('Helvetica-Bold').text('Signed Service Agreement', { align: 'center' });
+    doc.moveDown(0.5);
+
+    if (params.companyName) {
+      doc.fontSize(14).font('Helvetica').fillColor('#666666').text(params.companyName, { align: 'center' });
+      doc.moveDown(0.3);
+    }
+
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#cccccc');
+    doc.moveDown(1);
+
+    doc.fillColor('#000000');
+    doc.fontSize(12).font('Helvetica-Bold').text('Proposal Details');
+    doc.moveDown(0.3);
+    doc.fontSize(10).font('Helvetica');
+    doc.text(`Proposal: ${params.quote.name}`);
+    if (params.quote.buildFee && Number(params.quote.buildFee) > 0) {
+      doc.text(`Build Investment: $${Number(params.quote.buildFee).toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
+    }
+    if (params.quote.monthlyCost && Number(params.quote.monthlyCost) > 0) {
+      doc.text(`Monthly Investment: $${Number(params.quote.monthlyCost).toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
+    }
+    doc.moveDown(0.5);
+
+    if (params.quoteItemsList.length > 0) {
+      doc.fontSize(12).font('Helvetica-Bold').text('Services Included');
+      doc.moveDown(0.3);
+      doc.fontSize(10).font('Helvetica');
+      for (const item of params.quoteItemsList) {
+        doc.text(`• ${item.name}${item.quantity > 1 ? ` (x${item.quantity})` : ''}`, { indent: 10 });
+      }
+      doc.moveDown(0.5);
+    }
+
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#cccccc');
+    doc.moveDown(0.5);
+
+    doc.fontSize(12).font('Helvetica-Bold').text(params.termsTitle || 'Service Agreement');
+    doc.moveDown(0.3);
+    const plainTerms = stripHtml(params.termsContent);
+    doc.fontSize(9).font('Helvetica').text(plainTerms, { lineGap: 2 });
+    doc.moveDown(1);
+
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#cccccc');
+    doc.moveDown(0.5);
+
+    doc.fontSize(12).font('Helvetica-Bold').text('Electronic Signature');
+    doc.moveDown(0.3);
+    doc.fontSize(10).font('Helvetica');
+    doc.text(`Signed By: ${params.signerName}`);
+    doc.text(`Email: ${params.signerEmail}`);
+    doc.text(`Date Signed: ${params.signedAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}`);
+    doc.text(`IP Address: ${params.signerIpAddress}`);
+    doc.moveDown(0.5);
+
+    if (params.signatureData.startsWith('data:image')) {
+      try {
+        const base64Data = params.signatureData.split(',')[1];
+        const imgBuffer = Buffer.from(base64Data, 'base64');
+        doc.text('Signature:');
+        doc.image(imgBuffer, { width: 200, height: 60 });
+      } catch (e) {
+        doc.text(`Signature: ${params.signerName}`, { font: 'Helvetica-Oblique' });
+      }
+    } else {
+      const displaySig = params.signatureData.startsWith('typed:')
+        ? params.signatureData.slice(6)
+        : params.signatureData;
+      doc.text('Signature:');
+      doc.font('Helvetica-Oblique').fontSize(18).text(displaySig);
+      doc.font('Helvetica').fontSize(10);
+    }
+
+    doc.moveDown(1);
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#cccccc');
+    doc.moveDown(0.3);
+    doc.fontSize(8).fillColor('#999999').text(
+      `This document was electronically signed on ${params.signedAt.toISOString()} from IP address ${params.signerIpAddress}. ` +
+      `The signer confirmed: "I have read and agree to the terms. I authorize this electronic signature as my binding signature."`,
+      { align: 'center' }
+    );
+
+    doc.end();
+  });
 }
 
 async function loadEmailTemplate() {
@@ -509,6 +634,58 @@ export function registerProposalRoutes(
           }
         }
       }
+
+      (async () => {
+        try {
+          const clientId = quote.clientId;
+          if (!clientId) {
+            console.log("[PDF] No clientId on quote, skipping PDF generation");
+            return;
+          }
+
+          const qItems = await db.select().from(quoteItems).where(eq(quoteItems.quoteId, quote.id));
+          let companyName = "";
+          try {
+            const [bp] = await db.select().from(businessProfile).limit(1);
+            companyName = bp?.companyName || "";
+          } catch (e) {}
+
+          const signedAt = updated.signedAt || new Date();
+          const pdfBuffer = await generateSignedAgreementPdf({
+            quote,
+            quoteItemsList: qItems,
+            termsContent: activeTerms[0]?.content || "",
+            termsTitle: activeTerms[0]?.title || "Service Agreement",
+            signerName,
+            signerEmail,
+            signerIpAddress,
+            signedAt: new Date(signedAt),
+            signatureData,
+            companyName,
+          });
+
+          const sanitizedName = quote.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+          const fileName = `Signed_Agreement_${sanitizedName}_${new Date(signedAt).toISOString().split('T')[0]}.pdf`;
+
+          const objectStorage = new ObjectStorageService();
+          const fileUrl = await objectStorage.uploadBuffer(pdfBuffer, fileName, 'application/pdf');
+
+          const uploadedBy = quote.sentByUserId || quote.createdBy;
+          await db.insert(documents).values({
+            name: fileName,
+            fileName,
+            fileType: 'pdf',
+            fileSize: pdfBuffer.length,
+            fileUrl,
+            clientId,
+            uploadedBy,
+          });
+
+          console.log(`[PDF] Signed agreement PDF generated and stored for client ${clientId}: ${fileName}`);
+        } catch (pdfError) {
+          console.error("[PDF] Error generating signed agreement PDF:", pdfError);
+        }
+      })();
 
       res.json({ success: true, proposal: { status: updated.status, signedAt: updated.signedAt } });
     } catch (error) {

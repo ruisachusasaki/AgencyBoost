@@ -272,6 +272,17 @@ export class ObjectStorageService {
     }
   }
 
+  async uploadBuffer(buffer: Buffer, fileName: string, contentType: string): Promise<string> {
+    const privateObjectDir = this.getPrivateObjectDir();
+    const objectId = randomUUID();
+    const fullPath = `${privateObjectDir}/uploads/${objectId}`;
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+    const bucket = objectStorageClient.bucket(bucketName);
+    const file = bucket.file(objectName);
+    await file.save(buffer, { contentType, resumable: false });
+    return `/objects/uploads/${objectId}`;
+  }
+
   normalizeObjectEntityPath(rawPath: string): string {
     console.log("Normalizing path:", rawPath);
     
