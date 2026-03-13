@@ -6107,20 +6107,7 @@ async function convertLeadToClient(leadId, triggeredBy, options) {
             transferredCount++;
           }
         } else if (item.itemType === "package" && item.packageId) {
-          const existingPkg = await tx.select().from(clientPackages).where(
-            and5(
-              eq6(clientPackages.clientId, client.id),
-              eq6(clientPackages.packageId, item.packageId)
-            )
-          ).limit(1);
-          if (existingPkg.length === 0) {
-            await tx.insert(clientPackages).values({
-              clientId: client.id,
-              packageId: item.packageId,
-              customQuantities: item.customQuantities
-            });
-            transferredCount++;
-          }
+          console.log(`[LeadConversion] Expanding package ${item.packageId} into individual bundles/products (not adding as package to avoid double-counting)`);
           const pkgCustomQtys = item.customQuantities || {};
           const pkgItems = await tx.select().from(packageItems).where(eq6(packageItems.packageId, item.packageId));
           for (const pkgItem of pkgItems) {

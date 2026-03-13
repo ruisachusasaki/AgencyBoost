@@ -241,26 +241,7 @@ export async function convertLeadToClient(
             transferredCount++;
           }
         } else if (item.itemType === "package" && item.packageId) {
-          const existingPkg = await tx
-            .select()
-            .from(clientPackages)
-            .where(
-              and(
-                eq(clientPackages.clientId, client.id),
-                eq(clientPackages.packageId, item.packageId)
-              )
-            )
-            .limit(1);
-
-          if (existingPkg.length === 0) {
-            await tx.insert(clientPackages).values({
-              clientId: client.id,
-              packageId: item.packageId,
-              customQuantities: item.customQuantities,
-            });
-            transferredCount++;
-          }
-
+          console.log(`[LeadConversion] Expanding package ${item.packageId} into individual bundles/products (not adding as package to avoid double-counting)`);
           const pkgCustomQtys = (item.customQuantities || {}) as Record<string, any>;
           const pkgItems = await tx
             .select()
