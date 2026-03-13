@@ -1,0 +1,35 @@
+Do NOT modify any existing functionality. Do NOT touch any existing endpoints, components, or conversion logic. You are adding a new shared service function only.
+
+Based on your audit from the previous step, create a new shared service file at server/services/leadConversionService.ts
+
+This file must export a single async function: convertLeadToClient(leadId: number, triggeredBy: 'online_proposal' | 'manual' | 'ach_signing')
+
+The function must:
+
+1. IDEMPOTENCY CHECK FIRST:
+   - Before doing anything, check if the lead has already been converted (check for existing client record linked to this lead, or a converted/clientId field on the lead)
+   - If already converted, return { success: true, clientId: [existing id], alreadyConverted: true } immediately — do nothing else
+   - This prevents duplicate client records if both auto and manual fire
+
+2. PERFORM THE CONVERSION:
+   - Run exactly the same operations that the existing "Convert to Client" button runs — replicate that logic here exactly, do not simplify or skip steps
+   - Copy all lead fields to the new client record
+   - Migrate any associated quote items to client_products / client_bundles / client_packages per the existing conversion logic
+   - Set the quote status to 'accepted' if not already set
+
+3. UPDATE THE LEAD RECORD:
+   - Mark the lead as converted (set isConverted = true or equivalent field)
+   - Store the resulting clientId back on the lead record
+   - Store convertedAt timestamp
+   - Store the triggeredBy value so we have an audit trail of whether conversion was automatic or manual
+
+4. RETURN:
+   - { success: true, clientId: [new client id], alreadyConverted: false } on success
+   - Throw a descriptive error on failure (do not swallow errors)
+
+5. WRAP IN A TRANSACTION:
+   - All database writes must be wrapped in a single Drizzle transaction so partial conversions cannot occur
+
+If the leads table is missing isConverted, convertedAt, or clientId fields, add them to the schema in shared/schema.ts and create the appropriate Drizzle migration. Do not change any other fields or tables.
+
+Do not modify the existing Convert to Client endpoint/handler — leave it completely intact for now.

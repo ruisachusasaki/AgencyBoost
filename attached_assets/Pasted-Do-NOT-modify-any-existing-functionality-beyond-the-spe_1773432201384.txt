@@ -1,0 +1,45 @@
+Do NOT modify any existing functionality beyond the specific attachment point 
+identified below. Do not change any UI, any other endpoints, or any existing 
+business logic.
+
+Using the new convertLeadToClient service from the previous step, wire 
+auto-conversion into the proposal signing step:
+
+1. FIND THE SIGNING ENDPOINT:
+   - Locate the server-side endpoint that handles "Sign Proposal" submission
+     (the endpoint called when the client clicks the teal "Sign Proposal" button)
+   - This is the endpoint that records the signature, signer name, signer email,
+     and agreement acceptance — identify it exactly from the current codebase
+     before making any changes
+
+2. ATTACH CONVERSION AFTER SIGNATURE IS SAVED:
+   - After the signature is successfully recorded and before sending the response,
+     call: convertLeadToClient(leadId, 'online_proposal')
+   - The leadId should come from the quote record associated with this proposal token
+   - Include the returned clientId in the API response payload
+
+3. ERROR HANDLING:
+   - If convertLeadToClient throws or fails, log the error with full details
+   - Do NOT block the signing response — the client signed successfully,
+     conversion failure should not prevent them from proceeding to payment
+   - In that case, return clientId: null in the response and let the manual
+     fallback handle it
+
+4. PASS clientId THROUGH THE FRONTEND FLOW:
+   - Find the frontend proposal component that handles the Sign step
+   - After the signing API call succeeds, store the returned clientId in
+     component state
+   - Pass it forward to the Pay step and Done/TY step so it's available
+     for the onboarding form button
+   - If clientId is null (conversion failed silently), show the onboarding
+     button in a disabled "Setting up your account..." state on the TY page
+     rather than breaking
+
+5. NO STRIPE WEBHOOK NEEDED:
+   - Do not add conversion logic to any Stripe webhook or payment endpoint
+   - Signing is the sole trigger
+   - The idempotency guard in the service handles any edge case where this
+     somehow fires twice
+
+Do not change the quote approval workflow, payment flow, or any other part
+of the proposal or leads functionality.
