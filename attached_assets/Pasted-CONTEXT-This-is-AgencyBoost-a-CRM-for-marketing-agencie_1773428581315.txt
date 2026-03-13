@@ -1,0 +1,269 @@
+CONTEXT:
+This is AgencyBoost, a CRM for marketing agencies. We are building a 
+NEW HIRE WORKFLOW feature. The following has already been completed:
+  - DB tables: ic_agreement_templates, job_offers, offer_signatures, 
+    offer_status_log
+  - New status values added to the applicants table: 'send_offer', 
+    'offer_accepted', 'offer_declined', 'hired'
+
+This prompt builds the IC AGREEMENT TEMPLATE BUILDER — where admins 
+create and manage the Independent Contractor Agreement template that 
+gets dynamically populated when an offer is sent to an applicant.
+
+This lives under Settings > HR Settings as a new tab called 
+"IC Agreement".
+
+ALWAYS use the primary teal theme color (hsl(179, 100%, 39%) / #00C9C6) 
+for buttons, accents, and interactive elements. Never use blue.
+
+═══════════════════════════════════════
+PART A — BACKEND API ROUTES
+═══════════════════════════════════════
+
+Add the following routes to server/routes.ts. All require 
+requireAuth(). Admin only — Managers and regular Users cannot 
+access these endpoints.
+
+─────────────────────────────────────
+GET /api/ic-agreement-templates
+─────────────────────────────────────
+- Return all IC Agreement templates ordered by createdAt DESC
+- Include: id, name, isActive, createdBy (with staff name joined), 
+  createdAt, updatedAt
+- Do NOT return the full content field in the list — keep it 
+  lightweight
+
+─────────────────────────────────────
+GET /api/ic-agreement-templates/:id
+─────────────────────────────────────
+- Return full template including content field
+- Include createdBy staff name
+
+─────────────────────────────────────
+GET /api/ic-agreement-templates/active
+─────────────────────────────────────
+- Return the single active template (isActive = true)
+- Include full content field
+- If no active template exists return { template: null }
+- This endpoint will be used by the Send Offer flow in Prompt C
+
+─────────────────────────────────────
+POST /api/ic-agreement-templates
+─────────────────────────────────────
+- Admin only
+- Body: { name, content, isActive }
+- Set createdBy = req.user.id
+- If isActive = true: first set ALL other templates 
+  isActive = false in the same transaction, then insert 
+  the new template with isActive = true
+- Return created template
+
+─────────────────────────────────────
+PUT /api/ic-agreement-templates/:id
+─────────────────────────────────────
+- Admin only
+- Body: { name, content, isActive } — all optional
+- If isActive = true is being set: first set ALL other 
+  templates isActive = false in the same transaction
+- Update updatedAt = now()
+- Return updated template
+
+─────────────────────────────────────
+DELETE /api/ic-agreement-templates/:id
+─────────────────────────────────────
+- Admin only
+- Soft check: if this template is referenced by any job_offers 
+  (templateId = this id), do NOT delete — return 400 with message 
+  "Cannot delete — this template has been used in sent offers."
+- If the template being deleted is currently isActive, return 400 
+  with message "Cannot delete the active template. Set another 
+  template as active first."
+- Otherwise hard delete
+
+═══════════════════════════════════════
+PART B — FRONTEND TEMPLATE BUILDER
+═══════════════════════════════════════
+
+Create the following new files:
+  client/src/pages/settings/ICAgreementTemplates.tsx
+  client/src/components/icagreement/ICAgreementEditor.tsx
+  client/src/components/icagreement/PlaceholderToolbar.tsx
+
+─────────────────────────────────────
+ICAgreementTemplates.tsx (List Page)
+─────────────────────────────────────
+This is the tab content shown under Settings > HR Settings > 
+"IC Agreement".
+
+Layout:
+
+TOP SECTION — Active Template Banner:
+  - If an active template exists: green banner showing
+    "✓ Active Template: [template name]" with an "Edit" button
+  - If no active template: yellow warning banner showing
+    "⚠ No active IC Agreement template. Offers cannot be sent 
+    until an active template is configured."
+
+TEMPLATE LIST:
+  - Table with columns: Name, Status (Active badge or —), 
+    Created By, Last Updated, Actions
+  - Active template row gets a subtle teal-tinted background
+  - Actions per row:
+      - "Edit" button (pencil icon) — navigates to editor
+      - "Set Active" button — only shown on inactive templates, 
+        calls PUT to set isActive = true with confirmation dialog:
+        "This will deactivate the current active template and 
+        make [name] the active template. Continue?"
+      - "Delete" button (trash icon) — with confirmation dialog, 
+        calls DELETE endpoint, shows error toast if blocked
+
+"+ New Template" button (teal, top right):
+  - Navigates to /settings/hr/ic-agreement/new
+
+─────────────────────────────────────
+ICAgreementEditor.tsx (Create/Edit Page)
+─────────────────────────────────────
+Full-page editor for creating or editing an IC Agreement template.
+
+This page is used for both NEW (/settings/hr/ic-agreement/new) 
+and EDIT (/settings/hr/ic-agreement/:id) flows.
+
+Layout:
+
+LEFT PANEL (2/3 width) — Editor:
+  - Template Name field (text input, top of panel, required)
+  - Rich text editor for the agreement content
+    Use the existing rich text editor component already present 
+    in the codebase (check how Knowledge Base articles or email 
+    templates are edited — use the SAME editor component, do not 
+    introduce a new one)
+  - The editor must support: headings, bold, italic, underline, 
+    bullet lists, numbered lists, paragraph text
+  - Placeholder tags render as teal-highlighted inline chips 
+    within the editor content so the manager can visually see 
+    where dynamic fields will appear — e.g. a teal chip showing 
+    "candidate_name" rather than raw {{candidate_name}} text
+
+RIGHT PANEL (1/3 width) — Placeholder Toolbar + Settings:
+
+  PLACEHOLDER TOOLBAR (PlaceholderToolbar.tsx):
+  - Header: "Dynamic Fields"
+  - Subtext: "Click any field to insert it at your cursor 
+    position in the agreement"
+  - List of all available placeholders as clickable buttons:
+
+      Candidate Information:
+        [candidate_name]    — Applicant's full name
+        [position]          — Position being offered
+        [start_date]        — Their start date
+        
+      Compensation:
+        [compensation]      — Pay rate or amount
+        [compensation_type] — e.g. per hour / per month
+        
+      Offer Details:
+        [offer_date]        — Date offer was sent
+        [custom_terms]      — Additional custom terms
+        
+      Company:
+        [manager_name]      — Hiring manager's full name
+        [company_name]      — The Media Optimizers
+
+  - Each placeholder button: outlined, small, teal border and 
+    text, clicking inserts {{field_name}} at the cursor position 
+    in the editor
+  - Group placeholders under their category headers in gray 
+    small caps
+
+  TEMPLATE SETTINGS (below placeholder toolbar):
+  - "Set as Active Template" toggle/checkbox
+    Label: "Make this the active template"
+    Subtext: "Only one template can be active at a time. 
+    Setting this as active will deactivate the current 
+    active template."
+  - If editing the currently active template: toggle is 
+    checked and disabled (cannot deactivate without 
+    activating another)
+
+BOTTOM ACTION BAR (full width, sticky):
+  - Left: "Back to Templates" link
+  - Right: "Save Draft" button (outline) + "Save & Activate" 
+    button (teal, solid)
+  - "Save Draft": saves with isActive = false regardless 
+    of the toggle state (just saving work)
+  - "Save & Activate": saves with isActive = true — shows 
+    confirmation dialog if another template is currently 
+    active: "This will replace [current active template name] 
+    as the active template. Continue?"
+  - Both buttons show loading state during save
+  - On success: toast "Template saved successfully" then 
+    navigate back to the templates list
+  - On error: destructive toast with error message
+
+─────────────────────────────────────
+LIVE PREVIEW MODAL
+─────────────────────────────────────
+Add a "Preview" button in the bottom action bar (between 
+"Back" and the save buttons).
+
+On click: opens a full-screen modal showing a simulated 
+populated version of the agreement with sample placeholder 
+values substituted in:
+  {{candidate_name}}    → "Alex Johnson"
+  {{position}}          → "Account Manager"
+  {{start_date}}        → today's date formatted as 
+                          "March 13, 2026"
+  {{compensation}}      → "$5,000"
+  {{compensation_type}} → "per month"
+  {{offer_date}}        → today's date
+  {{custom_terms}}      → "Standard contractor terms apply."
+  {{manager_name}}      → the logged-in user's full name
+  {{company_name}}      → "The Media Optimizers"
+
+Modal header: "Agreement Preview — Sample Data"
+Subtext: "This is a preview using sample data. Actual values 
+will be filled in when an offer is sent."
+Close button top right.
+The preview renders the HTML content cleanly with proper 
+typography — not raw HTML tags.
+
+═══════════════════════════════════════
+PART C — NAVIGATION INTEGRATION
+═══════════════════════════════════════
+
+Add "IC Agreement" as a new tab under Settings > HR Settings.
+- Tab label: "IC Agreement"
+- Position: after the existing "Onboarding Templates" tab 
+  added in the previous build
+- Admin only — Managers and regular Users do not see this tab
+
+Add routes in the router:
+  /settings/hr/ic-agreement          → ICAgreementTemplates.tsx
+  /settings/hr/ic-agreement/new      → ICAgreementEditor.tsx 
+                                        (create mode)
+  /settings/hr/ic-agreement/:id      → ICAgreementEditor.tsx 
+                                        (edit mode)
+
+═══════════════════════════════════════
+PROTECTIVE RULES
+═══════════════════════════════════════
+- Do NOT modify any existing HR Settings tabs or their content
+- Do NOT modify any existing routes — only ADD new ones
+- Do NOT touch vite.config.ts, package.json, or drizzle.config.ts
+- Do NOT modify any existing schema or migrations
+- Do NOT introduce a new rich text editor library — use whatever 
+  rich text editor is already present in the codebase
+- Do NOT modify any existing applicant tracking components 
+  or pages
+- Use TanStack Query v5 object form for all queries:
+  useQuery({ queryKey: [...], queryFn: ... })
+- useMutation for all POST/PUT/DELETE operations
+- After any mutation: invalidate the templates list query
+- Toast notifications: only "default" and "destructive" variants
+- Icons from lucide-react only
+- All teal accents: hsl(179, 100%, 39%)
+- Only one template can be isActive = true at any time — 
+  enforce this in BOTH the API (transaction) and the UI 
+  (confirmation dialogs)
+- The active template deactivation-on-new-activation must 
+  be atomic — use a database transaction

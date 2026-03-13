@@ -1076,7 +1076,7 @@ export const jobApplications = pgTable("job_applications", {
   resumeUrl: text("resume_url"),
   coverLetterUrl: text("cover_letter_url"),
   portfolioUrl: text("portfolio_url"),
-  stage: text("stage").notNull().default("new"), // new, review, interview, not_selected, test_sent, send_offer, offer_sent, offer_accepted, offer_rejected
+  stage: text("stage").notNull().default("new"), // new, review, interview, not_selected, test_sent, send_offer, offer_sent, offer_accepted, offer_declined, hired
   rating: integer("rating").default(0), // 1-5 star rating
   notes: text("notes"),
   assignedRecruiter: uuid("assigned_recruiter").references(() => staff.id),
@@ -5801,3 +5801,97 @@ export type InsertOnboardingInstance = z.infer<typeof insertOnboardingInstanceSc
 export const insertOnboardingInstanceItemSchema = createInsertSchema(onboardingInstanceItems).omit({ id: true, createdAt: true });
 export type OnboardingInstanceItem = typeof onboardingInstanceItems.$inferSelect;
 export type InsertOnboardingInstanceItem = z.infer<typeof insertOnboardingInstanceItemSchema>;
+
+// ═══════════════════════════════════════
+// HR System - IC Agreement Templates
+// ═══════════════════════════════════════
+// Supported placeholders for template content:
+//   {{candidate_name}}    — applicant's full name
+//   {{position}}          — position they are being hired for
+//   {{start_date}}        — their start date
+//   {{compensation}}      — pay rate or salary
+//   {{compensation_type}} — e.g. "per hour", "per month", "flat project rate"
+//   {{manager_name}}      — hiring manager's full name
+//   {{company_name}}      — static: "The Media Optimizers"
+//   {{offer_date}}        — date the offer was sent
+//   {{custom_terms}}      — optional additional terms
+export const icAgreementTemplates = pgTable("ic_agreement_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  content: text("content").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdBy: uuid("created_by").references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// ═══════════════════════════════════════
+// HR System - Job Offers
+// ═══════════════════════════════════════
+export const jobOffers = pgTable("job_offers", {
+  id: serial("id").primaryKey(),
+  applicationId: varchar("application_id").notNull().references(() => jobApplications.id, { onDelete: "cascade" }),
+  createdBy: uuid("created_by").references(() => staff.id),
+  templateId: integer("template_id").references(() => icAgreementTemplates.id),
+  populatedContent: text("populated_content").notNull(),
+  compensation: text("compensation").notNull(),
+  compensationType: text("compensation_type").notNull(), // 'per_hour', 'per_month', 'flat_rate'
+  startDate: date("start_date").notNull(),
+  customTerms: text("custom_terms"),
+  signingToken: text("signing_token").notNull(),
+  status: text("status").notNull().default("pending"), // 'pending', 'signed', 'declined'
+  sentAt: timestamp("sent_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  unique("job_offers_application_id_unique").on(table.applicationId),
+  unique("job_offers_signing_token_unique").on(table.signingToken),
+  index("job_offers_status_idx").on(table.status),
+]);
+
+// ═══════════════════════════════════════
+// HR System - Offer Signatures
+// ═══════════════════════════════════════
+export const offerSignatures = pgTable("offer_signatures", {
+  id: serial("id").primaryKey(),
+  offerId: integer("offer_id").notNull().references(() => jobOffers.id, { onDelete: "cascade" }),
+  signatureType: text("signature_type").notNull(), // 'drawn' or 'typed'
+  signatureData: text("signature_data").notNull(),
+  signerName: text("signer_name").notNull(),
+  signerEmail: text("signer_email").notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  signedAt: timestamp("signed_at").notNull().defaultNow(),
+}, (table) => [
+  unique("offer_signatures_offer_id_unique").on(table.offerId),
+]);
+
+// ═══════════════════════════════════════
+// HR System - Offer Status Log
+// ═══════════════════════════════════════
+export const offerStatusLog = pgTable("offer_status_log", {
+  id: serial("id").primaryKey(),
+  offerId: integer("offer_id").notNull().references(() => jobOffers.id, { onDelete: "cascade" }),
+  status: text("status").notNull(),
+  changedBy: uuid("changed_by").references(() => staff.id),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("offer_status_log_offer_id_idx").on(table.offerId),
+]);
+
+export const insertIcAgreementTemplateSchema = createInsertSchema(icAgreementTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export type IcAgreementTemplate = typeof icAgreementTemplates.$inferSelect;
+export type InsertIcAgreementTemplate = z.infer<typeof insertIcAgreementTemplateSchema>;
+
+export const insertJobOfferSchema = createInsertSchema(jobOffers).omit({ id: true, createdAt: true, sentAt: true });
+export type JobOffer = typeof jobOffers.$inferSelect;
+export type InsertJobOffer = z.infer<typeof insertJobOfferSchema>;
+
+export const insertOfferSignatureSchema = createInsertSchema(offerSignatures).omit({ id: true, signedAt: true });
+export type OfferSignature = typeof offerSignatures.$inferSelect;
+export type InsertOfferSignature = z.infer<typeof insertOfferSignatureSchema>;
+
+export const insertOfferStatusLogSchema = createInsertSchema(offerStatusLog).omit({ id: true, createdAt: true });
+export type OfferStatusLog = typeof offerStatusLog.$inferSelect;
+export type InsertOfferStatusLog = z.infer<typeof insertOfferStatusLogSchema>;
