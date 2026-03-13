@@ -33,7 +33,7 @@ import type { Client, Tag, InsertTag, EmailTemplate, SmsTemplate, ClientHealthSc
 import { format, formatDistanceToNow, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useRolePermissions } from "@/hooks/use-has-permission";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { cn, getCurrentWeekRange } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import ClientHealthModal from "@/components/client-health-modal";
@@ -2854,8 +2854,9 @@ function ImportFromQuoteContent({ clientId, selectedQuoteId, setSelectedQuoteId,
 
 function ClientOnboardingHubSection({ client, clientId, isAdmin }: { client: any; clientId: string; isAdmin: boolean }) {
   const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
   const { data: onboardingStatus, isLoading } = useQuery<any>({
-    queryKey: ['/api/clients', clientId, 'onboarding-status'],
+    queryKey: [`/api/clients/${clientId}/onboarding-status`],
     enabled: !!clientId,
   });
 
@@ -2866,7 +2867,11 @@ function ClientOnboardingHubSection({ client, clientId, isAdmin }: { client: any
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'onboarding-status'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/onboarding-status`] });
+      toast({ title: "Onboarding link generated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to generate onboarding link", description: error.message, variant: "destructive" });
     },
   });
 
