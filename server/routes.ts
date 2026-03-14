@@ -15107,9 +15107,20 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
       for (const ab of assignedBundles) {
         const [bundle] = await db.select({ name: productBundles.name }).from(productBundles).where(eq(productBundles.id, ab.bundleId));
-        const templates = await db.select().from(productTaskTemplates).where(and(eq(productTaskTemplates.bundleId, ab.bundleId), eq(productTaskTemplates.status, 'active')));
-        const onboarding = templates.filter(t => t.taskType === 'onboarding');
-        const recurring = templates.filter(t => t.taskType === 'recurring');
+        const bundleLevelTemplates = await db.select().from(productTaskTemplates).where(and(eq(productTaskTemplates.bundleId, ab.bundleId), eq(productTaskTemplates.status, 'active')));
+        
+        const bps = await db.select({ productId: bundleProducts.productId }).from(bundleProducts).where(eq(bundleProducts.bundleId, ab.bundleId));
+        let productLevelTemplates: any[] = [];
+        for (const bp of bps) {
+          const pTemplates = await db.select().from(productTaskTemplates).where(and(eq(productTaskTemplates.productId, bp.productId), eq(productTaskTemplates.status, 'active')));
+          productLevelTemplates.push(...pTemplates);
+        }
+        
+        const allTemplates = [...bundleLevelTemplates, ...productLevelTemplates];
+        const uniqueTemplates = allTemplates.filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i);
+        
+        const onboarding = uniqueTemplates.filter(t => t.taskType === 'onboarding');
+        const recurring = uniqueTemplates.filter(t => t.taskType === 'recurring');
         const onboardingNew = skipExisting ? onboarding.filter(t => !existingSet.has(`${t.id}-onboarding`)) : onboarding;
         const recurringNew = skipExisting ? recurring.filter(t => !existingSet.has(`${t.id}-recurring`)) : recurring;
         previewItems.push({ itemType: 'bundle', itemId: ab.bundleId, name: bundle?.name || 'Unknown', onboardingTemplates: onboardingNew.length, recurringTemplates: recurringNew.length, totalOnboarding: onboarding.length, totalRecurring: recurring.length });
@@ -15164,13 +15175,25 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         if (!skipExisting) return itemList;
         const filtered: typeof items = [];
         for (const item of itemList) {
-          const conditions: any[] = [eq(productTaskTemplates.taskType, genType), eq(productTaskTemplates.status, 'active')];
-          if (item.productId) conditions.push(eq(productTaskTemplates.productId, item.productId));
-          else if (item.bundleId) conditions.push(eq(productTaskTemplates.bundleId, item.bundleId));
-          else if (item.packageId) conditions.push(eq(productTaskTemplates.packageId, item.packageId));
-          else continue;
-          const templates = await db.select({ id: productTaskTemplates.id }).from(productTaskTemplates).where(and(...conditions));
-          const hasNew = templates.some(t => !existingGenSet.has(`${t.id}-${genType}`));
+          let allTemplates: any[] = [];
+          
+          if (item.productId) {
+            const templates = await db.select({ id: productTaskTemplates.id }).from(productTaskTemplates).where(and(eq(productTaskTemplates.taskType, genType), eq(productTaskTemplates.status, 'active'), eq(productTaskTemplates.productId, item.productId)));
+            allTemplates.push(...templates);
+          } else if (item.bundleId) {
+            const bundleTemplates = await db.select({ id: productTaskTemplates.id }).from(productTaskTemplates).where(and(eq(productTaskTemplates.taskType, genType), eq(productTaskTemplates.status, 'active'), eq(productTaskTemplates.bundleId, item.bundleId)));
+            allTemplates.push(...bundleTemplates);
+            const bps = await db.select({ productId: bundleProducts.productId }).from(bundleProducts).where(eq(bundleProducts.bundleId, item.bundleId));
+            for (const bp of bps) {
+              const pTemplates = await db.select({ id: productTaskTemplates.id }).from(productTaskTemplates).where(and(eq(productTaskTemplates.taskType, genType), eq(productTaskTemplates.status, 'active'), eq(productTaskTemplates.productId, bp.productId)));
+              allTemplates.push(...pTemplates);
+            }
+          } else if (item.packageId) {
+            const pkgTemplates = await db.select({ id: productTaskTemplates.id }).from(productTaskTemplates).where(and(eq(productTaskTemplates.taskType, genType), eq(productTaskTemplates.status, 'active'), eq(productTaskTemplates.packageId, item.packageId)));
+            allTemplates.push(...pkgTemplates);
+          } else continue;
+          
+          const hasNew = allTemplates.some(t => !existingGenSet.has(`${t.id}-${genType}`));
           if (hasNew) filtered.push(item);
         }
         return filtered;

@@ -35980,9 +35980,17 @@ AgencyBoost CRM`
       }
       for (const ab of assignedBundles) {
         const [bundle] = await db.select({ name: productBundles.name }).from(productBundles).where(eq20(productBundles.id, ab.bundleId));
-        const templates = await db.select().from(productTaskTemplates).where(and18(eq20(productTaskTemplates.bundleId, ab.bundleId), eq20(productTaskTemplates.status, "active")));
-        const onboarding = templates.filter((t) => t.taskType === "onboarding");
-        const recurring = templates.filter((t) => t.taskType === "recurring");
+        const bundleLevelTemplates = await db.select().from(productTaskTemplates).where(and18(eq20(productTaskTemplates.bundleId, ab.bundleId), eq20(productTaskTemplates.status, "active")));
+        const bps = await db.select({ productId: bundleProducts.productId }).from(bundleProducts).where(eq20(bundleProducts.bundleId, ab.bundleId));
+        let productLevelTemplates = [];
+        for (const bp of bps) {
+          const pTemplates = await db.select().from(productTaskTemplates).where(and18(eq20(productTaskTemplates.productId, bp.productId), eq20(productTaskTemplates.status, "active")));
+          productLevelTemplates.push(...pTemplates);
+        }
+        const allTemplates = [...bundleLevelTemplates, ...productLevelTemplates];
+        const uniqueTemplates = allTemplates.filter((t, i, arr) => arr.findIndex((x) => x.id === t.id) === i);
+        const onboarding = uniqueTemplates.filter((t) => t.taskType === "onboarding");
+        const recurring = uniqueTemplates.filter((t) => t.taskType === "recurring");
         const onboardingNew = skipExisting ? onboarding.filter((t) => !existingSet.has(`${t.id}-onboarding`)) : onboarding;
         const recurringNew = skipExisting ? recurring.filter((t) => !existingSet.has(`${t.id}-recurring`)) : recurring;
         previewItems.push({ itemType: "bundle", itemId: ab.bundleId, name: bundle?.name || "Unknown", onboardingTemplates: onboardingNew.length, recurringTemplates: recurringNew.length, totalOnboarding: onboarding.length, totalRecurring: recurring.length });
@@ -36030,13 +36038,23 @@ AgencyBoost CRM`
         if (!skipExisting) return itemList;
         const filtered = [];
         for (const item of itemList) {
-          const conditions = [eq20(productTaskTemplates.taskType, genType), eq20(productTaskTemplates.status, "active")];
-          if (item.productId) conditions.push(eq20(productTaskTemplates.productId, item.productId));
-          else if (item.bundleId) conditions.push(eq20(productTaskTemplates.bundleId, item.bundleId));
-          else if (item.packageId) conditions.push(eq20(productTaskTemplates.packageId, item.packageId));
-          else continue;
-          const templates = await db.select({ id: productTaskTemplates.id }).from(productTaskTemplates).where(and18(...conditions));
-          const hasNew = templates.some((t) => !existingGenSet.has(`${t.id}-${genType}`));
+          let allTemplates = [];
+          if (item.productId) {
+            const templates = await db.select({ id: productTaskTemplates.id }).from(productTaskTemplates).where(and18(eq20(productTaskTemplates.taskType, genType), eq20(productTaskTemplates.status, "active"), eq20(productTaskTemplates.productId, item.productId)));
+            allTemplates.push(...templates);
+          } else if (item.bundleId) {
+            const bundleTemplates = await db.select({ id: productTaskTemplates.id }).from(productTaskTemplates).where(and18(eq20(productTaskTemplates.taskType, genType), eq20(productTaskTemplates.status, "active"), eq20(productTaskTemplates.bundleId, item.bundleId)));
+            allTemplates.push(...bundleTemplates);
+            const bps = await db.select({ productId: bundleProducts.productId }).from(bundleProducts).where(eq20(bundleProducts.bundleId, item.bundleId));
+            for (const bp of bps) {
+              const pTemplates = await db.select({ id: productTaskTemplates.id }).from(productTaskTemplates).where(and18(eq20(productTaskTemplates.taskType, genType), eq20(productTaskTemplates.status, "active"), eq20(productTaskTemplates.productId, bp.productId)));
+              allTemplates.push(...pTemplates);
+            }
+          } else if (item.packageId) {
+            const pkgTemplates = await db.select({ id: productTaskTemplates.id }).from(productTaskTemplates).where(and18(eq20(productTaskTemplates.taskType, genType), eq20(productTaskTemplates.status, "active"), eq20(productTaskTemplates.packageId, item.packageId)));
+            allTemplates.push(...pkgTemplates);
+          } else continue;
+          const hasNew = allTemplates.some((t) => !existingGenSet.has(`${t.id}-${genType}`));
           if (hasNew) filtered.push(item);
         }
         return filtered;
