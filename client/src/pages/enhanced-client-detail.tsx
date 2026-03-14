@@ -2286,11 +2286,14 @@ function GenerateTasksDialog({ clientId, open, onOpenChange }: { clientId: strin
     if (items.length === 0) return;
     setIsGenerating(true);
     try {
-      const res = await apiRequest('POST', `/api/clients/${clientId}/generate-tasks`, {
-        selectedItems: items,
-        generationType,
-        skipExisting,
+      const res = await fetch(`/api/clients/${clientId}/generate-tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selectedItems: items, generationType, skipExisting }),
+        credentials: 'include',
+        signal: AbortSignal.timeout(120000),
       });
+      if (!res.ok) throw new Error('Failed');
       const result = await res.json();
       onOpenChange(false);
       if (result.errors?.length > 0 && result.totalTasksCreated > 0) {
