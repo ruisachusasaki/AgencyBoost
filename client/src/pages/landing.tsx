@@ -160,9 +160,9 @@ export default function LandingPage() {
                 </Button>
               </Link>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-1">
               {benefits.map((benefit) => (
-                <div key={benefit} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                <div key={benefit} className="flex items-start gap-3 py-1.5 px-3 rounded-lg hover:bg-gray-50 transition-colors">
                   <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: "hsl(179, 100%, 39%)" }} />
                   <span className="text-gray-700">{benefit}</span>
                 </div>
