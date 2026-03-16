@@ -19,7 +19,7 @@ export default function TermsOfUsePage() {
             </Link>
             <div className="flex items-center gap-3">
               <Link href="/login">
-                <Button variant="outline" size="sm">Login</Button>
+                <Button size="sm" className="text-white font-semibold" style={{ backgroundColor: "#00C7C4" }}>Login</Button>
               </Link>
             </div>
           </div>
