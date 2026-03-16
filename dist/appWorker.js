@@ -29000,8 +29000,8 @@ AgencyBoost CRM`
       }
       await db.delete(salesActivities).where(eq20(salesActivities.leadId, req.params.id));
       await db.delete(leadStageTransitions).where(eq20(leadStageTransitions.leadId, req.params.id));
+      await db.delete(deals).where(eq20(deals.leadId, req.params.id));
       await db.update(tasks).set({ leadId: null }).where(eq20(tasks.leadId, req.params.id));
-      await db.update(deals).set({ leadId: null }).where(eq20(deals.leadId, req.params.id));
       await db.update(quotes).set({ leadId: null }).where(eq20(quotes.leadId, req.params.id));
       await db.update(proposals).set({ leadId: null }).where(eq20(proposals.leadId, req.params.id));
       const deletedRows = await db.delete(leads).where(eq20(leads.id, req.params.id));
@@ -29045,8 +29045,8 @@ AgencyBoost CRM`
           }
           await db.delete(salesActivities).where(eq20(salesActivities.leadId, leadId));
           await db.delete(leadStageTransitions).where(eq20(leadStageTransitions.leadId, leadId));
+          await db.delete(deals).where(eq20(deals.leadId, leadId));
           await db.update(tasks).set({ leadId: null }).where(eq20(tasks.leadId, leadId));
-          await db.update(deals).set({ leadId: null }).where(eq20(deals.leadId, leadId));
           await db.update(quotes).set({ leadId: null }).where(eq20(quotes.leadId, leadId));
           await db.update(proposals).set({ leadId: null }).where(eq20(proposals.leadId, leadId));
           await db.delete(leads).where(eq20(leads.id, leadId));
