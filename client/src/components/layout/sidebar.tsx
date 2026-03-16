@@ -36,7 +36,7 @@ interface SidebarProps {
 }
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: Home },
+  { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "Clients", href: "/clients", icon: Users },
   { name: "Marketing", href: "/marketing", icon: Megaphone },
   { name: "Sales", href: "/sales", icon: Banknote },
@@ -131,7 +131,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
     const module = moduleMap[item.href];
     
     // Always show Dashboard
-    if (item.href === "/") {
+    if (item.href === "/dashboard") {
       return true;
     }
     

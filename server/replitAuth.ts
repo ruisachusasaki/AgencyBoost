@@ -296,7 +296,7 @@ export async function setupAuth(app: Express) {
           }
           
           console.log("✅ Authentication successful for:", user.claims?.email, "-> staffId:", user.staffId);
-          res.redirect("/");
+          res.redirect("/dashboard");
         });
       });
     })(req, res, next);

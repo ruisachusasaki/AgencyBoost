@@ -9,6 +9,9 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import LoginPage from "@/pages/login";
+import LandingPage from "@/pages/landing";
+import PrivacyPolicyPage from "@/pages/privacy-policy";
+import TermsOfUsePage from "@/pages/terms-of-use";
 import AuthGate from "@/components/AuthGate";
 import Clients from "@/pages/clients";
 import EnhancedClientDetail from "@/pages/enhanced-client-detail";
@@ -96,6 +99,9 @@ function Router() {
   return (
     <Switch>
       {/* Public routes - no authentication required */}
+      <Route path="/" component={LandingPage} />
+      <Route path="/privacy" component={PrivacyPolicyPage} />
+      <Route path="/terms" component={TermsOfUsePage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
@@ -130,7 +136,7 @@ function Router() {
       <Route path="/public/ticket-form/:shortCode" component={PublicTicketForm} />
       
       {/* Protected routes - authentication required */}
-      <Route path="/">
+      <Route path="/dashboard">
         {() => (
           <AuthGate>
             <MainLayout>

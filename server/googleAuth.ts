@@ -411,7 +411,7 @@ export async function setupAuth(app: Express) {
         }
 
         console.log("✅ Authentication successful for:", userInfo.email, "-> staffId:", staffMember.id);
-        res.redirect("/");
+        res.redirect("/dashboard");
       });
     } catch (error: any) {
       console.error("Google OAuth callback error:", error.message);

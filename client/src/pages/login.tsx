@@ -44,7 +44,7 @@ export default function LoginPage() {
       return apiRequest("POST", "/api/auth/login", data);
     },
     onSuccess: () => {
-      window.location.href = "/";
+      window.location.href = "/dashboard";
     },
     onError: (error: any) => {
       toast({

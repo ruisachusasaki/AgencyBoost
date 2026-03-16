@@ -877,8 +877,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   // GET /api/logout - Logout and redirect to login
   app.get("/api/logout", (req, res) => {
     req.session = null;
-    // Redirect to a login page or home page
-    res.redirect("/");
+    res.redirect("/login");
   });
 
   // GET /api/auth/me - Return current user profile and permissions

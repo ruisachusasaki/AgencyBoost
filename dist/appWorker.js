@@ -25000,7 +25000,7 @@ AgencyBoost CRM`
   });
   app2.get("/api/logout", (req, res) => {
     req.session = null;
-    res.redirect("/");
+    res.redirect("/login");
   });
   app2.get("/api/auth/me", requireAuth(), async (req, res) => {
     try {
@@ -57944,7 +57944,7 @@ async function setupAuth(app2) {
           return res.redirect("/login?error=session_failed");
         }
         console.log("\u2705 Authentication successful for:", userInfo.email, "-> staffId:", staffMember.id);
-        res.redirect("/");
+        res.redirect("/dashboard");
       });
     } catch (error2) {
       console.error("Google OAuth callback error:", error2.message);
