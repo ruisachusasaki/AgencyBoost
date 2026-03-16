@@ -155,7 +155,7 @@ function ContactSection() {
                 onCheckedChange={(checked) => setTcpaConsent(checked === true)}
                 className="mt-0.5 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-teal-600"
               />
-              <label htmlFor="tcpa-consent" className="text-xs text-white/70 leading-relaxed cursor-pointer">
+              <label htmlFor="tcpa-consent" className="text-xs leading-relaxed cursor-pointer" style={{ color: "#111827" }}>
                 By checking this box, I consent to receive calls, text messages, and/or emails from Boost Mode Media LLC 
                 at the contact information provided. I understand that these communications may be generated using an 
                 automated system and that consent is not a condition of purchase. Message and data rates may apply. 
