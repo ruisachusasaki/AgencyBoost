@@ -192,7 +192,7 @@ export default function PrivacyPolicyPage() {
               </p>
               <div className="mt-4 p-6 bg-gray-50 rounded-lg border border-gray-100">
                 <p className="font-semibold text-gray-900">Media Optimizers, LLC</p>
-                <p className="text-gray-700 mt-1">Email: joe@boostmode.com</p>
+                <p className="text-gray-700 mt-1">Email: support@themediaoptimizers.com</p>
                 <p className="text-gray-700">Website: agencyboost.app</p>
               </div>
             </section>
