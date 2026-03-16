@@ -2994,11 +2994,34 @@ export default function ProductsSettings() {
                 {/* Product-Level Templates */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Package className="w-5 h-5" />
-                      Task Templates
-                    </CardTitle>
-                    <CardDescription>Task templates that auto-generate when a product is assigned to a client</CardDescription>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Package className="w-5 h-5" />
+                          Task Templates
+                        </CardTitle>
+                        <CardDescription className="mt-1.5">Task templates that auto-generate when a product is assigned to a client</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const allKeys = new Set(products.map((p: Product) => `product-${p.id}`));
+                            setExpandedTaskMappingItems(allKeys);
+                          }}
+                        >
+                          Expand All
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setExpandedTaskMappingItems(new Set())}
+                        >
+                          Collapse All
+                        </Button>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {products.length === 0 ? (
