@@ -206,7 +206,7 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-3">
               <Link href="/login">
-                <Button size="sm" variant="outline" className="border-gray-200 bg-white hover:bg-gray-50 font-semibold" style={{ color: "hsl(179, 100%, 39%)" }}>
+                <Button size="sm" className="text-white font-semibold" style={{ backgroundColor: "#00C7C4" }}>
                   Login
                 </Button>
               </Link>
