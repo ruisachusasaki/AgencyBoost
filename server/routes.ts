@@ -24847,6 +24847,21 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  // Landing page contact inquiry
+  app.post("/api/public/contact-inquiry", async (req, res) => {
+    try {
+      const { firstName, lastName, email, phone, tcpaConsent } = req.body;
+      if (!firstName || !lastName || !email || !phone) {
+        return res.status(400).json({ error: "All fields are required" });
+      }
+      console.log("📬 New contact inquiry:", { firstName, lastName, email, phone, tcpaConsent: !!tcpaConsent, timestamp: new Date().toISOString() });
+      res.json({ success: true, message: "Thank you for your interest! We'll be in touch soon." });
+    } catch (error: any) {
+      console.error("Contact inquiry error:", error);
+      res.status(500).json({ error: "Failed to submit inquiry" });
+    }
+  });
+
   // Simple in-memory rate limiting for public survey submissions
   const surveySubmissionRateLimit = new Map<string, { count: number; resetAt: number }>();
   const SURVEY_RATE_LIMIT = 10; // max submissions per minute

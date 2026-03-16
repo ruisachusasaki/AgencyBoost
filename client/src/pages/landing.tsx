@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { 
   ArrowRight, BarChart3, Users, Target, CheckCircle2, Zap, Shield, 
   Clock, TrendingUp, Layers, CalendarDays, ListChecks, Rocket,
-  ChevronRight, Star
+  ChevronRight, Star, Send, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const features = [
   {
@@ -64,6 +67,129 @@ const benefits = [
   "Ticket system for support requests",
   "HR module for hiring and contractor management"
 ];
+
+function ContactSection() {
+  const [formData, setFormData] = useState({ firstName: "", lastName: "", email: "", phone: "" });
+  const [tcpaConsent, setTcpaConsent] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone) {
+      setError("Please fill in all fields.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/public/contact-inquiry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...formData, tcpaConsent }),
+      });
+      if (!res.ok) throw new Error("Submission failed");
+      setSubmitted(true);
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <section className="py-20 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: "hsl(179, 100%, 39%)" }}>
+      <div className="max-w-4xl mx-auto text-center">
+        <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+          Ready to boost your agency?
+        </h2>
+        <p className="text-lg text-white/80 mb-8 max-w-2xl mx-auto">
+          Join marketing agencies that use AgencyBoost to streamline operations, 
+          automate workflows, and deliver better results for their clients.
+        </p>
+
+        {submitted ? (
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 max-w-lg mx-auto border border-white/20">
+            <CheckCircle2 className="w-12 h-12 text-white mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">Thank you!</h3>
+            <p className="text-white/80">We received your inquiry and will be in touch soon.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="bg-white/10 backdrop-blur-sm rounded-xl p-8 max-w-lg mx-auto border border-white/20">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <Input
+                placeholder="First Name"
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                className="bg-white text-gray-900 border-0 placeholder:text-gray-400"
+              />
+              <Input
+                placeholder="Last Name"
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                className="bg-white text-gray-900 border-0 placeholder:text-gray-400"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <Input
+                type="email"
+                placeholder="Email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="bg-white text-gray-900 border-0 placeholder:text-gray-400"
+              />
+              <Input
+                type="tel"
+                placeholder="Phone"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="bg-white text-gray-900 border-0 placeholder:text-gray-400"
+              />
+            </div>
+
+            <div className="flex items-start gap-3 mb-6 text-left">
+              <Checkbox
+                id="tcpa-consent"
+                checked={tcpaConsent}
+                onCheckedChange={(checked) => setTcpaConsent(checked === true)}
+                className="mt-0.5 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-teal-600"
+              />
+              <label htmlFor="tcpa-consent" className="text-xs text-white/70 leading-relaxed cursor-pointer">
+                By checking this box, I consent to receive calls, text messages, and/or emails from Boost Mode Media LLC 
+                at the contact information provided. I understand that these communications may be generated using an 
+                automated system and that consent is not a condition of purchase. Message and data rates may apply. 
+                I can opt out at any time by replying STOP or contacting us directly.
+              </label>
+            </div>
+
+            {error && <p className="text-red-200 text-sm mb-4">{error}</p>}
+
+            <Button
+              type="submit"
+              size="lg"
+              disabled={isSubmitting}
+              className="w-full px-8 py-6 text-lg font-semibold bg-white hover:bg-gray-100"
+              style={{ color: "hsl(179, 100%, 39%)" }}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 w-5 h-5 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  Get Started
+                  <Send className="ml-2 w-5 h-5" />
+                </>
+              )}
+            </Button>
+          </form>
+        )}
+      </div>
+    </section>
+  );
+}
 
 export default function LandingPage() {
   return (
@@ -172,24 +298,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: "hsl(179, 100%, 39%)" }}>
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            Ready to boost your agency?
-          </h2>
-          <p className="text-lg text-white/80 mb-8 max-w-2xl mx-auto">
-            Join marketing agencies that use AgencyBoost to streamline operations, 
-            automate workflows, and deliver better results for their clients.
-          </p>
-          <Link href="/login">
-            <Button size="lg" variant="secondary" className="px-8 py-6 text-lg font-semibold bg-white hover:bg-gray-100" style={{ color: "hsl(179, 100%, 39%)" }}>
-              Get Started Now
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-          </Link>
-        </div>
-      </section>
+      {/* CTA Section with Contact Form */}
+      <ContactSection />
 
       {/* Footer */}
       <footer className="py-12 px-4 sm:px-6 lg:px-8 bg-gray-900 text-gray-400">
