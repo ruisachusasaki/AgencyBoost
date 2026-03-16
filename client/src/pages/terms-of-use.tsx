@@ -175,7 +175,7 @@ export default function TermsOfUsePage() {
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-3">11. Limitation of Liability</h2>
               <p className="text-gray-700 leading-relaxed">
-                TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, BOOST MODE MEDIA LLC AND ITS OFFICERS, 
+                TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, MEDIA OPTIMIZERS, LLC AND ITS OFFICERS, 
                 DIRECTORS, EMPLOYEES, AGENTS, AND AFFILIATES SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, 
                 SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, 
                 DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, ARISING OUT OF OR IN CONNECTION WITH YOUR 
