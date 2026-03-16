@@ -80,7 +80,7 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-3">
               <Link href="/login">
-                <Button variant="outline" size="sm">
+                <Button size="sm" className="text-white" style={{ backgroundColor: "hsl(179, 100%, 39%)" }}>
                   Login
                 </Button>
               </Link>
