@@ -46,7 +46,7 @@ export default function TermsOfUsePage() {
               <h2 className="text-2xl font-semibold text-gray-900 mb-3">1. Acceptance of Terms</h2>
               <p className="text-gray-700 leading-relaxed">
                 These Terms of Use ("Terms") constitute a legally binding agreement between you ("User," 
-                "you," or "your") and Boost Mode Media LLC ("Company," "we," "us," or "our"), governing 
+                "you," or "your") and Media Optimizers, LLC ("Company," "we," "us," or "our"), governing 
                 your access to and use of the AgencyBoost platform (accessible at agencyboost.app), 
                 including all associated services, features, and content (collectively, the "Service"). 
                 By creating an account, accessing, or using the Service, you acknowledge that you have 
@@ -123,10 +123,10 @@ export default function TermsOfUsePage() {
               <h2 className="text-2xl font-semibold text-gray-900 mb-3">6. Intellectual Property</h2>
               <p className="text-gray-700 leading-relaxed">
                 The Service and its original content, features, and functionality are and will remain the 
-                exclusive property of Boost Mode Media LLC. The Service is protected by copyright, trademark, 
+                exclusive property of Media Optimizers, LLC. The Service is protected by copyright, trademark, 
                 trade secret, and other intellectual property laws. The AgencyBoost name, logo, and all 
                 related names, logos, product and service names, designs, and slogans are trademarks of 
-                Boost Mode Media LLC. You may not use these marks without our prior written permission.
+                Media Optimizers, LLC. You may not use these marks without our prior written permission.
               </p>
             </section>
 
@@ -189,7 +189,7 @@ export default function TermsOfUsePage() {
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-3">12. Indemnification</h2>
               <p className="text-gray-700 leading-relaxed">
-                You agree to indemnify, defend, and hold harmless Boost Mode Media LLC, its officers, 
+                You agree to indemnify, defend, and hold harmless Media Optimizers, LLC, its officers, 
                 directors, employees, agents, and affiliates from and against any and all claims, damages, 
                 losses, liabilities, costs, and expenses (including reasonable attorneys' fees) arising out 
                 of or related to your use of the Service, your violation of these Terms, your violation of 
@@ -255,7 +255,7 @@ export default function TermsOfUsePage() {
                 If you have any questions about these Terms, please contact us at:
               </p>
               <div className="mt-4 p-6 bg-gray-50 rounded-lg border border-gray-100">
-                <p className="font-semibold text-gray-900">Boost Mode Media LLC</p>
+                <p className="font-semibold text-gray-900">Media Optimizers, LLC</p>
                 <p className="text-gray-700 mt-1">Email: joe@boostmode.com</p>
                 <p className="text-gray-700">Website: agencyboost.app</p>
               </div>
@@ -280,7 +280,7 @@ export default function TermsOfUsePage() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto mt-6 pt-6 border-t border-gray-800 text-center text-sm">
-          <p>&copy; {new Date().getFullYear()} Boost Mode Media LLC. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Media Optimizers, LLC. All rights reserved.</p>
         </div>
       </footer>
     </div>

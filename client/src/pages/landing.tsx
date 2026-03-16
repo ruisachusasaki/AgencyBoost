@@ -156,7 +156,7 @@ function ContactSection() {
                 className="mt-0.5 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-teal-600"
               />
               <label htmlFor="tcpa-consent" className="text-xs leading-relaxed cursor-pointer" style={{ color: "#111827" }}>
-                By checking this box, I consent to receive calls, text messages, and/or emails from Boost Mode Media LLC 
+                By checking this box, I consent to receive calls, text messages, and/or emails from Media Optimizers, LLC 
                 at the contact information provided. I understand that these communications may be generated using an 
                 automated system and that consent is not a condition of purchase. Message and data rates may apply. 
                 I can opt out at any time by replying STOP or contacting us directly.
@@ -324,8 +324,8 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-gray-800 text-center text-sm">
-            <p>&copy; {new Date().getFullYear()} Boost Mode Media LLC. All rights reserved.</p>
-            <p className="mt-1 text-gray-500">AgencyBoost is a product of Boost Mode Media LLC.</p>
+            <p>&copy; {new Date().getFullYear()} Media Optimizers, LLC. All rights reserved.</p>
+            <p className="mt-1 text-gray-500">AgencyBoost is a product of Media Optimizers, LLC.</p>
           </div>
         </div>
       </footer>

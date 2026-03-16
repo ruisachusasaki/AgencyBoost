@@ -45,7 +45,7 @@ export default function PrivacyPolicyPage() {
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-3">1. Introduction</h2>
               <p className="text-gray-700 leading-relaxed">
-                Boost Mode Media LLC ("Company," "we," "us," or "our") operates the AgencyBoost platform 
+                Media Optimizers, LLC ("Company," "we," "us," or "our") operates the AgencyBoost platform 
                 (accessible at agencyboost.app), a customer relationship management and agency operations 
                 platform ("Service"). This Privacy Policy explains how we collect, use, disclose, and 
                 safeguard your information when you use our Service. By accessing or using AgencyBoost, 
@@ -191,7 +191,7 @@ export default function PrivacyPolicyPage() {
                 data practices, please contact us at:
               </p>
               <div className="mt-4 p-6 bg-gray-50 rounded-lg border border-gray-100">
-                <p className="font-semibold text-gray-900">Boost Mode Media LLC</p>
+                <p className="font-semibold text-gray-900">Media Optimizers, LLC</p>
                 <p className="text-gray-700 mt-1">Email: joe@boostmode.com</p>
                 <p className="text-gray-700">Website: agencyboost.app</p>
               </div>
@@ -216,7 +216,7 @@ export default function PrivacyPolicyPage() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto mt-6 pt-6 border-t border-gray-800 text-center text-sm">
-          <p>&copy; {new Date().getFullYear()} Boost Mode Media LLC. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Media Optimizers, LLC. All rights reserved.</p>
         </div>
       </footer>
     </div>
