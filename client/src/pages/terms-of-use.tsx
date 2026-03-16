@@ -243,8 +243,8 @@ export default function TermsOfUsePage() {
               <h2 className="text-2xl font-semibold text-gray-900 mb-3">17. Entire Agreement</h2>
               <p className="text-gray-700 leading-relaxed">
                 These Terms, together with our Privacy Policy and any other legal notices or agreements 
-                published by us on the Service, constitute the entire agreement between you and Boost Mode 
-                Media LLC regarding your use of the Service and supersede all prior agreements and 
+                published by us on the Service, constitute the entire agreement between you and Media 
+                Optimizers, LLC regarding your use of the Service and supersede all prior agreements and 
                 understandings, whether written or oral.
               </p>
             </section>
