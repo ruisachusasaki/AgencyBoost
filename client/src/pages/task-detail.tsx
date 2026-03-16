@@ -1475,26 +1475,24 @@ export default function TaskDetail() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Date</Label>
-              <Popover open={manualTimeDateOpen} onOpenChange={setManualTimeDateOpen} modal={false}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !manualTimeDate && "text-muted-foreground"
-                    )}
-                    data-testid="input-manual-time-date"
-                    onPointerDown={(e) => e.stopPropagation()}
-                  >
-                    {manualTimeDate ? (
-                      format(new Date(manualTimeDate + 'T12:00:00'), "MMM d, yyyy")
-                    ) : (
-                      "Select date"
-                    )}
-                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start" onPointerDownOutside={(e) => e.preventDefault()} onInteractOutside={(e) => e.preventDefault()} style={{ zIndex: 9999 }}>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !manualTimeDate && "text-muted-foreground"
+                )}
+                data-testid="input-manual-time-date"
+                onClick={() => setManualTimeDateOpen(!manualTimeDateOpen)}
+              >
+                {manualTimeDate ? (
+                  format(new Date(manualTimeDate + 'T12:00:00'), "MMM d, yyyy")
+                ) : (
+                  "Select date"
+                )}
+                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+              </Button>
+              {manualTimeDateOpen && (
+                <div className="border rounded-md p-0 w-fit">
                   <Calendar
                     mode="single"
                     selected={manualTimeDate ? new Date(manualTimeDate + 'T12:00:00') : undefined}
@@ -1509,10 +1507,9 @@ export default function TaskDetail() {
                       const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
                       return date > todayMidnight;
                     }}
-                    initialFocus
                   />
-                </PopoverContent>
-              </Popover>
+                </div>
+              )}
             </div>
             
             <div className="space-y-2">
