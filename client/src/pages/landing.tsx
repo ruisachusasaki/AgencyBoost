@@ -79,12 +79,6 @@ export default function LandingPage() {
               <span className="text-xl font-bold text-gray-900">AgencyBoost</span>
             </div>
             <div className="flex items-center gap-3">
-              <Link href="/privacy">
-                <span className="text-sm text-gray-500 hover:text-gray-700 cursor-pointer hidden sm:inline">Privacy</span>
-              </Link>
-              <Link href="/terms">
-                <span className="text-sm text-gray-500 hover:text-gray-700 cursor-pointer hidden sm:inline">Terms</span>
-              </Link>
               <Link href="/login">
                 <Button variant="outline" size="sm">
                   Login
