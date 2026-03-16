@@ -28998,6 +28998,12 @@ AgencyBoost CRM`
       if (!lead) {
         return res.status(404).json({ message: "Lead not found" });
       }
+      await db.delete(salesActivities).where(eq20(salesActivities.leadId, req.params.id));
+      await db.delete(leadStageTransitions).where(eq20(leadStageTransitions.leadId, req.params.id));
+      await db.update(tasks).set({ leadId: null }).where(eq20(tasks.leadId, req.params.id));
+      await db.update(deals).set({ leadId: null }).where(eq20(deals.leadId, req.params.id));
+      await db.update(quotes).set({ leadId: null }).where(eq20(quotes.leadId, req.params.id));
+      await db.update(proposals).set({ leadId: null }).where(eq20(proposals.leadId, req.params.id));
       const deletedRows = await db.delete(leads).where(eq20(leads.id, req.params.id));
       if (deletedRows.rowCount === 0) {
         return res.status(404).json({ message: "Lead not found" });
@@ -29037,13 +29043,12 @@ AgencyBoost CRM`
             errors.push(`Lead ${leadId} not found`);
             continue;
           }
-          const leadDeals = await db.select({ id: deals.id }).from(deals).where(eq20(deals.leadId, leadId));
-          if (leadDeals.length > 0) {
-            errors.push(`Lead "${lead.name || lead.email}" has ${leadDeals.length} deal(s) and cannot be deleted. Please remove the deals first.`);
-            continue;
-          }
-          await db.update(quotes).set({ leadId: null }).where(eq20(quotes.leadId, leadId));
+          await db.delete(salesActivities).where(eq20(salesActivities.leadId, leadId));
+          await db.delete(leadStageTransitions).where(eq20(leadStageTransitions.leadId, leadId));
           await db.update(tasks).set({ leadId: null }).where(eq20(tasks.leadId, leadId));
+          await db.update(deals).set({ leadId: null }).where(eq20(deals.leadId, leadId));
+          await db.update(quotes).set({ leadId: null }).where(eq20(quotes.leadId, leadId));
+          await db.update(proposals).set({ leadId: null }).where(eq20(proposals.leadId, leadId));
           await db.delete(leads).where(eq20(leads.id, leadId));
           deletedCount++;
           await createAuditLog(
@@ -43089,6 +43094,19 @@ ${appointment.description || ""}
     } catch (error) {
       console.error("Error fetching public survey:", error);
       res.status(500).json({ message: "Failed to fetch survey" });
+    }
+  });
+  app2.post("/api/public/contact-inquiry", async (req, res) => {
+    try {
+      const { firstName, lastName, email, phone, tcpaConsent } = req.body;
+      if (!firstName || !lastName || !email || !phone) {
+        return res.status(400).json({ error: "All fields are required" });
+      }
+      console.log("\u{1F4EC} New contact inquiry:", { firstName, lastName, email, phone, tcpaConsent: !!tcpaConsent, timestamp: (/* @__PURE__ */ new Date()).toISOString() });
+      res.json({ success: true, message: "Thank you for your interest! We'll be in touch soon." });
+    } catch (error) {
+      console.error("Contact inquiry error:", error);
+      res.status(500).json({ error: "Failed to submit inquiry" });
     }
   });
   const surveySubmissionRateLimit = /* @__PURE__ */ new Map();

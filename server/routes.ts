@@ -6092,6 +6092,14 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         return res.status(404).json({ message: "Lead not found" });
       }
       
+      // Delete related records that don't have CASCADE delete
+      await db.delete(salesActivities).where(eq(salesActivities.leadId, req.params.id));
+      await db.delete(leadStageTransitions).where(eq(leadStageTransitions.leadId, req.params.id));
+      await db.update(tasks).set({ leadId: null }).where(eq(tasks.leadId, req.params.id));
+      await db.update(deals).set({ leadId: null }).where(eq(deals.leadId, req.params.id));
+      await db.update(quotes).set({ leadId: null }).where(eq(quotes.leadId, req.params.id));
+      await db.update(proposals).set({ leadId: null }).where(eq(proposals.leadId, req.params.id));
+
       const deletedRows = await db.delete(leads)
         .where(eq(leads.id, req.params.id));
       
@@ -6143,21 +6151,13 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             continue;
           }
 
-          // Check if lead has associated deals (deals.leadId is NOT NULL, so we can't delete)
-          const leadDeals = await db.select({ id: deals.id }).from(deals).where(eq(deals.leadId, leadId));
-          if (leadDeals.length > 0) {
-            errors.push(`Lead "${lead.name || lead.email}" has ${leadDeals.length} deal(s) and cannot be deleted. Please remove the deals first.`);
-            continue;
-          }
-
           // Delete or nullify related records that would block deletion
-          // Nullify leadId on quotes (leadId is nullable)
-          await db.update(quotes).set({ leadId: null }).where(eq(quotes.leadId, leadId));
-          
-          // Nullify leadId on tasks (leadId is nullable)
+          await db.delete(salesActivities).where(eq(salesActivities.leadId, leadId));
+          await db.delete(leadStageTransitions).where(eq(leadStageTransitions.leadId, leadId));
           await db.update(tasks).set({ leadId: null }).where(eq(tasks.leadId, leadId));
-
-          // Now delete the lead (cascade will handle: leadStageTransitions, salesActivities, leadAppointments, leadNotes)
+          await db.update(deals).set({ leadId: null }).where(eq(deals.leadId, leadId));
+          await db.update(quotes).set({ leadId: null }).where(eq(quotes.leadId, leadId));
+          await db.update(proposals).set({ leadId: null }).where(eq(proposals.leadId, leadId));
           await db.delete(leads).where(eq(leads.id, leadId));
           deletedCount++;
 
