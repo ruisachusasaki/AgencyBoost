@@ -52469,6 +52469,7 @@ ${appointment.description || ""}
         clientBudget: quotes.clientBudget,
         desiredMargin: quotes.desiredMargin,
         totalCost: quotes.totalCost,
+        buildFee: quotes.buildFee,
         oneTimeCost: quotes.oneTimeCost,
         monthlyCost: quotes.monthlyCost,
         status: quotes.status,

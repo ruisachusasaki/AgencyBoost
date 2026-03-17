@@ -37718,6 +37718,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           clientBudget: quotes.clientBudget,
           desiredMargin: quotes.desiredMargin,
           totalCost: quotes.totalCost,
+          buildFee: quotes.buildFee,
           oneTimeCost: quotes.oneTimeCost,
           monthlyCost: quotes.monthlyCost,
           status: quotes.status,
