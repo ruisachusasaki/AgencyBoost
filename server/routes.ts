@@ -15502,6 +15502,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           quantity: bundleProducts.quantity,
           productName: products.name,
           productDescription: products.description,
+          productSalesTooltip: products.salesTooltip,
           productCost: products.cost,
           productType: products.type
         })
@@ -16122,6 +16123,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
                 productPrice: products.price,
                 productCost: products.cost,
                 productType: products.type,
+                productSalesTooltip: products.salesTooltip,
               })
               .from(bundleProducts)
               .leftJoin(products, eq(bundleProducts.productId, products.id))

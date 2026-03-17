@@ -2217,14 +2217,14 @@ export default function Sales() {
                                 </div>
                                 {item.type === 'product' && item.productId && (() => {
                                   const selectedProduct = products.find((p: any) => p.id === item.productId);
-                                  return selectedProduct?.description ? (
+                                  return selectedProduct?.salesTooltip ? (
                                     <TooltipProvider>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
-                                          <Info className="h-4 w-4 text-muted-foreground shrink-0 cursor-help mt-6" />
+                                          <Info className="h-4 w-4 text-amber-500 shrink-0 cursor-help mt-6" />
                                         </TooltipTrigger>
                                         <TooltipContent side="top" className="max-w-xs">
-                                          <p className="text-sm">{selectedProduct.description}</p>
+                                          <p className="text-sm">{selectedProduct.salesTooltip}</p>
                                         </TooltipContent>
                                       </Tooltip>
                                     </TooltipProvider>
@@ -2266,14 +2266,14 @@ export default function Sales() {
                                           <div className="flex-1">
                                             <div className="flex items-center gap-1">
                                               <p className="text-sm font-medium">{bundleProduct.productName}</p>
-                                              {bundleProduct.productDescription && (
+                                              {bundleProduct.productSalesTooltip && (
                                                 <TooltipProvider>
                                                   <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                      <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 cursor-help" />
+                                                      <Info className="h-3.5 w-3.5 text-amber-500 shrink-0 cursor-help" />
                                                     </TooltipTrigger>
                                                     <TooltipContent side="top" className="max-w-xs">
-                                                      <p className="text-sm">{bundleProduct.productDescription}</p>
+                                                      <p className="text-sm">{bundleProduct.productSalesTooltip}</p>
                                                     </TooltipContent>
                                                   </Tooltip>
                                                 </TooltipProvider>
@@ -2366,14 +2366,14 @@ export default function Sales() {
                                                     <div key={bp.id || bp.productId} className="flex items-center justify-between text-xs text-muted-foreground">
                                                       <span className="flex-1 flex items-center gap-1">
                                                         {bp.productName} {bp.productType === 'recurring' ? '(recurring)' : ''}
-                                                        {bp.productDescription && (
+                                                        {bp.productSalesTooltip && (
                                                           <TooltipProvider>
                                                             <Tooltip>
                                                               <TooltipTrigger asChild>
-                                                                <Info className="h-3 w-3 text-muted-foreground shrink-0 cursor-help" />
+                                                                <Info className="h-3 w-3 text-amber-500 shrink-0 cursor-help" />
                                                               </TooltipTrigger>
                                                               <TooltipContent side="top" className="max-w-xs">
-                                                                <p className="text-sm">{bp.productDescription}</p>
+                                                                <p className="text-sm">{bp.productSalesTooltip}</p>
                                                               </TooltipContent>
                                                             </Tooltip>
                                                           </TooltipProvider>
@@ -2405,14 +2405,14 @@ export default function Sales() {
                                           <div className="flex-1">
                                             <div className="flex items-center gap-1">
                                               <p className="text-sm font-medium">{itemName}</p>
-                                              {pkgItem.product?.description && (
+                                              {pkgItem.product?.salesTooltip && (
                                                 <TooltipProvider>
                                                   <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                      <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 cursor-help" />
+                                                      <Info className="h-3.5 w-3.5 text-amber-500 shrink-0 cursor-help" />
                                                     </TooltipTrigger>
                                                     <TooltipContent side="top" className="max-w-xs">
-                                                      <p className="text-sm">{pkgItem.product.description}</p>
+                                                      <p className="text-sm">{pkgItem.product.salesTooltip}</p>
                                                     </TooltipContent>
                                                   </Tooltip>
                                                 </TooltipProvider>

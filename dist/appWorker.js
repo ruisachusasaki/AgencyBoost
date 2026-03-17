@@ -654,6 +654,7 @@ var init_schema = __esm({
       categoryId: varchar("category_id").references(() => productCategories.id),
       status: text("status").notNull().default("active"),
       // active, inactive
+      salesTooltip: text("sales_tooltip"),
       usageCount: integer("usage_count").default(0),
       createdAt: timestamp("created_at").defaultNow(),
       updatedAt: timestamp("updated_at").defaultNow()
@@ -36270,6 +36271,7 @@ AgencyBoost CRM`
         quantity: bundleProducts.quantity,
         productName: products.name,
         productDescription: products.description,
+        productSalesTooltip: products.salesTooltip,
         productCost: products.cost,
         productType: products.type
       }).from(bundleProducts).leftJoin(products, eq20(bundleProducts.productId, products.id)).where(eq20(bundleProducts.bundleId, bundleId));
@@ -36706,7 +36708,8 @@ AgencyBoost CRM`
               productName: products.name,
               productPrice: products.price,
               productCost: products.cost,
-              productType: products.type
+              productType: products.type,
+              productSalesTooltip: products.salesTooltip
             }).from(bundleProducts).leftJoin(products, eq20(bundleProducts.productId, products.id)).where(eq20(bundleProducts.bundleId, item.bundleId));
             return { ...item, product: null, bundle: bundle ? { ...bundle, products: bundleProds } : null };
           }

@@ -216,6 +216,7 @@ export const products = pgTable("products", {
   type: text("type").notNull(), // one_time, recurring
   categoryId: varchar("category_id").references(() => productCategories.id),
   status: text("status").notNull().default("active"), // active, inactive
+  salesTooltip: text("sales_tooltip"),
   usageCount: integer("usage_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

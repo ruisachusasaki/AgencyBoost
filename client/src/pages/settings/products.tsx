@@ -966,6 +966,7 @@ export default function ProductsSettings() {
     const data = {
       name,
       description: (formData.get("description") as string)?.trim() || "",
+      salesTooltip: (formData.get("salesTooltip") as string)?.trim() || null,
       price,
       cost: formData.get("cost") as string,
       type: createFormType,
@@ -1014,6 +1015,7 @@ export default function ProductsSettings() {
     const data = {
       name,
       description: (formData.get("description") as string)?.trim() || "",
+      salesTooltip: (formData.get("salesTooltip") as string)?.trim() || null,
       price: editFormPrice || "0",
       cost: editFormCost || null,
       type: editFormType,
@@ -1675,6 +1677,10 @@ export default function ProductsSettings() {
                     <Label htmlFor="description">Description</Label>
                     <Textarea id="description" name="description" />
                   </div>
+                  <div>
+                    <Label htmlFor="salesTooltip">Sales Tooltip (internal only)</Label>
+                    <Textarea id="salesTooltip" name="salesTooltip" placeholder="Help your sales team understand this product, recommended quantities, etc." className="text-sm" rows={2} />
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="price">Price</Label>
@@ -1779,6 +1785,17 @@ export default function ProductsSettings() {
                       id="edit-description" 
                       name="description" 
                       defaultValue={editingProduct.description || ""}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-salesTooltip">Sales Tooltip (internal only)</Label>
+                    <Textarea 
+                      id="edit-salesTooltip" 
+                      name="salesTooltip" 
+                      defaultValue={editingProduct.salesTooltip || ""}
+                      placeholder="Help your sales team understand this product, recommended quantities, etc."
+                      className="text-sm"
+                      rows={2}
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
