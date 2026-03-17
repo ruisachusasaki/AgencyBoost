@@ -22,7 +22,8 @@ import {
   Eye, EyeOff, Users, Target, Briefcase, Building, ShoppingBag, TrendingUp,
   Monitor, FileX, User, Clock, Mail, Phone, Globe, MapPin, Calendar,
   PenTool, Palette, Hash, Heart, Star, Zap, Coffee, Lightbulb, Rocket,
-  Shield, ShieldCheck, ExternalLink, ChevronUp, ChevronDown, ChevronLeft, ChevronRight
+  Shield, ShieldCheck, ExternalLink, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
+  Loader2, Image as ImageIcon, Paintbrush, X, Save
 } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -1556,8 +1557,290 @@ function ClientHealthSettings() {
   );
 }
 
+const portalColorPresets = [
+  { name: "Teal", value: "#00C9C6" },
+  { name: "Blue", value: "#3B82F6" },
+  { name: "Indigo", value: "#6366F1" },
+  { name: "Purple", value: "#8B5CF6" },
+  { name: "Pink", value: "#EC4899" },
+  { name: "Red", value: "#EF4444" },
+  { name: "Orange", value: "#F97316" },
+  { name: "Green", value: "#22C55E" },
+  { name: "Slate", value: "#475569" },
+];
+
+function ClientPortalBranding() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [logoUrl, setLogoUrl] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [primaryColor, setPrimaryColor] = useState("#00C9C6");
+  const [accentColor, setAccentColor] = useState("#F59E0B");
+  const [welcomeMessage, setWelcomeMessage] = useState("");
+  const [footerText, setFooterText] = useState("");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  const { data: branding, isLoading } = useQuery<any>({
+    queryKey: ['/api/settings/client-portal-branding'],
+  });
+
+  useEffect(() => {
+    if (branding) {
+      setLogoUrl(branding.logoUrl || "");
+      setCompanyName(branding.companyName || "");
+      setPrimaryColor(branding.primaryColor || "#00C9C6");
+      setAccentColor(branding.accentColor || "#F59E0B");
+      setWelcomeMessage(branding.welcomeMessage || "");
+      setFooterText(branding.footerText || "");
+    }
+  }, [branding]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("PUT", "/api/settings/client-portal-branding", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/client-portal-branding'] });
+      toast({ title: "Branding Saved", description: "Client portal branding has been updated." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to save branding", variant: "destructive" });
+    },
+  });
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await fetch('/api/settings/client-portal-branding/logo-upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Upload failed');
+      const data = await response.json();
+      setLogoUrl(data.fileUrl);
+      toast({ title: "Logo uploaded" });
+    } catch {
+      toast({ title: "Upload failed", variant: "destructive" });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleSave = () => {
+    const colorToSave = /^#[0-9A-Fa-f]{6}$/.test(primaryColor) ? primaryColor : "#00C9C6";
+    const accentToSave = /^#[0-9A-Fa-f]{6}$/.test(accentColor) ? accentColor : "#F59E0B";
+    saveMutation.mutate({
+      logoUrl,
+      companyName,
+      primaryColor: colorToSave,
+      accentColor: accentToSave,
+      welcomeMessage,
+      footerText,
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Paintbrush className="h-5 w-5" />
+            Branding & Style
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Customize the look and feel of the client portal. Changes apply to all clients.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-8">
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Company Logo</Label>
+            <p className="text-sm text-muted-foreground">Upload your company logo to display in the client portal header.</p>
+            <div className="flex items-start gap-4">
+              {logoUrl ? (
+                <div className="relative group">
+                  <div className="w-32 h-32 border-2 border-dashed border-slate-200 rounded-lg flex items-center justify-center bg-white overflow-hidden">
+                    <img src={logoUrl} alt="Company logo" className="max-w-full max-h-full object-contain p-2" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setLogoUrl('')}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                    onChange={handleLogoUpload}
+                    disabled={uploadingLogo}
+                  />
+                  <div className="w-32 h-32 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center gap-2 text-slate-400 hover:border-primary hover:text-primary transition-colors">
+                    {uploadingLogo ? (
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    ) : (
+                      <>
+                        <ImageIcon className="h-8 w-8" />
+                        <span className="text-xs">Upload Logo</span>
+                      </>
+                    )}
+                  </div>
+                </label>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Company Name</Label>
+            <p className="text-sm text-muted-foreground">Displayed in the portal header alongside your logo.</p>
+            <Input
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              placeholder="Your Company Name"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Primary Color</Label>
+            <p className="text-sm text-muted-foreground">Used for buttons, navigation, and primary accents throughout the portal.</p>
+            <div className="flex items-center gap-3 flex-wrap">
+              {portalColorPresets.map((preset) => (
+                <button
+                  key={preset.value}
+                  onClick={() => setPrimaryColor(preset.value)}
+                  className={`w-10 h-10 rounded-full border-2 transition-all ${primaryColor === preset.value ? 'border-gray-900 scale-110 ring-2 ring-offset-2' : 'border-gray-200 hover:scale-105'}`}
+                  style={{ backgroundColor: preset.value }}
+                  title={preset.name}
+                />
+              ))}
+              <div className="flex items-center gap-2 ml-2">
+                <input
+                  type="color"
+                  value={primaryColor}
+                  onChange={(e) => setPrimaryColor(e.target.value)}
+                  className="w-10 h-10 rounded cursor-pointer border"
+                />
+                <Input
+                  value={primaryColor}
+                  onChange={(e) => setPrimaryColor(e.target.value)}
+                  className="w-28 font-mono text-sm"
+                  placeholder="#000000"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Accent Color</Label>
+            <p className="text-sm text-muted-foreground">Used for highlights, badges, and secondary elements.</p>
+            <div className="flex items-center gap-3 flex-wrap">
+              {portalColorPresets.map((preset) => (
+                <button
+                  key={preset.value}
+                  onClick={() => setAccentColor(preset.value)}
+                  className={`w-10 h-10 rounded-full border-2 transition-all ${accentColor === preset.value ? 'border-gray-900 scale-110 ring-2 ring-offset-2' : 'border-gray-200 hover:scale-105'}`}
+                  style={{ backgroundColor: preset.value }}
+                  title={preset.name}
+                />
+              ))}
+              <div className="flex items-center gap-2 ml-2">
+                <input
+                  type="color"
+                  value={accentColor}
+                  onChange={(e) => setAccentColor(e.target.value)}
+                  className="w-10 h-10 rounded cursor-pointer border"
+                />
+                <Input
+                  value={accentColor}
+                  onChange={(e) => setAccentColor(e.target.value)}
+                  className="w-28 font-mono text-sm"
+                  placeholder="#000000"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Welcome Message</Label>
+            <p className="text-sm text-muted-foreground">Greeting shown to clients when they log into the portal.</p>
+            <Textarea
+              value={welcomeMessage}
+              onChange={(e) => setWelcomeMessage(e.target.value)}
+              placeholder="Welcome to your client portal! Here you can track your projects, view tasks, and stay updated on progress."
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Footer Text</Label>
+            <p className="text-sm text-muted-foreground">Custom text displayed at the bottom of the portal.</p>
+            <Input
+              value={footerText}
+              onChange={(e) => setFooterText(e.target.value)}
+              placeholder="© 2026 Your Company. All rights reserved."
+            />
+          </div>
+
+          <div className="pt-4 border-t">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-medium">Preview</h4>
+                <p className="text-sm text-muted-foreground">A quick look at how your branding will appear</p>
+              </div>
+              <Button onClick={handleSave} disabled={saveMutation.isPending}>
+                {saveMutation.isPending ? (
+                  <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Saving...</>
+                ) : (
+                  <><Save className="h-4 w-4 mr-2" /> Save Branding</>
+                )}
+              </Button>
+            </div>
+
+            <div className="mt-4 border rounded-lg overflow-hidden">
+              <div className="p-4 flex items-center gap-3" style={{ backgroundColor: primaryColor }}>
+                {logoUrl && (
+                  <img src={logoUrl} alt="Logo preview" className="h-8 w-auto bg-white rounded px-2 py-1" />
+                )}
+                <span className="font-semibold text-white text-lg">{companyName || "Your Company"}</span>
+              </div>
+              <div className="p-6 bg-gray-50">
+                <p className="text-gray-700">{welcomeMessage || "Welcome to your client portal!"}</p>
+                <div className="mt-4 flex gap-2">
+                  <span className="px-3 py-1 text-sm rounded-full text-white" style={{ backgroundColor: primaryColor }}>Active</span>
+                  <span className="px-3 py-1 text-sm rounded-full text-white" style={{ backgroundColor: accentColor }}>In Progress</span>
+                </div>
+              </div>
+              {footerText && (
+                <div className="px-4 py-2 bg-gray-100 text-xs text-gray-500 text-center">{footerText}</div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function ClientsSettings() {
-  const [activeTab, setActiveTab] = useState<"clientBrief" | "portalAccess" | "teamAssignments" | "clientHealth" | "onboardingForm">("clientBrief");
+  const [activeTab, setActiveTab] = useState<"clientBrief" | "clientPortal" | "teamAssignments" | "clientHealth" | "onboardingForm">("clientBrief");
+  const [portalSubTab, setPortalSubTab] = useState<"access" | "branding">("access");
   const [editingSection, setEditingSection] = useState<ClientBriefSection | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -1809,16 +2092,16 @@ export default function ClientsSettings() {
               Client Brief
             </button>
             <button
-              onClick={() => setActiveTab("portalAccess")}
+              onClick={() => setActiveTab("clientPortal")}
               className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                activeTab === "portalAccess"
+                activeTab === "clientPortal"
                   ? "border-primary text-primary"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
-              data-testid="tab-portal-access"
+              data-testid="tab-client-portal"
             >
               <Users className="h-4 w-4" />
-              Portal Access
+              Client Portal
             </button>
             <button
               onClick={() => setActiveTab("teamAssignments")}
@@ -1980,8 +2263,34 @@ export default function ClientsSettings() {
         )}
 
         {/* Portal Access Tab */}
-        {activeTab === "portalAccess" && (
-          <PortalAccessManagement />
+        {activeTab === "clientPortal" && (
+          <div className="space-y-4">
+            <div className="flex gap-2 border-b border-gray-200 pb-0">
+              <button
+                onClick={() => setPortalSubTab("access")}
+                className={`py-2 px-3 border-b-2 font-medium text-sm ${
+                  portalSubTab === "access"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                Portal Access
+              </button>
+              <button
+                onClick={() => setPortalSubTab("branding")}
+                className={`py-2 px-3 border-b-2 font-medium text-sm ${
+                  portalSubTab === "branding"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                Branding & Style
+              </button>
+            </div>
+
+            {portalSubTab === "access" && <PortalAccessManagement />}
+            {portalSubTab === "branding" && <ClientPortalBranding />}
+          </div>
         )}
 
         {/* Team Assignments Tab */}
