@@ -1188,21 +1188,12 @@ export default function ArticleView() {
               ) : null}
               
               <div className="prose prose-lg max-w-none dark:prose-invert">
-                {isEditing ? (
-                  <SlateEditor
-                    value={editContent}
-                    onChange={setEditContent}
-                    placeholder="Write your article content... Type '/' for commands"
-                  />
-                ) : (
-                  <SlateEditor
-                    key={`article-${id}`}
-                    value={currentContent}
-                    onChange={handleContentChange}
-                    readOnly={true}
-                    placeholder=""
-                  />
-                )}
+                <SlateEditor
+                  key={`article-${id}`}
+                  value={currentContent}
+                  onChange={handleContentChange}
+                  placeholder="Write your article content... Type '/' for commands"
+                />
               </div>
             </CardContent>
           </Card>
