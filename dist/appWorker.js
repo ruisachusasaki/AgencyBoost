@@ -45466,7 +45466,7 @@ ${appointment.description || ""}
       res.status(500).json({ error: "Failed to fetch time off requests" });
     }
   });
-  app2.post("/api/hr/time-off-requests", requireAuth(), requirePermission("hr", "canCreate"), async (req, res) => {
+  app2.post("/api/hr/time-off-requests", requireAuth(), requireGranularPermission("hr.time_off.create"), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!rawUserId) return;

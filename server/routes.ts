@@ -28270,7 +28270,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  app.post("/api/hr/time-off-requests", requireAuth(), requirePermission('hr', 'canCreate'), async (req, res) => {
+  app.post("/api/hr/time-off-requests", requireAuth(), requireGranularPermission('hr.time_off.create'), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!rawUserId) return;
