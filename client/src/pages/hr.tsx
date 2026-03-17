@@ -820,12 +820,13 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
   }, [staffData, departmentFilter, positionFilter]);
 
   // Who's Off calendar data calculation (moved to top level to avoid hooks inside conditionals)
+  // Who's Off should show ALL approved time off to everyone so the whole team can see who's out
   const whosOffSortedTimeOff = useMemo(() => {
     const today = new Date();
     const sixtyDaysFromNow = new Date();
     sixtyDaysFromNow.setDate(today.getDate() + 60);
 
-    const approvedTimeOff = filteredTimeOffRequests.filter(request => {
+    const approvedTimeOff = timeOffRequests.filter(request => {
       if (request.status !== 'approved') return false;
       const startDate = parseISO(request.startDate);
       const endDate = parseISO(request.endDate);
@@ -858,7 +859,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
 
     return Object.entries(timeOffByDateRange)
       .sort(([,a], [,b]) => a.startDate.getTime() - b.startDate.getTime());
-  }, [filteredTimeOffRequests, staffData]);
+  }, [timeOffRequests, staffData]);
 
   const whosOffTotalPages = useMemo(() => {
     return Math.ceil(whosOffSortedTimeOff.length / whosOffPageSize);
@@ -870,7 +871,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
 
-    const approvedTimeOff = filteredTimeOffRequests.filter(request => {
+    const approvedTimeOff = timeOffRequests.filter(request => {
       if (request.status !== 'approved') return false;
       const startDate = parseISO(request.startDate);
       const endDate = parseISO(request.endDate);
@@ -927,7 +928,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
     const daysInMonth = lastDay.getDate();
 
     return { dayMap, startDayOfWeek, daysInMonth, year, month };
-  }, [filteredTimeOffRequests, staffData, whosOffCalendarMonth]);
+  }, [timeOffRequests, staffData, whosOffCalendarMonth]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
