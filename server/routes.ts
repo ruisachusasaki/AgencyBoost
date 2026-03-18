@@ -36525,27 +36525,9 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         .where(eq(clients.id, clientPortalUser.clientId))
         .limit(1);
 
-      // Regenerate session to prevent session fixation attacks
-      await new Promise<void>((resolve, reject) => {
-        req.session.regenerate((err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-
-      // Clear main user session to prevent role confusion
-      req.session.userId = undefined;
-      req.session.user = undefined;
-
-      // Create client portal session
-      req.session.clientPortalUserId = clientPortalUser.id;
-      req.session.clientPortalUser = {
-        id: clientPortalUser.id,
-        email: clientPortalUser.email,
-        name: `${clientPortalUser.firstName} ${clientPortalUser.lastName}`,
-        clientId: clientPortalUser.clientId,
-        clientName: client?.name || "Unknown Client"
-      };
+      // Client portal auth is handled via frontend sessionStorage (not server sessions).
+      // Do NOT regenerate or clear the express session here — doing so destroys the
+      // staff user's auth session when testing client portal in the same browser.
 
       // Update last login time
       await db
