@@ -15,7 +15,7 @@ import LeadAppointmentsDisplay from "@/components/forms/lead-appointments-displa
 import { CallButton } from "@/components/voip";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useRolePermissions } from "@/hooks/use-has-permission";
+import { useRolePermissions, useHasPermission } from "@/hooks/use-has-permission";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
@@ -51,8 +51,8 @@ export default function LeadDetail() {
     queryKey: ["/api/auth/current-user"],
   });
 
-  // Use role-based permission hook for consistent permission checks
   const { isAdminOrManager } = useRolePermissions();
+  const { hasPermission: canDeleteLeads } = useHasPermission('leads.canDelete');
 
   // Fetch lead data - using the specific lead endpoint
   const { data: lead, isLoading: leadLoading } = useQuery<Lead>({
@@ -566,7 +566,7 @@ export default function LeadDetail() {
               {convertToClientMutation.isPending ? "Converting..." : "Convert to Client"}
             </Button>
           )}
-          {isAdminOrManager && (
+          {(isAdminOrManager || canDeleteLeads) && (
             <Button
               variant="destructive"
               onClick={() => setShowDeleteDialog(true)}
