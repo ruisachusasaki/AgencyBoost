@@ -5876,7 +5876,8 @@ async function generateTasksFromTemplates(params) {
           const taskCount = template.quantityMode === "once" ? 1 : Math.max(1, item.quantity || 1);
           const createdTaskIds = [];
           for (let unitNum = 1; unitNum <= taskCount; unitNum++) {
-            const dueDate = new Date(cycleStartDate);
+            const dueDate = /* @__PURE__ */ new Date();
+            dueDate.setHours(0, 0, 0, 0);
             dueDate.setDate(dueDate.getDate() + (template.dueDateOffset ?? 7));
             let taskTitle = template.name;
             if (template.quantityMode === "per_unit_named") {

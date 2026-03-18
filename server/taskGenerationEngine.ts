@@ -229,7 +229,8 @@ export async function generateTasksFromTemplates(
           const createdTaskIds: string[] = [];
 
           for (let unitNum = 1; unitNum <= taskCount; unitNum++) {
-            const dueDate = new Date(cycleStartDate);
+            const dueDate = new Date();
+            dueDate.setHours(0, 0, 0, 0);
             dueDate.setDate(dueDate.getDate() + (template.dueDateOffset ?? 7));
 
             let taskTitle = template.name;
