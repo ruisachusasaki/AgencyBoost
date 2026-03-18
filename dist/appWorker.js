@@ -52230,6 +52230,72 @@ ${appointment.description || ""}
       res.status(500).json({ message: "Failed to deactivate client portal user" });
     }
   });
+  app2.get("/api/settings/client-portal-branding", requireAuth(), requirePermission("clients", "canView"), async (req, res) => {
+    try {
+      const [setting] = await db.select().from(taskSettings).where(eq20(taskSettings.settingKey, "client_portal_branding"));
+      res.json(setting?.settingValue || {});
+    } catch (error) {
+      console.error("Error fetching client portal branding:", error);
+      res.status(500).json({ message: "Failed to fetch client portal branding" });
+    }
+  });
+  app2.put("/api/settings/client-portal-branding", requireAuth(), requirePermission("clients", "canEdit"), async (req, res) => {
+    try {
+      const brandingSchema = z3.object({
+        logoUrl: z3.string().max(2e3).default(""),
+        companyName: z3.string().max(200).default(""),
+        primaryColor: z3.string().regex(/^#[0-9A-Fa-f]{6}$/, "Must be a valid hex color").default("#00C9C6"),
+        accentColor: z3.string().regex(/^#[0-9A-Fa-f]{6}$/, "Must be a valid hex color").default("#F59E0B"),
+        welcomeMessage: z3.string().max(500).default(""),
+        footerText: z3.string().max(500).default("")
+      });
+      const parsed = brandingSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid branding data", errors: parsed.error.flatten().fieldErrors });
+      }
+      const [existing] = await db.select().from(taskSettings).where(eq20(taskSettings.settingKey, "client_portal_branding"));
+      if (existing) {
+        await db.update(taskSettings).set({ settingValue: parsed.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq20(taskSettings.settingKey, "client_portal_branding"));
+      } else {
+        await db.insert(taskSettings).values({
+          settingKey: "client_portal_branding",
+          settingValue: parsed.data
+        });
+      }
+      res.json(parsed.data);
+    } catch (error) {
+      console.error("Error saving client portal branding:", error);
+      res.status(500).json({ message: "Failed to save client portal branding" });
+    }
+  });
+  app2.post("/api/settings/client-portal-branding/logo-upload", requireAuth(), requirePermission("clients", "canEdit"), upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      const allowedTypes = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"];
+      if (!allowedTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ error: "Invalid file type. Only PNG, JPG, SVG, and WebP are allowed." });
+      }
+      const { ObjectStorageService: ObjectStorageService2, sanitizeFileName: sanitizeFileName4 } = await Promise.resolve().then(() => (init_objectStorage(), objectStorage_exports));
+      const objectStorageService = new ObjectStorageService2();
+      const uploadUrl = await objectStorageService.getObjectEntityUploadURL();
+      const sanitized = sanitizeFileName4(req.file.originalname);
+      const response = await fetch(uploadUrl, {
+        method: "PUT",
+        body: req.file.buffer,
+        headers: { "Content-Type": req.file.mimetype || "application/octet-stream" }
+      });
+      if (!response.ok) throw new Error("Failed to upload to object storage");
+      const urlObj = new URL(uploadUrl);
+      const objectPath = urlObj.pathname;
+      const fileUrl = `/objects${objectPath}`;
+      res.json({ fileUrl, fileName: sanitized });
+    } catch (error) {
+      console.error("Error uploading portal branding logo:", error);
+      res.status(500).json({ error: "Failed to upload logo" });
+    }
+  });
   app2.get("/api/quotes", requireAuth(), async (req, res) => {
     try {
       const quotesWithDetails = await db.select({
