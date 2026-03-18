@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -430,6 +429,7 @@ export default function ClientPortalDashboard() {
     dueDateRange: 'all'
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [activeTaskTab, setActiveTaskTab] = useState<'all' | 'in_progress' | 'completed' | 'upcoming'>('all');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -947,102 +947,126 @@ export default function ClientPortalDashboard() {
           )}
         </Card>
 
-        {/* Tasks Tabs */}
-        <Tabs defaultValue="all" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-[400px]">
-            <TabsTrigger value="all" data-testid="tab-all">All Tasks</TabsTrigger>
-            <TabsTrigger value="in_progress" data-testid="tab-progress">In Progress</TabsTrigger>
-            <TabsTrigger value="completed" data-testid="tab-completed">Completed</TabsTrigger>
-            <TabsTrigger value="upcoming" data-testid="tab-upcoming">Upcoming</TabsTrigger>
-          </TabsList>
+        {/* Tasks Tabs - pill style */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-0 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 overflow-x-auto" style={{ width: 'fit-content' }}>
+            {([
+              { value: 'all', label: 'All Tasks', testId: 'tab-all' },
+              { value: 'in_progress', label: 'In Progress', testId: 'tab-progress' },
+              { value: 'completed', label: 'Completed', testId: 'tab-completed' },
+              { value: 'upcoming', label: 'Upcoming', testId: 'tab-upcoming' },
+            ] as const).map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => setActiveTaskTab(tab.value)}
+                className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
+                  activeTaskTab === tab.value
+                    ? "text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                }`}
+                style={activeTaskTab === tab.value ? { backgroundColor: branding.primaryColor || "hsl(179, 100%, 39%)" } : {}}
+                data-testid={tab.testId}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-          <TabsContent value="all" className="space-y-4" data-testid="content-all-tasks">
-            {tasksLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">Loading your tasks...</p>
+          {activeTaskTab === 'all' && (
+            <div className="space-y-4" data-testid="content-all-tasks">
+              {tasksLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading your tasks...</p>
+                  </div>
                 </div>
-              </div>
-            ) : tasks.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No tasks yet</h3>
-                  <p className="text-muted-foreground">
-                    Your agency will add tasks to this portal as they work on your projects.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4">
-                {tasks.map((task) => (
-                  <TaskCard key={task.id} task={task} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
+              ) : tasks.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No tasks yet</h3>
+                    <p className="text-muted-foreground">
+                      Your agency will add tasks to this portal as they work on your projects.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {tasks.map((task) => (
+                    <TaskCard key={task.id} task={task} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
-          <TabsContent value="in_progress" className="space-y-4" data-testid="content-progress-tasks">
-            {inProgressTasks.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No tasks in progress</h3>
-                  <p className="text-muted-foreground">
-                    Tasks that your agency is actively working on will appear here.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4">
-                {inProgressTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
+          {activeTaskTab === 'in_progress' && (
+            <div className="space-y-4" data-testid="content-progress-tasks">
+              {inProgressTasks.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No tasks in progress</h3>
+                    <p className="text-muted-foreground">
+                      Tasks that your agency is actively working on will appear here.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {inProgressTasks.map((task) => (
+                    <TaskCard key={task.id} task={task} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
-          <TabsContent value="completed" className="space-y-4" data-testid="content-completed-tasks">
-            {completedTasks.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <CheckCircle2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No completed tasks</h3>
-                  <p className="text-muted-foreground">
-                    Completed tasks will appear here once your agency finishes working on them.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4">
-                {completedTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
+          {activeTaskTab === 'completed' && (
+            <div className="space-y-4" data-testid="content-completed-tasks">
+              {completedTasks.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <CheckCircle2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No completed tasks</h3>
+                    <p className="text-muted-foreground">
+                      Completed tasks will appear here once your agency finishes working on them.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {completedTasks.map((task) => (
+                    <TaskCard key={task.id} task={task} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
-          <TabsContent value="upcoming" className="space-y-4" data-testid="content-upcoming-tasks">
-            {upcomingTasks.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No upcoming tasks</h3>
-                  <p className="text-muted-foreground">
-                    Future tasks scheduled by your agency will appear here.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4">
-                {upcomingTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+          {activeTaskTab === 'upcoming' && (
+            <div className="space-y-4" data-testid="content-upcoming-tasks">
+              {upcomingTasks.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No upcoming tasks</h3>
+                    <p className="text-muted-foreground">
+                      Future tasks scheduled by your agency will appear here.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {upcomingTasks.map((task) => (
+                    <TaskCard key={task.id} task={task} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
