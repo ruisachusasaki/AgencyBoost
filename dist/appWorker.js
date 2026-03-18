@@ -52455,6 +52455,8 @@ ${appointment.description || ""}
         const userBuildFee = parseFloat(req.body.buildFee || "0");
         const finalQuoteData = {
           ...validatedData,
+          clientBudget: validatedData.clientBudget || "0",
+          desiredMargin: validatedData.desiredMargin || "0",
           status: effectiveStatus,
           buildFee: userBuildFee.toString(),
           totalCost: calculatedTotalCost.toString(),

@@ -37684,6 +37684,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
         const finalQuoteData = {
           ...validatedData,
+          clientBudget: validatedData.clientBudget || '0',
+          desiredMargin: validatedData.desiredMargin || '0',
           status: effectiveStatus,
           buildFee: userBuildFee.toString(),
           totalCost: calculatedTotalCost.toString(),
