@@ -20030,7 +20030,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   // ===== CALENDAR SYSTEM API ROUTES =====
 
   // Calendar Management Routes
-  app.get("/api/calendars", process.env.NODE_ENV === 'development' ? (req, res, next) => next() : requireAuth(), process.env.NODE_ENV === 'development' ? (req, res, next) => next() : requirePermission('calendars', 'canView'), async (req, res) => {
+  app.get("/api/calendars", requireAuth(), async (req, res) => {
     try {
       const calendarsData = await db
         .select()
@@ -20096,7 +20096,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  app.get("/api/calendars/:id", requireAuth(), requirePermission('calendars', 'canView'), async (req, res) => {
+  app.get("/api/calendars/:id", requireAuth(), async (req, res) => {
     try {
       const [calendar] = await db
         .select()
@@ -20131,7 +20131,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  app.get("/api/calendars/by-url/:customUrl", requireAuth(), requirePermission('calendars', 'canView'), async (req, res) => {
+  app.get("/api/calendars/by-url/:customUrl", requireAuth(), async (req, res) => {
     try {
       const [calendar] = await db
         .select()

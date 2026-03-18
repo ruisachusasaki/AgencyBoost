@@ -39648,7 +39648,7 @@ ${appointment.description || ""}
       res.status(500).json({ message: "Failed to get current user" });
     }
   });
-  app2.get("/api/calendars", process.env.NODE_ENV === "development" ? (req, res, next) => next() : requireAuth(), process.env.NODE_ENV === "development" ? (req, res, next) => next() : requirePermission("calendars", "canView"), async (req, res) => {
+  app2.get("/api/calendars", requireAuth(), async (req, res) => {
     try {
       const calendarsData = await db.select().from(calendars).orderBy(asc5(calendars.name));
       const baseUrl = `${req.protocol}://${req.get("host")}`;
@@ -39694,7 +39694,7 @@ ${appointment.description || ""}
       res.status(500).json({ message: "Failed to create calendar" });
     }
   });
-  app2.get("/api/calendars/:id", requireAuth(), requirePermission("calendars", "canView"), async (req, res) => {
+  app2.get("/api/calendars/:id", requireAuth(), async (req, res) => {
     try {
       const [calendar] = await db.select().from(calendars).where(eq20(calendars.id, req.params.id));
       if (!calendar) {
@@ -39716,7 +39716,7 @@ ${appointment.description || ""}
       res.status(500).json({ message: "Failed to fetch calendar" });
     }
   });
-  app2.get("/api/calendars/by-url/:customUrl", requireAuth(), requirePermission("calendars", "canView"), async (req, res) => {
+  app2.get("/api/calendars/by-url/:customUrl", requireAuth(), async (req, res) => {
     try {
       const [calendar] = await db.select().from(calendars).where(eq20(calendars.customUrl, req.params.customUrl));
       if (!calendar) {
@@ -59384,7 +59384,16 @@ async function generateAnniversaryAndBirthdayEvents() {
     }
     let createdCount = 0;
     for (const eventData of eventsToCreate) {
-      const existing = await db.select().from(calendarAppointments).where(eq30(calendarAppointments.title, eventData.title)).limit(1);
+      const yearStart = new Date(currentYear, 0, 1);
+      const yearEnd = new Date(currentYear, 11, 31, 23, 59, 59);
+      const existing = await db.select().from(calendarAppointments).where(
+        and27(
+          eq30(calendarAppointments.title, eventData.title),
+          eq30(calendarAppointments.calendarId, eventData.calendarId),
+          sql16`${calendarAppointments.startTime} >= ${yearStart}`,
+          sql16`${calendarAppointments.startTime} <= ${yearEnd}`
+        )
+      ).limit(1);
       if (existing.length === 0) {
         await db.insert(calendarAppointments).values(eventData);
         createdCount++;

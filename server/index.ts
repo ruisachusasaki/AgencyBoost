@@ -1048,12 +1048,20 @@ async function generateAnniversaryAndBirthdayEvents() {
       }
     }
     
-    // Check which events already exist and only create new ones
     let createdCount = 0;
     for (const eventData of eventsToCreate) {
+      const yearStart = new Date(currentYear, 0, 1);
+      const yearEnd = new Date(currentYear, 11, 31, 23, 59, 59);
       const existing = await db.select()
         .from(calendarAppointments)
-        .where(eq(calendarAppointments.title, eventData.title))
+        .where(
+          and(
+            eq(calendarAppointments.title, eventData.title),
+            eq(calendarAppointments.calendarId, eventData.calendarId),
+            sql`${calendarAppointments.startTime} >= ${yearStart}`,
+            sql`${calendarAppointments.startTime} <= ${yearEnd}`
+          )
+        )
         .limit(1);
         
       if (existing.length === 0) {
