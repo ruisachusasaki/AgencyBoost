@@ -849,7 +849,7 @@ export default function OneOnOneMeetings() {
                 <Label htmlFor="meeting-date" className="text-sm font-medium">
                   Meeting Date <span className="text-red-500">*</span>
                 </Label>
-                <Popover>
+                <Popover modal={false}>
                   <PopoverTrigger asChild>
                     <Button
                       id="meeting-date"
@@ -864,7 +864,7 @@ export default function OneOnOneMeetings() {
                       {newMeetingDate ? format(newMeetingDate, "PPP") : "Select a date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0 z-[9999] pointer-events-auto" align="start">
                     <Calendar
                       mode="single"
                       selected={newMeetingDate}
@@ -982,14 +982,14 @@ export default function OneOnOneMeetings() {
                     {recurringEndType === "on_date" && (
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">End Date</Label>
-                        <Popover open={isRecurringEndDateOpen} onOpenChange={setIsRecurringEndDateOpen}>
+                        <Popover modal={false} open={isRecurringEndDateOpen} onOpenChange={setIsRecurringEndDateOpen}>
                           <PopoverTrigger asChild>
                             <Button variant="outline" className="w-full justify-start text-left font-normal text-sm">
                               <CalendarIcon className="mr-2 h-4 w-4" />
                               {recurringEndDate ? format(recurringEndDate, "MMM d, yyyy") : "Select end date..."}
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
+                          <PopoverContent className="w-auto p-0 z-[9999] pointer-events-auto" align="start">
                             <Calendar
                               mode="single"
                               selected={recurringEndDate || undefined}
