@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil, ClipboardList, Repeat, Layers, ClipboardCheck, Copy, Link2 } from "lucide-react";
+import { ArrowLeft, ArrowDownLeft, ArrowUpRight, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil, ClipboardList, Repeat, Layers, ClipboardCheck, Copy, Link2 } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 import ContactCardField from "@/components/contact-card-field";
 
@@ -3330,10 +3330,13 @@ export default function EnhancedClientDetail() {
   
   // Communication history state
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
+  const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
   const [communicationSearch, setCommunicationSearch] = useState('');
   const deferredCommunicationSearch = useDeferredValue(communicationSearch);
   const [commCurrentPage, setCommCurrentPage] = useState(1);
   const commItemsPerPage = 10;
+  const [commTypeFilter, setCommTypeFilter] = useState<'all' | 'sms' | 'email'>('all');
+  const [commDirectionFilter, setCommDirectionFilter] = useState<'all' | 'outbound' | 'inbound'>('all');
   
   // Reset page when search changes (with proper dependency to avoid render loop)
   useEffect(() => {
@@ -4653,6 +4656,19 @@ export default function EnhancedClientDetail() {
     return auditLogs
       .filter(log => log.entityType === 'sms' || log.entityType === 'email' || log.entity_type === 'sms' || log.entity_type === 'email' || log.action === 'call')
       .filter(log => {
+        if (commTypeFilter !== 'all') {
+          const logType = log.entityType || log.entity_type;
+          if (commTypeFilter === 'sms' && logType !== 'sms') return false;
+          if (commTypeFilter === 'email' && logType !== 'email') return false;
+        }
+        if (commDirectionFilter !== 'all') {
+          const isInbound = log.newValues?.direction === 'inbound';
+          if (commDirectionFilter === 'inbound' && !isInbound) return false;
+          if (commDirectionFilter === 'outbound' && isInbound) return false;
+        }
+        return true;
+      })
+      .filter(log => {
         if (!deferredCommunicationSearch.trim()) return true;
         const searchLower = deferredCommunicationSearch.toLowerCase();
         const messageContent = log.newValues?.message || log.details || '';
@@ -4663,11 +4679,65 @@ export default function EnhancedClientDetail() {
                details.toLowerCase().includes(searchLower);
       })
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [auditLogs, deferredCommunicationSearch]);
+  }, [auditLogs, deferredCommunicationSearch, commTypeFilter, commDirectionFilter]);
 
-  const totalCommunications = communications.length;
+  const threadedCommunications = useMemo(() => {
+    const threads: Record<string, typeof communications> = {};
+    const threadMeta: Record<string, { type: 'sms' | 'email'; participants: string[] }> = {};
+    for (const msg of communications) {
+      const logType = msg.entityType || msg.entity_type;
+      let threadKey: string;
+      let participants: string[];
+      if (logType === 'sms' || msg.action === 'call') {
+        const to = (msg.newValues?.to || '').trim();
+        const from = (msg.newValues?.from || '').trim();
+        const nums = [to, from].filter(Boolean).sort();
+        if (nums.length === 0) {
+          threadKey = `sms:__orphan__${msg.id}`;
+          participants = ['Unknown'];
+        } else {
+          threadKey = `sms:${JSON.stringify(nums)}`;
+          participants = nums;
+        }
+        threadMeta[threadKey] = { type: 'sms', participants };
+      } else {
+        const to = (msg.newValues?.to || msg.newValues?.recipientEmail || '').trim().toLowerCase();
+        const from = (msg.newValues?.from || msg.newValues?.senderEmail || '').trim().toLowerCase();
+        const addrs = [to, from].filter(Boolean).sort();
+        if (addrs.length === 0) {
+          threadKey = `email:__orphan__${msg.id}`;
+          participants = ['Unknown'];
+        } else {
+          threadKey = `email:${JSON.stringify(addrs)}`;
+          participants = addrs;
+        }
+        threadMeta[threadKey] = { type: 'email', participants };
+      }
+      if (!threads[threadKey]) threads[threadKey] = [];
+      threads[threadKey].push(msg);
+    }
+    return Object.entries(threads).map(([key, msgs]) => ({
+      threadKey: key,
+      messages: msgs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
+      latestTimestamp: Math.max(...msgs.map(m => new Date(m.timestamp).getTime())),
+      type: threadMeta[key].type,
+      participants: threadMeta[key].participants,
+      messageCount: msgs.length,
+    })).sort((a, b) => b.latestTimestamp - a.latestTimestamp);
+  }, [communications]);
+
+  const toggleThread = (threadKey: string) => {
+    setExpandedThreads(prev => {
+      const next = new Set(prev);
+      if (next.has(threadKey)) next.delete(threadKey);
+      else next.add(threadKey);
+      return next;
+    });
+  };
+
+  const totalCommunications = threadedCommunications.length;
   const totalCommPages = Math.ceil(totalCommunications / commItemsPerPage);
-  const paginatedCommunications = communications.slice(
+  const paginatedThreads = threadedCommunications.slice(
     (commCurrentPage - 1) * commItemsPerPage,
     commCurrentPage * commItemsPerPage
   );
@@ -7533,143 +7603,206 @@ export default function EnhancedClientDetail() {
             {/* Communication History */}
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold">Communication History</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <div className="relative">
-                      <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <Input
-                        placeholder="Search messages..."
-                        value={communicationSearch}
-                        onChange={(e) => {
-                          setCommunicationSearch(e.target.value);
-                          setCommCurrentPage(1); // Reset to first page when searching
-                        }}
-                        className="pl-10 w-64"
-                        data-testid="input-communication-search"
-                      />
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-semibold">Communication History</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                        <Input
+                          placeholder="Search messages..."
+                          value={communicationSearch}
+                          onChange={(e) => {
+                            setCommunicationSearch(e.target.value);
+                            setCommCurrentPage(1);
+                          }}
+                          className="pl-10 w-64"
+                          data-testid="input-communication-search"
+                        />
+                      </div>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-0 bg-gray-100 dark:bg-gray-800 rounded-lg p-1" style={{ width: 'fit-content' }}>
+                      {([{ value: 'all', label: 'All' }, { value: 'sms', label: 'SMS' }, { value: 'email', label: 'Email' }] as const).map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => { setCommTypeFilter(opt.value); setCommCurrentPage(1); }}
+                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${commTypeFilter === opt.value ? 'text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                          style={commTypeFilter === opt.value ? { backgroundColor: 'hsl(179, 100%, 39%)' } : {}}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-0 bg-gray-100 dark:bg-gray-800 rounded-lg p-1" style={{ width: 'fit-content' }}>
+                      {([{ value: 'all', label: 'All' }, { value: 'outbound', label: 'Sent' }, { value: 'inbound', label: 'Received' }] as const).map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => { setCommDirectionFilter(opt.value); setCommCurrentPage(1); }}
+                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${commDirectionFilter === opt.value ? 'text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                          style={commDirectionFilter === opt.value ? { backgroundColor: 'hsl(179, 100%, 39%)' } : {}}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-xs text-gray-400 ml-1">{communications.length} message{communications.length !== 1 ? 's' : ''} in {threadedCommunications.length} thread{threadedCommunications.length !== 1 ? 's' : ''}</span>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {paginatedCommunications.length > 0 ? (
+                <div className="space-y-3">
+                  {paginatedThreads.length > 0 ? (
                     <>
-                      {paginatedCommunications.map((log) => {
-                        const isExpanded = expandedMessages.has(log.id);
-                        const fullMessage = log.newValues?.message || log.details || '';
-                        const emailSubject = log.newValues?.subject || '';
-                        const shortDescription = log.details;
-                        
+                      {paginatedThreads.map((thread) => {
+                        const isThreadOpen = expandedThreads.has(thread.threadKey);
+                        const latestMsg = thread.messages[0];
+                        const latestIsInbound = latestMsg.newValues?.direction === 'inbound';
+                        const latestType = latestMsg.entityType || latestMsg.entity_type;
+
                         return (
-                          <div key={log.id} className="border rounded-lg p-4" data-testid={`message-card-${log.id}`}>
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                {log.action === 'call' ? (
-                                  <Phone className="h-4 w-4 text-green-600" />
-                                ) : log.entityType === 'sms' && log.newValues?.direction === 'inbound' ? (
-                                  <MessageSquare className="h-4 w-4 text-green-600" />
-                                ) : log.entityType === 'sms' ? (
-                                  <MessageSquare className="h-4 w-4 text-primary" />
-                                ) : (
-                                  <Mail className="h-4 w-4 text-blue-600" />
-                                )}
-                                <span className="font-medium text-gray-900 capitalize" data-testid={`text-message-type-${log.id}`}>
-                                  {log.action === 'call' ? 'Call' : log.entityType === 'sms' && log.newValues?.direction === 'inbound' ? 'SMS Received' : log.entityType}
-                                </span>
-                                {log.entityType === 'sms' && log.newValues?.direction === 'inbound' ? (
-                                  <span className="text-sm text-green-600 font-medium" data-testid={`text-sent-by-${log.id}`}>
-                                    from {log.newValues?.from || 'unknown'}
-                                  </span>
-                                ) : log.userName && log.userName !== 'Unknown User' ? (
-                                  <span className="text-sm text-gray-500" data-testid={`text-sent-by-${log.id}`}>
-                                    by {log.userName}
-                                  </span>
-                                ) : null}
-                                {/* Provider Status Badge */}
-                                {log.newValues?.status && (
-                                  <span 
-                                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
-                                    data-testid={`badge-provider-status-${log.id}`}
-                                  >
-                                    {log.newValues.provider && (
-                                      <span className="text-gray-600 capitalize mr-1">
-                                        {log.newValues.provider === 'twilio' ? 'Twilio' : log.newValues.provider === 'mailgun' ? 'MailGun' : log.newValues.provider}:
-                                      </span>
-                                    )}
-                                    <span className="capitalize">{log.newValues.status}</span>
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-500" data-testid={`text-timestamp-${log.id}`}>
-                                  {new Date(log.timestamp).toLocaleString()}
-                                </span>
-                                <button
-                                  onClick={() => toggleMessageExpansion(log.id)}
-                                  className="p-1 hover:bg-gray-100 rounded transition-colors"
-                                  data-testid={`button-expand-message-${log.id}`}
-                                >
-                                  {isExpanded ? (
-                                    <ChevronUp className="h-4 w-4 text-gray-500" />
-                                  ) : (
-                                    <ChevronDown className="h-4 w-4 text-gray-500" />
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                            
-                            {/* Phone numbers - always visible */}
-                            {log.newValues && (log.newValues.to || log.newValues.from) && (
-                              <div className="text-sm text-gray-600 mb-2" data-testid={`text-phone-numbers-${log.id}`}>
-                                {log.newValues.to && `To: ${log.newValues.to}`}
-                                {log.newValues.to && log.newValues.from && ' | '}
-                                {log.newValues.from && `From: ${log.newValues.from}`}
-                              </div>
-                            )}
-                            
-                            {/* Full message content - expandable */}
-                            {isExpanded && fullMessage && fullMessage !== shortDescription && (
-                              <div className="mt-3 pt-3 border-t border-gray-200" data-testid={`container-full-message-${log.id}`}>
-                                <p className="text-sm font-medium text-gray-700 mb-2">
-                                  {log.entityType === 'email' || log.entity_type === 'email' ? 'Email Details:' : 'Full Message:'}
-                                </p>
-                                <div className="bg-gray-50 rounded-md p-3 space-y-2">
-                                  {/* Show subject line for emails */}
-                                  {(log.entityType === 'email' || log.entity_type === 'email') && emailSubject && (
-                                    <div>
-                                      <p className="text-xs font-medium text-gray-600 uppercase tracking-wider">Subject:</p>
-                                      <p className="text-sm text-gray-800 font-medium" data-testid={`text-email-subject-${log.id}`}>{emailSubject}</p>
-                                    </div>
-                                  )}
-                                  {/* Show message content */}
-                                  <div>
-                                    <p className="text-xs font-medium text-gray-600 uppercase tracking-wider">Message:</p>
-                                    {log.entityType === 'email' || log.entity_type === 'email' ? (
-                                      <div 
-                                        className="prose prose-sm max-w-none text-gray-800" 
-                                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(fullMessage) }}
-                                        data-testid={`text-full-message-${log.id}`}
-                                      />
-                                    ) : (
-                                      <p className="text-sm text-gray-800 whitespace-pre-wrap" data-testid={`text-full-message-${log.id}`}>{fullMessage}</p>
+                          <div key={thread.threadKey} className="border rounded-lg overflow-hidden" data-testid={`thread-${thread.threadKey}`}>
+                            {/* Thread Header */}
+                            <button
+                              onClick={() => toggleThread(thread.threadKey)}
+                              className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`flex items-center justify-center w-8 h-8 rounded-full ${thread.type === 'sms' ? 'bg-teal-100 text-teal-700' : 'bg-blue-100 text-blue-700'}`}>
+                                  {thread.type === 'sms' ? <MessageSquare className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-sm text-gray-900">
+                                      {thread.participants.join(' ↔ ')}
+                                    </span>
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">{thread.type === 'sms' ? 'SMS' : 'Email'}</Badge>
+                                    {thread.messageCount > 1 && (
+                                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{thread.messageCount} messages</Badge>
                                     )}
                                   </div>
+                                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                                    {latestIsInbound ? '← ' : '→ '}
+                                    {(latestMsg.newValues?.message || latestMsg.details || '').slice(0, 100)}
+                                  </p>
                                 </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-xs text-gray-400">{new Date(latestMsg.timestamp).toLocaleDateString()}</span>
+                                {isThreadOpen ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+                              </div>
+                            </button>
+
+                            {/* Thread Messages */}
+                            {isThreadOpen && (
+                              <div className="border-t bg-gray-50/50 divide-y divide-gray-100">
+                                {thread.messages.map((log) => {
+                                  const isInbound = log.newValues?.direction === 'inbound';
+                                  const isExpanded = expandedMessages.has(log.id);
+                                  const fullMessage = log.newValues?.message || log.details || '';
+                                  const emailSubject = log.newValues?.subject || '';
+                                  const logType = log.entityType || log.entity_type;
+
+                                  return (
+                                    <div
+                                      key={log.id}
+                                      className={`p-3 ${isInbound ? 'bg-green-50/60' : 'bg-white'}`}
+                                      data-testid={`message-card-${log.id}`}
+                                    >
+                                      <div className="flex items-start gap-3">
+                                        {/* Direction indicator */}
+                                        <div className={`mt-0.5 flex items-center justify-center w-6 h-6 rounded-full shrink-0 ${isInbound ? 'bg-green-200 text-green-800' : 'bg-blue-200 text-blue-800'}`}>
+                                          {isInbound ? (
+                                            <ArrowDownLeft className="h-3 w-3" />
+                                          ) : (
+                                            <ArrowUpRight className="h-3 w-3" />
+                                          )}
+                                        </div>
+
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                              <span className={`text-xs font-semibold uppercase tracking-wide ${isInbound ? 'text-green-700' : 'text-blue-700'}`}>
+                                                {isInbound ? 'Received' : 'Sent'}
+                                              </span>
+                                              {isInbound ? (
+                                                <span className="text-xs text-gray-500">from {log.newValues?.from || 'unknown'}</span>
+                                              ) : log.userName && log.userName !== 'Unknown User' ? (
+                                                <span className="text-xs text-gray-500">by {log.userName}</span>
+                                              ) : null}
+                                              {log.newValues?.status && (
+                                                <span className={`inline-flex items-center px-1.5 py-0 rounded text-[10px] font-medium ${
+                                                  log.newValues.status === 'delivered' || log.newValues.status === 'sent' ? 'bg-green-100 text-green-700' :
+                                                  log.newValues.status === 'failed' ? 'bg-red-100 text-red-700' :
+                                                  'bg-gray-100 text-gray-700'
+                                                }`}>
+                                                  {log.newValues.provider === 'twilio' ? 'Twilio' : log.newValues.provider === 'mailgun' ? 'MailGun' : log.newValues.provider}: {log.newValues.status}
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="flex items-center gap-1 shrink-0">
+                                              <span className="text-[11px] text-gray-400">{new Date(log.timestamp).toLocaleString()}</span>
+                                              <button
+                                                onClick={() => toggleMessageExpansion(log.id)}
+                                                className="p-0.5 hover:bg-gray-200 rounded transition-colors"
+                                              >
+                                                {isExpanded ? <ChevronUp className="h-3.5 w-3.5 text-gray-400" /> : <ChevronDown className="h-3.5 w-3.5 text-gray-400" />}
+                                              </button>
+                                            </div>
+                                          </div>
+
+                                          {/* Preview line */}
+                                          {!isExpanded && (
+                                            <p className="text-sm text-gray-700 mt-1 line-clamp-2">
+                                              {emailSubject ? `${emailSubject} — ` : ''}{fullMessage.replace(/<[^>]*>/g, '').slice(0, 200)}
+                                            </p>
+                                          )}
+
+                                          {/* Expanded content */}
+                                          {isExpanded && (
+                                            <div className={`mt-2 rounded-md p-3 space-y-2 ${isInbound ? 'bg-green-100/60 border border-green-200' : 'bg-blue-50/60 border border-blue-100'}`}>
+                                              {logType === 'email' && emailSubject && (
+                                                <div>
+                                                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Subject</p>
+                                                  <p className="text-sm text-gray-800 font-medium">{emailSubject}</p>
+                                                </div>
+                                              )}
+                                              {log.newValues && (log.newValues.to || log.newValues.from) && (
+                                                <div className="text-xs text-gray-600">
+                                                  {log.newValues.to && <span>To: {log.newValues.to}</span>}
+                                                  {log.newValues.to && log.newValues.from && <span className="mx-1">|</span>}
+                                                  {log.newValues.from && <span>From: {log.newValues.from}</span>}
+                                                </div>
+                                              )}
+                                              <div>
+                                                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Message</p>
+                                                {logType === 'email' ? (
+                                                  <div className="prose prose-sm max-w-none text-gray-800 mt-1" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(fullMessage) }} />
+                                                ) : (
+                                                  <p className="text-sm text-gray-800 whitespace-pre-wrap mt-1">{fullMessage}</p>
+                                                )}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
                         );
                       })}
-                      
+
                       {/* Pagination Controls */}
                       {totalCommPages > 1 && (
                         <div className="flex items-center justify-between pt-4">
                           <div className="text-sm text-gray-500" data-testid="text-pagination-info">
                             Showing {((commCurrentPage - 1) * commItemsPerPage) + 1} to{' '}
                             {Math.min(commCurrentPage * commItemsPerPage, totalCommunications)} of{' '}
-                            {totalCommunications} messages
+                            {totalCommunications} threads
                           </div>
                           <div className="flex items-center gap-2">
                             <Button
@@ -7701,11 +7834,11 @@ export default function EnhancedClientDetail() {
                     <div className="text-center py-12">
                       <MessageSquare className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        {communicationSearch.trim() ? 'No Messages Found' : 'No Communication Yet'}
+                        {communicationSearch.trim() || commTypeFilter !== 'all' || commDirectionFilter !== 'all' ? 'No Messages Found' : 'No Communication Yet'}
                       </h3>
                       <p className="text-gray-600">
-                        {communicationSearch.trim() 
-                          ? `No messages found matching "${communicationSearch}"`
+                        {communicationSearch.trim() || commTypeFilter !== 'all' || commDirectionFilter !== 'all'
+                          ? 'No messages match your current filters.'
                           : 'Communication history will appear here as you interact with this client.'
                         }
                       </p>
