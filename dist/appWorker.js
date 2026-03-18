@@ -33222,6 +33222,15 @@ AgencyBoost CRM`
       return res.sendStatus(500);
     }
   });
+  app2.get("/api/public/client-portal-branding", async (req, res) => {
+    try {
+      const [setting] = await db.select().from(taskSettings).where(eq20(taskSettings.settingKey, "client_portal_branding"));
+      res.json(setting?.settingValue || {});
+    } catch (error) {
+      console.error("Error fetching public client portal branding:", error);
+      res.json({});
+    }
+  });
   app2.get("/objects/:objectPath(*)", requireAuth(), async (req, res) => {
     try {
       console.log("Serving object for path:", req.path);

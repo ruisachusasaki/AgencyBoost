@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -398,11 +398,29 @@ function TaskCard({ task }: { task: ClientTask }) {
   );
 }
 
+interface PortalBranding {
+  logoUrl?: string;
+  companyName?: string;
+  primaryColor?: string;
+  accentColor?: string;
+  welcomeMessage?: string;
+  footerText?: string;
+}
+
 export default function ClientPortalDashboard() {
   const [currentUser, setCurrentUser] = useState<ClientPortalUser | null>(() => {
     const stored = sessionStorage.getItem("clientPortalUser");
     return stored ? JSON.parse(stored) : null;
   });
+
+  const [branding, setBranding] = useState<PortalBranding>({});
+
+  useEffect(() => {
+    fetch("/api/public/client-portal-branding")
+      .then(r => r.json())
+      .then(data => setBranding(data || {}))
+      .catch(() => {});
+  }, []);
 
   // Filter state
   const [filters, setFilters] = useState<TaskFilters>({
@@ -571,18 +589,22 @@ export default function ClientPortalDashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="border-b" style={{ backgroundColor: branding.primaryColor || undefined }}>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="inline-flex items-center justify-center w-10 h-10 bg-primary/10 rounded-lg">
-                <div className="w-5 h-5 bg-primary rounded"></div>
-              </div>
+              {branding.logoUrl ? (
+                <img src={branding.logoUrl} alt={branding.companyName || "Logo"} className="h-10 w-auto object-contain bg-white rounded px-2 py-1" />
+              ) : (
+                <div className="inline-flex items-center justify-center w-10 h-10 bg-white/20 rounded-lg">
+                  <div className="w-5 h-5 bg-white rounded"></div>
+                </div>
+              )}
               <div>
-                <h1 className="text-xl font-semibold text-foreground" data-testid="text-app-title">
-                  AgencyBoost Portal
+                <h1 className="text-xl font-semibold" style={{ color: branding.primaryColor ? '#ffffff' : undefined }} data-testid="text-app-title">
+                  {branding.companyName || "Client Portal"}
                 </h1>
-                <p className="text-sm text-muted-foreground" data-testid="text-client-name">
+                <p className="text-sm" style={{ color: branding.primaryColor ? 'rgba(255,255,255,0.8)' : undefined }} data-testid="text-client-name">
                   {displayUser?.clientName}
                 </p>
               </div>
@@ -590,14 +612,15 @@ export default function ClientPortalDashboard() {
             
             <div className="flex items-center gap-4">
               <div className="text-right" data-testid="text-user-info">
-                <p className="text-sm font-medium text-foreground">{displayUser?.name}</p>
-                <p className="text-xs text-muted-foreground">{displayUser?.email}</p>
+                <p className="text-sm font-medium" style={{ color: branding.primaryColor ? '#ffffff' : undefined }}>{displayUser?.name}</p>
+                <p className="text-xs" style={{ color: branding.primaryColor ? 'rgba(255,255,255,0.7)' : undefined }}>{displayUser?.email}</p>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleLogout}
                 className="flex items-center gap-2"
+                style={branding.primaryColor ? { borderColor: 'rgba(255,255,255,0.5)', color: '#ffffff', backgroundColor: 'transparent' } : undefined}
                 data-testid="button-logout"
               >
                 <LogOut className="h-4 w-4" />
@@ -610,6 +633,13 @@ export default function ClientPortalDashboard() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
+        {/* Welcome Message */}
+        {branding.welcomeMessage && (
+          <div className="mb-6 p-4 rounded-lg border" style={{ backgroundColor: `${branding.primaryColor || 'hsl(179, 100%, 39%)'}08`, borderColor: `${branding.primaryColor || 'hsl(179, 100%, 39%)'}30` }}>
+            <p className="text-sm text-muted-foreground">{branding.welcomeMessage}</p>
+          </div>
+        )}
+
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card data-testid="card-stats-total">
@@ -1067,6 +1097,15 @@ export default function ClientPortalDashboard() {
           </div>
         )}
       </main>
+
+      {/* Footer */}
+      {(branding.footerText || branding.companyName) && (
+        <footer className="border-t py-4 mt-8">
+          <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+            {branding.footerText || `© ${new Date().getFullYear()} ${branding.companyName}. All rights reserved.`}
+          </div>
+        </footer>
+      )}
     </div>
   );
 }

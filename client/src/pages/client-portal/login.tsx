@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,6 +10,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+
+interface PortalBranding {
+  logoUrl?: string;
+  companyName?: string;
+  primaryColor?: string;
+  accentColor?: string;
+  welcomeMessage?: string;
+  footerText?: string;
+}
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -23,6 +32,14 @@ export default function ClientPortalLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [branding, setBranding] = useState<PortalBranding>({});
+
+  useEffect(() => {
+    fetch("/api/public/client-portal-branding")
+      .then(r => r.json())
+      .then(data => setBranding(data || {}))
+      .catch(() => {});
+  }, []);
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -62,13 +79,17 @@ export default function ClientPortalLogin() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* AgencyBoost Branding */}
+        {/* Portal Branding */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center gap-3 mb-2">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 rounded-xl">
-              <ArrowRight className="w-6 h-6 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">AgencyBoost</h1>
+            {branding.logoUrl ? (
+              <img src={branding.logoUrl} alt={branding.companyName || "Company Logo"} className="h-12 w-auto object-contain" />
+            ) : (
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl" style={{ backgroundColor: `${branding.primaryColor || 'hsl(179, 100%, 39%)'}20` }}>
+                <ArrowRight className="w-6 h-6" style={{ color: branding.primaryColor || 'hsl(179, 100%, 39%)' }} />
+              </div>
+            )}
+            <h1 className="text-2xl font-bold text-foreground">{branding.companyName || "Client Portal"}</h1>
           </div>
           <p className="text-muted-foreground">Client Portal</p>
         </div>
@@ -179,7 +200,7 @@ export default function ClientPortalLogin() {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-muted-foreground">
-          <p>© 2025 AgencyBoost. All rights reserved.</p>
+          <p>{branding.footerText || `© ${new Date().getFullYear()} ${branding.companyName || "AgencyBoost"}. All rights reserved.`}</p>
         </div>
       </div>
     </div>

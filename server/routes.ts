@@ -11463,6 +11463,17 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  app.get("/api/public/client-portal-branding", async (req, res) => {
+    try {
+      const [setting] = await db.select().from(taskSettings)
+        .where(eq(taskSettings.settingKey, 'client_portal_branding'));
+      res.json(setting?.settingValue || {});
+    } catch (error) {
+      console.error("Error fetching public client portal branding:", error);
+      res.json({});
+    }
+  });
+
   app.get("/objects/:objectPath(*)", requireAuth(), async (req, res) => {
     try {
       console.log("Serving object for path:", req.path);
