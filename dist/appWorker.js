@@ -1,4 +1,3 @@
-import { createRequire } from 'module'; const require = createRequire(import.meta.url);
 var __defProp = Object.defineProperty;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
@@ -18271,7 +18270,7 @@ function registerProposalRoutes(app2, requireAuth2, requirePermission2, notifica
       const quoteName = quote.name || "Your Proposal";
       const branding = await loadBranding();
       const emailTpl = await loadEmailTemplate();
-      const html = generateProposalEmailHtml(clientName, quoteName, proposalUrl, branding, emailTpl);
+      const html = generateProposalEmailHtml(clientName, quoteName, proposalUrl, branding, emailTpl, appUrl);
       const subject = applyMergeTags(emailTpl.subjectLine, clientName, quoteName);
       const emailResult = await notificationService.sendDirectEmail({
         to: clientEmail,
@@ -18323,7 +18322,7 @@ Thank you!`,
       const proposalUrl = `${appUrl}/proposal/${quote.publicToken}`;
       const branding = await loadBranding();
       const emailTpl = await loadEmailTemplate();
-      const html = generateProposalEmailHtml(clientName, quote.name, proposalUrl, branding, emailTpl);
+      const html = generateProposalEmailHtml(clientName, quote.name, proposalUrl, branding, emailTpl, appUrl);
       const subject = applyMergeTags(emailTpl.subjectLine, clientName, quote.name);
       const emailResult = await notificationService.sendDirectEmail({
         to: clientEmail,
@@ -18885,13 +18884,14 @@ Thank you!`,
 function applyMergeTags(text2, clientName, quoteName) {
   return text2.replace(/\{\{clientName\}\}/g, clientName).replace(/\{\{proposalName\}\}/g, quoteName);
 }
-function generateProposalEmailHtml(clientName, quoteName, proposalUrl, branding = {}, emailTpl) {
+function generateProposalEmailHtml(clientName, quoteName, proposalUrl, branding = {}, emailTpl, appUrl) {
   const escHtml = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const rawColor = branding.primaryColor || "#00C9C6";
   const color = /^#[0-9A-Fa-f]{6}$/.test(rawColor) ? rawColor : "#00C9C6";
   const darkerColor = adjustColor(color, -15);
   const companyName = escHtml(branding.companyName || "");
-  const logoHtml = branding.logoUrl ? `<img src="${escHtml(branding.logoUrl)}" alt="${companyName}" style="max-height: 48px; max-width: 200px; margin-bottom: 12px;" />` : "";
+  const publicLogoUrl = branding.logoUrl && appUrl ? `${appUrl}/api/public/proposal-logo` : "";
+  const logoHtml = publicLogoUrl ? `<img src="${escHtml(publicLogoUrl)}" alt="${companyName}" style="max-height: 48px; max-width: 200px; margin-bottom: 12px;" />` : "";
   const footerContent = branding.footerText ? `<p style="margin-bottom: 8px;">${escHtml(branding.footerText)}</p>` : "";
   const tpl = {
     headerTitle: emailTpl?.headerTitle || "Your Proposal is Ready",
@@ -33231,6 +33231,35 @@ AgencyBoost CRM`
       await objectStorageService.downloadObject(objectFile, res);
     } catch (error) {
       console.error("Error serving onboarding logo:", error);
+      const { ObjectNotFoundError: ObjectNotFoundError2 } = await Promise.resolve().then(() => (init_objectStorage(), objectStorage_exports));
+      if (error instanceof ObjectNotFoundError2) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
+  });
+  app2.get("/api/public/proposal-logo", async (req, res) => {
+    try {
+      const [brandingSetting] = await db.select().from(taskSettings).where(eq20(taskSettings.settingKey, "proposal_branding"));
+      let logoUrl = "";
+      if (brandingSetting?.settingValue) {
+        logoUrl = brandingSetting.settingValue.logoUrl || "";
+      } else {
+        const [profile] = await db.select().from(businessProfile).limit(1);
+        if (profile) {
+          logoUrl = profile.logo || "";
+        }
+      }
+      if (!logoUrl || typeof logoUrl !== "string") {
+        return res.sendStatus(404);
+      }
+      const { ObjectStorageService: ObjectStorageService2 } = await Promise.resolve().then(() => (init_objectStorage(), objectStorage_exports));
+      const objectStorageService = new ObjectStorageService2();
+      const objectFile = await objectStorageService.getObjectEntityFile(logoUrl);
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      await objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error serving proposal logo:", error);
       const { ObjectNotFoundError: ObjectNotFoundError2 } = await Promise.resolve().then(() => (init_objectStorage(), objectStorage_exports));
       if (error instanceof ObjectNotFoundError2) {
         return res.sendStatus(404);

@@ -11463,6 +11463,37 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  app.get("/api/public/proposal-logo", async (req, res) => {
+    try {
+      const [brandingSetting] = await db.select().from(taskSettings)
+        .where(eq(taskSettings.settingKey, 'proposal_branding'));
+      let logoUrl = "";
+      if (brandingSetting?.settingValue) {
+        logoUrl = (brandingSetting.settingValue as any).logoUrl || "";
+      } else {
+        const [profile] = await db.select().from(businessProfile).limit(1);
+        if (profile) {
+          logoUrl = (profile as any).logo || "";
+        }
+      }
+      if (!logoUrl || typeof logoUrl !== 'string') {
+        return res.sendStatus(404);
+      }
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(logoUrl);
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      await objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error serving proposal logo:", error);
+      const { ObjectNotFoundError } = await import("./objectStorage");
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
+  });
+
   app.get("/api/public/client-portal-branding", async (req, res) => {
     try {
       const [setting] = await db.select().from(taskSettings)

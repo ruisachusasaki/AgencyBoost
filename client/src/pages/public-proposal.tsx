@@ -453,7 +453,7 @@ export default function PublicProposal() {
   const brandColor = branding.primaryColor || "#00C9C6";
   const brandColorDark = darkenColor(brandColor, -20);
   const companyName = branding.companyName || "";
-  const logoUrl = branding.logoUrl || "";
+  const logoUrl = branding.logoUrl ? "/api/public/proposal-logo" : "";
   const footerText = branding.footerText || "";
 
   const buildFee = data?.buildFee || 0;

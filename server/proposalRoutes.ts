@@ -261,7 +261,7 @@ export function registerProposalRoutes(
 
       const branding = await loadBranding();
       const emailTpl = await loadEmailTemplate();
-      const html = generateProposalEmailHtml(clientName, quoteName, proposalUrl, branding, emailTpl);
+      const html = generateProposalEmailHtml(clientName, quoteName, proposalUrl, branding, emailTpl, appUrl);
 
       const subject = applyMergeTags(emailTpl.subjectLine, clientName, quoteName);
       const emailResult = await notificationService.sendDirectEmail({
@@ -315,7 +315,7 @@ export function registerProposalRoutes(
       const proposalUrl = `${appUrl}/proposal/${quote.publicToken}`;
       const branding = await loadBranding();
       const emailTpl = await loadEmailTemplate();
-      const html = generateProposalEmailHtml(clientName, quote.name, proposalUrl, branding, emailTpl);
+      const html = generateProposalEmailHtml(clientName, quote.name, proposalUrl, branding, emailTpl, appUrl);
 
       const subject = applyMergeTags(emailTpl.subjectLine, clientName, quote.name);
       const emailResult = await notificationService.sendDirectEmail({
@@ -1017,15 +1017,17 @@ function generateProposalEmailHtml(
   quoteName: string,
   proposalUrl: string,
   branding: { logoUrl?: string; companyName?: string; primaryColor?: string; footerText?: string } = {},
-  emailTpl?: { headerTitle?: string; headerSubtitle?: string; greeting?: string; introText?: string; step1?: string; step2?: string; step3?: string; buttonText?: string; closingText?: string }
+  emailTpl?: { headerTitle?: string; headerSubtitle?: string; greeting?: string; introText?: string; step1?: string; step2?: string; step3?: string; buttonText?: string; closingText?: string },
+  appUrl?: string
 ): string {
   const escHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const rawColor = branding.primaryColor || "#00C9C6";
   const color = /^#[0-9A-Fa-f]{6}$/.test(rawColor) ? rawColor : "#00C9C6";
   const darkerColor = adjustColor(color, -15);
   const companyName = escHtml(branding.companyName || "");
-  const logoHtml = branding.logoUrl
-    ? `<img src="${escHtml(branding.logoUrl)}" alt="${companyName}" style="max-height: 48px; max-width: 200px; margin-bottom: 12px;" />`
+  const publicLogoUrl = branding.logoUrl && appUrl ? `${appUrl}/api/public/proposal-logo` : "";
+  const logoHtml = publicLogoUrl
+    ? `<img src="${escHtml(publicLogoUrl)}" alt="${companyName}" style="max-height: 48px; max-width: 200px; margin-bottom: 12px;" />`
     : "";
   const footerContent = branding.footerText
     ? `<p style="margin-bottom: 8px;">${escHtml(branding.footerText)}</p>`
