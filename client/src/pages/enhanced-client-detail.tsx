@@ -7694,102 +7694,74 @@ export default function EnhancedClientDetail() {
                               </div>
                             </button>
 
-                            {/* Thread Messages */}
+                            {/* Thread Messages — chat-bubble layout */}
                             {isThreadOpen && (
-                              <div className="border-t bg-gray-50/50 divide-y divide-gray-100">
-                                {thread.messages.map((log) => {
-                                  const isInbound = log.newValues?.direction === 'inbound';
-                                  const isExpanded = expandedMessages.has(log.id);
-                                  const fullMessage = log.newValues?.message || log.details || '';
-                                  const emailSubject = log.newValues?.subject || '';
-                                  const logType = log.entityType || log.entity_type;
+                              <div className="border-t bg-gray-50 px-4 py-3 space-y-1 max-h-[500px] overflow-y-auto">
+                                {(() => {
+                                  const sortedMsgs = [...thread.messages].sort(
+                                    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+                                  );
+                                  let lastDateStr = '';
+                                  return sortedMsgs.map((log) => {
+                                    const isInbound = log.newValues?.direction === 'inbound';
+                                    const fullMessage = log.newValues?.message || log.details || '';
+                                    const emailSubject = log.newValues?.subject || '';
+                                    const logType = log.entityType || log.entity_type;
+                                    const msgDate = new Date(log.timestamp);
+                                    const dateStr = msgDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                    const timeStr = msgDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                                    const showDateDivider = dateStr !== lastDateStr;
+                                    lastDateStr = dateStr;
 
-                                  return (
-                                    <div
-                                      key={log.id}
-                                      className={`p-3 ${isInbound ? 'bg-green-50/60' : 'bg-white'}`}
-                                      data-testid={`message-card-${log.id}`}
-                                    >
-                                      <div className="flex items-start gap-3">
-                                        {/* Direction indicator */}
-                                        <div className={`mt-0.5 flex items-center justify-center w-6 h-6 rounded-full shrink-0 ${isInbound ? 'bg-green-200 text-green-800' : 'bg-blue-200 text-blue-800'}`}>
-                                          {isInbound ? (
-                                            <ArrowDownLeft className="h-3 w-3" />
-                                          ) : (
-                                            <ArrowUpRight className="h-3 w-3" />
-                                          )}
-                                        </div>
-
-                                        <div className="flex-1 min-w-0">
-                                          <div className="flex items-center justify-between gap-2">
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                              <span className={`text-xs font-semibold uppercase tracking-wide ${isInbound ? 'text-green-700' : 'text-blue-700'}`}>
-                                                {isInbound ? 'Received' : 'Sent'}
-                                              </span>
-                                              {isInbound ? (
-                                                <span className="text-xs text-gray-500">from {log.newValues?.from || 'unknown'}</span>
-                                              ) : log.userName && log.userName !== 'Unknown User' ? (
-                                                <span className="text-xs text-gray-500">by {log.userName}</span>
-                                              ) : null}
-                                              {log.newValues?.status && (
-                                                <span className={`inline-flex items-center px-1.5 py-0 rounded text-[10px] font-medium ${
-                                                  log.newValues.status === 'delivered' || log.newValues.status === 'sent' ? 'bg-green-100 text-green-700' :
-                                                  log.newValues.status === 'failed' ? 'bg-red-100 text-red-700' :
-                                                  'bg-gray-100 text-gray-700'
-                                                }`}>
-                                                  {log.newValues.provider === 'twilio' ? 'Twilio' : log.newValues.provider === 'mailgun' ? 'MailGun' : log.newValues.provider}: {log.newValues.status}
-                                                </span>
-                                              )}
-                                            </div>
-                                            <div className="flex items-center gap-1 shrink-0">
-                                              <span className="text-[11px] text-gray-400">{new Date(log.timestamp).toLocaleString()}</span>
-                                              <button
-                                                onClick={() => toggleMessageExpansion(log.id)}
-                                                className="p-0.5 hover:bg-gray-200 rounded transition-colors"
-                                              >
-                                                {isExpanded ? <ChevronUp className="h-3.5 w-3.5 text-gray-400" /> : <ChevronDown className="h-3.5 w-3.5 text-gray-400" />}
-                                              </button>
+                                    return (
+                                      <div key={log.id}>
+                                        {showDateDivider && (
+                                          <div className="flex items-center justify-center my-3">
+                                            <div className="flex items-center gap-2 px-3 py-1 bg-white rounded-full border text-[11px] text-gray-500 font-medium shadow-sm">
+                                              <Calendar className="h-3 w-3" />
+                                              {dateStr}
                                             </div>
                                           </div>
-
-                                          {/* Preview line */}
-                                          {!isExpanded && (
-                                            <p className="text-sm text-gray-700 mt-1 line-clamp-2">
-                                              {emailSubject ? `${emailSubject} — ` : ''}{fullMessage.replace(/<[^>]*>/g, '').slice(0, 200)}
-                                            </p>
-                                          )}
-
-                                          {/* Expanded content */}
-                                          {isExpanded && (
-                                            <div className={`mt-2 rounded-md p-3 space-y-2 ${isInbound ? 'bg-green-100/60 border border-green-200' : 'bg-blue-50/60 border border-blue-100'}`}>
-                                              {logType === 'email' && emailSubject && (
-                                                <div>
-                                                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Subject</p>
-                                                  <p className="text-sm text-gray-800 font-medium">{emailSubject}</p>
-                                                </div>
+                                        )}
+                                        <div className={`flex ${isInbound ? 'justify-start' : 'justify-end'} mb-2`} data-testid={`message-card-${log.id}`}>
+                                          <div className={`max-w-[75%] ${isInbound ? '' : ''}`}>
+                                            {logType === 'email' && emailSubject && (
+                                              <p className={`text-[10px] font-semibold mb-0.5 ${isInbound ? 'text-gray-500' : 'text-right text-gray-500'}`}>
+                                                Re: {emailSubject}
+                                              </p>
+                                            )}
+                                            <div className={`rounded-2xl px-4 py-2.5 ${
+                                              isInbound
+                                                ? 'bg-white border border-gray-200 rounded-bl-md'
+                                                : 'text-white rounded-br-md'
+                                            }`} style={!isInbound ? { backgroundColor: 'hsl(179, 100%, 39%)' } : {}}>
+                                              {logType === 'email' ? (
+                                                <div className={`prose prose-sm max-w-none ${isInbound ? 'text-gray-800' : 'text-white'}`} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(fullMessage) }} />
+                                              ) : (
+                                                <p className={`text-sm whitespace-pre-wrap ${isInbound ? 'text-gray-800' : 'text-white'}`}>{fullMessage}</p>
                                               )}
-                                              {log.newValues && (log.newValues.to || log.newValues.from) && (
-                                                <div className="text-xs text-gray-600">
-                                                  {log.newValues.to && <span>To: {log.newValues.to}</span>}
-                                                  {log.newValues.to && log.newValues.from && <span className="mx-1">|</span>}
-                                                  {log.newValues.from && <span>From: {log.newValues.from}</span>}
-                                                </div>
-                                              )}
-                                              <div>
-                                                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Message</p>
-                                                {logType === 'email' ? (
-                                                  <div className="prose prose-sm max-w-none text-gray-800 mt-1" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(fullMessage) }} />
-                                                ) : (
-                                                  <p className="text-sm text-gray-800 whitespace-pre-wrap mt-1">{fullMessage}</p>
-                                                )}
-                                              </div>
                                             </div>
-                                          )}
+                                            <div className={`flex items-center gap-1.5 mt-1 ${isInbound ? '' : 'justify-end'}`}>
+                                              <span className="text-[10px] text-gray-400">{timeStr}</span>
+                                              {log.newValues?.status && (
+                                                <span className={`text-[10px] ${
+                                                  log.newValues.status === 'delivered' ? 'text-green-500' :
+                                                  log.newValues.status === 'failed' || log.newValues.status === 'undelivered' ? 'text-red-500' :
+                                                  'text-gray-400'
+                                                }`}>
+                                                  · {log.newValues.status}
+                                                </span>
+                                              )}
+                                              {!isInbound && log.userName && log.userName !== 'Unknown User' && (
+                                                <span className="text-[10px] text-gray-400">· {log.userName}</span>
+                                              )}
+                                            </div>
+                                          </div>
                                         </div>
                                       </div>
-                                    </div>
-                                  );
-                                })}
+                                    );
+                                  });
+                                })()}
                               </div>
                             )}
                           </div>
