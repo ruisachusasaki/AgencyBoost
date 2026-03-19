@@ -56,7 +56,6 @@ import {
   ChevronDown,
   ChevronUp,
   Check,
-  Target,
   HelpCircle,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";

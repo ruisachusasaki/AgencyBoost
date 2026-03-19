@@ -46237,6 +46237,7 @@ ${appointment.description || ""}
       }
       const customFieldsList = await db.select().from(customFields).orderBy(customFields.order);
       const folders = await db.select().from(customFieldFolders).orderBy(customFieldFolders.order);
+      const hasExistingProgress = client.onboardingProgress && Object.keys(client.onboardingProgress).length > 0;
       res.json({
         client: { id: client.id, name: client.name, email: client.email, company: client.company },
         config,
@@ -46245,6 +46246,18 @@ ${appointment.description || ""}
         savedProgress: client.onboardingProgress || null,
         savedStep: client.onboardingCurrentStep || 0
       });
+      if (!hasExistingProgress) {
+        try {
+          await emitTrigger("client_onboarding_started", {
+            clientId: client.id,
+            clientName: client.name,
+            clientEmail: client.email,
+            accountManagerId: client.accountManagerId
+          });
+        } catch (triggerError) {
+          console.error("Failed to emit client_onboarding_started trigger:", triggerError);
+        }
+      }
     } catch (error) {
       console.error("Error fetching client onboarding data:", error);
       res.status(500).json({ error: "Failed to load onboarding form" });
@@ -46282,6 +46295,17 @@ ${appointment.description || ""}
         customFieldValues: mergedCustomFieldValues
       }).where(eq20(clients.id, client.id));
       res.json({ success: true, message: "Progress saved" });
+      try {
+        await emitTrigger("client_onboarding_saved", {
+          clientId: client.id,
+          clientName: client.name,
+          clientEmail: client.email,
+          currentStep: clampedStep,
+          accountManagerId: client.accountManagerId
+        });
+      } catch (triggerError) {
+        console.error("Failed to emit client_onboarding_saved trigger:", triggerError);
+      }
     } catch (error) {
       console.error("Error saving onboarding progress:", error);
       res.status(500).json({ error: "Failed to save progress" });
@@ -46307,6 +46331,16 @@ ${appointment.description || ""}
         onboardingCurrentStep: 0
       }).where(eq20(clients.id, client.id));
       res.json({ success: true, message: "Onboarding completed successfully" });
+      try {
+        await emitTrigger("client_onboarding_completed", {
+          clientId: client.id,
+          clientName: client.name,
+          clientEmail: client.email,
+          accountManagerId: client.accountManagerId
+        });
+      } catch (triggerError) {
+        console.error("Failed to emit client_onboarding_completed trigger:", triggerError);
+      }
     } catch (error) {
       console.error("Error submitting client onboarding:", error);
       res.status(500).json({ error: "Failed to submit onboarding form" });
@@ -53187,6 +53221,23 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
           console.error("Failed to emit quote_accepted trigger:", triggerError);
         }
       }
+      if (status === "signed") {
+        try {
+          await emitTrigger("quote_signed", {
+            quoteId: updatedQuote.id,
+            quoteName: updatedQuote.name,
+            clientId: updatedQuote.clientId,
+            leadId: updatedQuote.leadId,
+            totalCost: updatedQuote.totalCost,
+            clientBudget: updatedQuote.clientBudget,
+            desiredMargin: updatedQuote.desiredMargin,
+            status: updatedQuote.status,
+            signedAt: updatedQuote.updatedAt
+          });
+        } catch (triggerError) {
+          console.error("Failed to emit quote_signed trigger:", triggerError);
+        }
+      }
       res.json({
         message: "Quote status updated successfully",
         quote: updatedQuote
@@ -58632,6 +58683,56 @@ async function initializeDefaultAutomationTriggers() {
           createdAt: /* @__PURE__ */ new Date()
         },
         {
+          id: "trigger-quote-signed",
+          name: "Quote Signed",
+          type: "quote_signed",
+          description: "Triggers when a sales quote status is updated to Signed",
+          category: "Sales",
+          configSchema: {
+            clientId: { type: "client_select", label: "Client", required: false },
+            leadId: { type: "lead_select", label: "Lead", required: false }
+          },
+          isActive: true,
+          createdAt: /* @__PURE__ */ new Date()
+        },
+        {
+          id: "trigger-client-onboarding-started",
+          name: "Client Onboarding Started",
+          type: "client_onboarding_started",
+          description: "Triggers when a client opens and begins their onboarding form",
+          category: "Client Management",
+          configSchema: {
+            clientId: { type: "client_select", label: "Client", required: false }
+          },
+          isActive: true,
+          createdAt: /* @__PURE__ */ new Date()
+        },
+        {
+          id: "trigger-client-onboarding-saved",
+          name: "Client Onboarding Progress Saved",
+          type: "client_onboarding_saved",
+          description: "Triggers when a client saves progress on their onboarding form",
+          category: "Client Management",
+          configSchema: {
+            clientId: { type: "client_select", label: "Client", required: false },
+            currentStep: { type: "number", label: "Step Number" }
+          },
+          isActive: true,
+          createdAt: /* @__PURE__ */ new Date()
+        },
+        {
+          id: "trigger-client-onboarding-completed",
+          name: "Client Onboarding Completed",
+          type: "client_onboarding_completed",
+          description: "Triggers when a client finishes and submits their onboarding form",
+          category: "Client Management",
+          configSchema: {
+            clientId: { type: "client_select", label: "Client", required: false }
+          },
+          isActive: true,
+          createdAt: /* @__PURE__ */ new Date()
+        },
+        {
           id: "trigger-weekly-hours-below-threshold",
           name: "Weekly Hours Below Threshold",
           type: "weekly_hours_below_threshold",
@@ -58874,6 +58975,56 @@ async function initializeDefaultAutomationTriggers() {
         category: "integration",
         configSchema: {
           is_private: { type: "boolean", label: "Private Channel Only", default: false }
+        },
+        isActive: true,
+        createdAt: /* @__PURE__ */ new Date()
+      },
+      {
+        id: "trigger-quote-signed-sample",
+        name: "Quote Signed",
+        type: "quote_signed",
+        description: "Triggers when a sales quote status is updated to Signed",
+        category: "Sales",
+        configSchema: {
+          clientId: { type: "client_select", label: "Client", required: false },
+          leadId: { type: "lead_select", label: "Lead", required: false }
+        },
+        isActive: true,
+        createdAt: /* @__PURE__ */ new Date()
+      },
+      {
+        id: "trigger-client-onboarding-started-sample",
+        name: "Client Onboarding Started",
+        type: "client_onboarding_started",
+        description: "Triggers when a client opens and begins their onboarding form",
+        category: "Client Management",
+        configSchema: {
+          clientId: { type: "client_select", label: "Client", required: false }
+        },
+        isActive: true,
+        createdAt: /* @__PURE__ */ new Date()
+      },
+      {
+        id: "trigger-client-onboarding-saved-sample",
+        name: "Client Onboarding Progress Saved",
+        type: "client_onboarding_saved",
+        description: "Triggers when a client saves progress on their onboarding form",
+        category: "Client Management",
+        configSchema: {
+          clientId: { type: "client_select", label: "Client", required: false },
+          currentStep: { type: "number", label: "Step Number" }
+        },
+        isActive: true,
+        createdAt: /* @__PURE__ */ new Date()
+      },
+      {
+        id: "trigger-client-onboarding-completed-sample",
+        name: "Client Onboarding Completed",
+        type: "client_onboarding_completed",
+        description: "Triggers when a client finishes and submits their onboarding form",
+        category: "Client Management",
+        configSchema: {
+          clientId: { type: "client_select", label: "Client", required: false }
         },
         isActive: true,
         createdAt: /* @__PURE__ */ new Date()

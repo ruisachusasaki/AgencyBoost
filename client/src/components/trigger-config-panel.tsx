@@ -543,7 +543,8 @@ export default function TriggerConfigPanel({
     } else if (triggerDefinition?.type === 'quote_created' || 
                triggerDefinition?.type === 'quote_sent' || 
                triggerDefinition?.type === 'quote_viewed' ||
-               triggerDefinition?.type === 'quote_accepted') {
+               triggerDefinition?.type === 'quote_accepted' ||
+               triggerDefinition?.type === 'quote_signed') {
       // For quote-related triggers, add quote-specific core fields FIRST
       fields.push({
         id: 'name',
@@ -2636,6 +2637,32 @@ export default function TriggerConfigPanel({
               </>
             )}
 
+            {/* For quote signed triggers, show core fields first */}
+            {triggerDefinition.type === 'quote_signed' && (
+              <>
+                {triggerDefinition.configSchema.clientId && 
+                  renderConfigField("clientId", triggerDefinition.configSchema.clientId)
+                }
+                {triggerDefinition.configSchema.leadId && 
+                  renderConfigField("leadId", triggerDefinition.configSchema.leadId)
+                }
+              </>
+            )}
+
+            {/* For client onboarding triggers, show core fields */}
+            {(triggerDefinition.type === 'client_onboarding_started' ||
+              triggerDefinition.type === 'client_onboarding_saved' ||
+              triggerDefinition.type === 'client_onboarding_completed') && (
+              <>
+                {triggerDefinition.configSchema.clientId && 
+                  renderConfigField("clientId", triggerDefinition.configSchema.clientId)
+                }
+                {triggerDefinition.type === 'client_onboarding_saved' && triggerDefinition.configSchema.currentStep &&
+                  renderConfigField("currentStep", triggerDefinition.configSchema.currentStep)
+                }
+              </>
+            )}
+
             {/* For task dependency completed triggers, show Additional Filters */}
             {triggerDefinition.type === 'task_dependency_completed' && (
               <>
@@ -2805,6 +2832,10 @@ export default function TriggerConfigPanel({
              triggerDefinition.type !== 'quote_sent' &&
              triggerDefinition.type !== 'quote_viewed' &&
              triggerDefinition.type !== 'quote_accepted' &&
+             triggerDefinition.type !== 'quote_signed' &&
+             triggerDefinition.type !== 'client_onboarding_started' &&
+             triggerDefinition.type !== 'client_onboarding_saved' &&
+             triggerDefinition.type !== 'client_onboarding_completed' &&
              triggerDefinition.type !== 'task_dependency_completed' &&
              triggerDefinition.type !== 'email_received' &&
              triggerDefinition.type !== 'client_portal_activity' &&

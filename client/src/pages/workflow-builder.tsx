@@ -1087,6 +1087,39 @@ export default function WorkflowBuilderPage() {
               );
             })()}
 
+            {/* Client Management */}
+            {(() => {
+              const clientMgmtTriggers = (availableTriggers as any[])?.filter((t: any) => t.category === "Client Management") || [];
+              const filteredTriggers = filterItems(clientMgmtTriggers.map((t: any) => ({ type: t.type, name: t.name })), triggerSearch);
+              if (filteredTriggers.length === 0) return null;
+              
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Briefcase className="h-5 w-5 text-teal-600" />
+                      Client Management
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {filteredTriggers.map((trigger) => (
+                      <Button
+                        key={trigger.type}
+                        variant="outline"
+                        className="w-full justify-start text-left h-auto p-3"
+                        onClick={() => handleSelectTrigger({ ...trigger, category: "Client Management" })}
+                        data-testid={`button-select-trigger-${trigger.type}`}
+                      >
+                        <div>
+                          <div className="font-medium">{trigger.name}</div>
+                        </div>
+                      </Button>
+                    ))}
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
             {/* Calendar Management */}
             {(() => {
               const calendarTriggers = (availableTriggers as any[])?.filter((t: any) => t.category === "calendar_management") || [];

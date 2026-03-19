@@ -29266,6 +29266,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       }
       const customFieldsList = await db.select().from(customFields).orderBy(customFields.order);
       const folders = await db.select().from(customFieldFolders).orderBy(customFieldFolders.order);
+      const hasExistingProgress = client.onboardingProgress && Object.keys(client.onboardingProgress as any).length > 0;
+
       res.json({
         client: { id: client.id, name: client.name, email: client.email, company: client.company },
         config,
@@ -29274,6 +29276,20 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         savedProgress: client.onboardingProgress || null,
         savedStep: client.onboardingCurrentStep || 0
       });
+
+      // Emit client_onboarding_started trigger when client first opens the form (no existing progress)
+      if (!hasExistingProgress) {
+        try {
+          await emitTrigger('client_onboarding_started', {
+            clientId: client.id,
+            clientName: client.name,
+            clientEmail: client.email,
+            accountManagerId: client.accountManagerId,
+          });
+        } catch (triggerError) {
+          console.error('Failed to emit client_onboarding_started trigger:', triggerError);
+        }
+      }
     } catch (error) {
       console.error("Error fetching client onboarding data:", error);
       res.status(500).json({ error: "Failed to load onboarding form" });
@@ -29317,6 +29333,19 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         })
         .where(eq(clients.id, client.id));
       res.json({ success: true, message: "Progress saved" });
+
+      // Emit client_onboarding_saved trigger
+      try {
+        await emitTrigger('client_onboarding_saved', {
+          clientId: client.id,
+          clientName: client.name,
+          clientEmail: client.email,
+          currentStep: clampedStep,
+          accountManagerId: client.accountManagerId,
+        });
+      } catch (triggerError) {
+        console.error('Failed to emit client_onboarding_saved trigger:', triggerError);
+      }
     } catch (error) {
       console.error("Error saving onboarding progress:", error);
       res.status(500).json({ error: "Failed to save progress" });
@@ -29345,6 +29374,18 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         })
         .where(eq(clients.id, client.id));
       res.json({ success: true, message: "Onboarding completed successfully" });
+
+      // Emit client_onboarding_completed trigger
+      try {
+        await emitTrigger('client_onboarding_completed', {
+          clientId: client.id,
+          clientName: client.name,
+          clientEmail: client.email,
+          accountManagerId: client.accountManagerId,
+        });
+      } catch (triggerError) {
+        console.error('Failed to emit client_onboarding_completed trigger:', triggerError);
+      }
     } catch (error) {
       console.error("Error submitting client onboarding:", error);
       res.status(500).json({ error: "Failed to submit onboarding form" });
@@ -38694,6 +38735,26 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           });
         } catch (triggerError) {
           console.error('Failed to emit quote_accepted trigger:', triggerError);
+          // Don't fail the status update if trigger fails
+        }
+      }
+
+      // Emit quote_signed trigger when status changes to "signed"
+      if (status === "signed") {
+        try {
+          await emitTrigger('quote_signed', {
+            quoteId: updatedQuote.id,
+            quoteName: updatedQuote.name,
+            clientId: updatedQuote.clientId,
+            leadId: updatedQuote.leadId,
+            totalCost: updatedQuote.totalCost,
+            clientBudget: updatedQuote.clientBudget,
+            desiredMargin: updatedQuote.desiredMargin,
+            status: updatedQuote.status,
+            signedAt: updatedQuote.updatedAt,
+          });
+        } catch (triggerError) {
+          console.error('Failed to emit quote_signed trigger:', triggerError);
           // Don't fail the status update if trigger fails
         }
       }

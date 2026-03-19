@@ -327,7 +327,9 @@ export default function AutomationTriggers() {
       campaign_management: "bg-purple-100 text-purple-800",
       financial_management: "bg-emerald-100 text-emerald-800",
       email_marketing: "bg-pink-100 text-pink-800",
-      time_based: "bg-cyan-100 text-cyan-800"
+      time_based: "bg-cyan-100 text-cyan-800",
+      "Sales": "bg-emerald-100 text-emerald-800",
+      "Client Management": "bg-teal-100 text-teal-800",
     };
     return colors[category] || "bg-gray-100 text-gray-800";
   };
@@ -732,6 +734,8 @@ export default function AutomationTriggers() {
                       <SelectItem value="financial_management">Financial Management</SelectItem>
                       <SelectItem value="email_marketing">Email Marketing</SelectItem>
                       <SelectItem value="time_based">Time Based</SelectItem>
+                      <SelectItem value="Sales">Sales</SelectItem>
+                      <SelectItem value="Client Management">Client Management</SelectItem>
                     </>
                   ) : (
                     <>
