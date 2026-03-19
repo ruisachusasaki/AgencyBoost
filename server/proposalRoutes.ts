@@ -646,12 +646,6 @@ export function registerProposalRoutes(
 
       (async () => {
         try {
-          const clientId = quote.clientId;
-          if (!clientId) {
-            console.log("[PDF] No clientId on quote, skipping PDF generation");
-            return;
-          }
-
           const qItems = await db.select().from(quoteItems).where(eq(quoteItems.quoteId, quote.id));
           let companyName = "";
           try {
@@ -676,21 +670,62 @@ export function registerProposalRoutes(
           const sanitizedName = quote.name.replace(/[^a-zA-Z0-9_-]/g, '_');
           const fileName = `Signed_Agreement_${sanitizedName}_${new Date(signedAt).toISOString().split('T')[0]}.pdf`;
 
-          const objectStorage = new ObjectStorageService();
-          const fileUrl = await objectStorage.uploadBuffer(pdfBuffer, fileName, 'application/pdf');
+          const clientId = quote.clientId;
+          if (clientId) {
+            const objectStorage = new ObjectStorageService();
+            const fileUrl = await objectStorage.uploadBuffer(pdfBuffer, fileName, 'application/pdf');
 
-          const uploadedBy = quote.sentByUserId || quote.createdBy;
-          await db.insert(documents).values({
-            name: fileName,
-            fileName,
-            fileType: 'pdf',
-            fileSize: pdfBuffer.length,
-            fileUrl,
-            clientId,
-            uploadedBy,
-          });
+            const uploadedBy = quote.sentByUserId || quote.createdBy;
+            await db.insert(documents).values({
+              name: fileName,
+              fileName,
+              fileType: 'pdf',
+              fileSize: pdfBuffer.length,
+              fileUrl,
+              clientId,
+              uploadedBy,
+            });
 
-          console.log(`[PDF] Signed agreement PDF generated and stored for client ${clientId}: ${fileName}`);
+            console.log(`[PDF] Signed agreement PDF generated and stored for client ${clientId}: ${fileName}`);
+          }
+
+          const branding = await loadBranding();
+          const brandColor = branding.primaryColor || "#00C9C6";
+          const brandName = branding.companyName || companyName || "";
+          try {
+            await notificationService.sendDirectEmail({
+              to: signerEmail,
+              subject: `Your Signed Agreement — ${quote.name}`,
+              text: `Hi ${signerName},\n\nThank you for signing the proposal "${quote.name}". Please find your signed agreement attached for your records.\n\nIf you have any questions, please don't hesitate to reach out.\n\nBest regards,\n${brandName}`,
+              html: `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+<div style="background: linear-gradient(135deg, ${brandColor} 0%, ${brandColor}dd 100%); color: white; padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+${brandName ? `<p style="font-size: 13px; opacity: 0.85; margin-bottom: 8px; letter-spacing: 0.5px;">${brandName}</p>` : ""}
+<h1 style="margin: 0 0 8px; font-size: 24px;">Agreement Signed</h1>
+<p style="margin: 0; opacity: 0.9;">Your signed copy is attached below</p>
+</div>
+<div style="background: #fff; padding: 30px; border: 1px solid #e0e0e0; border-top: none;">
+<p style="font-size: 16px;">Hi ${signerName},</p>
+<p>Thank you for signing the proposal <strong>"${quote.name}"</strong>. A copy of your signed agreement is attached to this email for your records.</p>
+<div style="background: #f8fafb; border-radius: 8px; padding: 16px; margin: 20px 0; border: 1px solid #eef1f3;">
+<p style="margin: 0 0 4px; font-size: 12px; text-transform: uppercase; color: #888;">Signed By</p>
+<p style="margin: 0; font-weight: 600;">${signerName} (${signerEmail})</p>
+<p style="margin: 8px 0 0; font-size: 12px; color: #888;">Signed on ${new Date(signedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+</div>
+<p style="font-size: 14px; color: #666;">If you have any questions, please don't hesitate to reach out.</p>
+</div>
+<div style="background: #f5f5f5; padding: 16px; text-align: center; font-size: 12px; color: #888; border-radius: 0 0 12px 12px; border: 1px solid #e0e0e0; border-top: none;">
+<p style="margin: 0;">This is an automated confirmation. Please keep this email for your records.</p>
+</div></body></html>`,
+              attachment: {
+                data: pdfBuffer,
+                filename: fileName,
+                contentType: 'application/pdf',
+              },
+            });
+            console.log(`[PDF] Signed agreement emailed to ${signerEmail}`);
+          } catch (emailErr) {
+            console.error("[PDF] Error emailing signed agreement to client:", emailErr);
+          }
         } catch (pdfError) {
           console.error("[PDF] Error generating signed agreement PDF:", pdfError);
         }

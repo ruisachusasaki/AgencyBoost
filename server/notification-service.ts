@@ -482,19 +482,27 @@ export class NotificationService {
   /**
    * Send a direct email via Mailgun (public method for use by other services like workflow engine)
    */
-  async sendDirectEmail(options: { to: string; subject: string; text: string; html?: string }): Promise<{ sent: boolean; error?: string }> {
+  async sendDirectEmail(options: { to: string; subject: string; text: string; html?: string; attachment?: { data: Buffer; filename: string; contentType?: string } }): Promise<{ sent: boolean; error?: string }> {
     if (!this.mailgunClient || !this.emailConfig) {
       return { sent: false, error: "Mailgun not configured" };
     }
 
     try {
-      await this.mailgunClient.messages.create(this.emailConfig.domain, {
+      const msgData: any = {
         from: `${this.emailConfig.fromName} <${this.emailConfig.fromEmail}>`,
         to: [options.to],
         subject: options.subject,
         text: options.text,
         html: options.html || options.text,
-      });
+      };
+      if (options.attachment) {
+        msgData.attachment = [{
+          data: options.attachment.data,
+          filename: options.attachment.filename,
+          contentType: options.attachment.contentType || 'application/pdf',
+        }];
+      }
+      await this.mailgunClient.messages.create(this.emailConfig.domain, msgData);
       return { sent: true };
     } catch (err: any) {
       console.error('[NotificationService] sendDirectEmail error:', err.message);
