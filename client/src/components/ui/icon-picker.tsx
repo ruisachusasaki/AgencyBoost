@@ -79,7 +79,7 @@ export function IconPicker({ value = "", onChange, label = "Icon", placeholder }
   return (
     <div className="grid gap-2">
       <Label>{label}</Label>
-      <Popover open={open} onOpenChange={setOpen} modal={true}>
+      <Popover open={open} onOpenChange={setOpen} modal={false}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -93,7 +93,7 @@ export function IconPicker({ value = "", onChange, label = "Icon", placeholder }
             <Search className="w-4 h-4 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-96 p-0" align="start" style={{ zIndex: 9999 }}>
+        <PopoverContent className="w-96 p-0 pointer-events-auto" align="start" style={{ zIndex: 9999 }}>
           <div className="flex flex-col" style={{ maxHeight: '400px' }}>
             <div className="p-3 border-b">
               <div className="relative">
@@ -105,6 +105,9 @@ export function IconPicker({ value = "", onChange, label = "Icon", placeholder }
                   className="pl-9"
                   data-testid="input-icon-search"
                   autoFocus
+                  onFocus={(e) => e.target.select()}
+                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
                 />
                 {searchTerm && (
                   <Button
