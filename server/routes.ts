@@ -29920,6 +29920,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
   app.get("/api/meetings/active-timer", requireAuth(), async (req, res) => {
     try {
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.set('Pragma', 'no-cache');
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return;
 

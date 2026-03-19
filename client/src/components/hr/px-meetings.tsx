@@ -414,6 +414,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/px-meetings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/meetings/active-timer"] });
       if (meetingId) {
         queryClient.invalidateQueries({ queryKey: [`/api/px-meetings/${meetingId}`] });
       }
@@ -431,6 +432,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/px-meetings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/meetings/active-timer"] });
       if (meetingId) {
         queryClient.invalidateQueries({ queryKey: [`/api/px-meetings/${meetingId}`] });
       }
@@ -458,6 +460,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/px-meetings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/meetings/active-timer"] });
       if (meetingId) {
         queryClient.invalidateQueries({ queryKey: [`/api/px-meetings/${meetingId}`] });
       }

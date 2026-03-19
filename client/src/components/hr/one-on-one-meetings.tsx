@@ -1500,6 +1500,7 @@ function MeetingEditor({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/meetings/active-timer"] });
       if (liveMeeting) {
         queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", liveMeeting.id, "details"] });
       }
@@ -1518,6 +1519,7 @@ function MeetingEditor({
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/meetings/active-timer"] });
       if (liveMeeting) {
         queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", liveMeeting.id, "details"] });
       }
@@ -1546,6 +1548,7 @@ function MeetingEditor({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/meetings/active-timer"] });
       if (liveMeeting) {
         queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", liveMeeting.id, "details"] });
       }

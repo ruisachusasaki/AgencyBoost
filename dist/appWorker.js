@@ -46747,6 +46747,8 @@ ${appointment.description || ""}
   });
   app2.get("/api/meetings/active-timer", requireAuth(), async (req, res) => {
     try {
+      res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+      res.set("Pragma", "no-cache");
       const userId2 = getAuthenticatedUserIdOrFail(req, res);
       if (!userId2) return;
       const managerStaff = alias(staff, "managerStaff");

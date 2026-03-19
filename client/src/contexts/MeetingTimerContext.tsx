@@ -34,6 +34,9 @@ export function MeetingTimerProvider({ children }: MeetingTimerProviderProps) {
   const { data: activeMeeting = null } = useQuery<ActiveMeeting | null>({
     queryKey: ['/api/meetings/active-timer'],
     refetchInterval: 5000,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const isMeetingTimerRunning = !!activeMeeting;
