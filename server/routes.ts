@@ -22367,10 +22367,14 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         console.log('Using fallback Twilio integration:', fallbackIntegration.phoneNumber);
         const client = createTwilioClient(fallbackIntegration.accountSid, fallbackIntegration.authToken);
         
+        const cbHost = req.headers.host || req.hostname;
+        const cbProto = req.headers['x-forwarded-proto'] || req.protocol;
+        const statusCallbackUrl = `${cbProto}://${cbHost}/api/webhooks/twilio/status`;
         const smsMessage = await client.messages.create({
           body: processedMessage,
           from: fallbackIntegration.phoneNumber,
-          to: to
+          to: to,
+          statusCallback: statusCallbackUrl
         });
         
         console.log('Twilio response:', { 
@@ -22409,10 +22413,14 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       
       const client = createTwilioClient(integration.accountSid, integration.authToken);
       
+      const cbHost2 = req.headers.host || req.hostname;
+      const cbProto2 = req.headers['x-forwarded-proto'] || req.protocol;
+      const statusCallbackUrl2 = `${cbProto2}://${cbHost2}/api/webhooks/twilio/status`;
       const smsMessage = await client.messages.create({
         body: processedMessage,
         from: integration.phoneNumber,
-        to: to
+        to: to,
+        statusCallback: statusCallbackUrl2
       });
       
       console.log('Twilio response:', { 
@@ -22860,6 +22868,54 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const twiml = new MessagingResponse();
       res.type('text/xml');
       res.send(twiml.toString());
+    }
+  });
+
+  // Twilio SMS status callback webhook — updates audit log status when delivery status changes
+  app.post("/api/webhooks/twilio/status", async (req, res) => {
+    try {
+      const { MessageSid, MessageStatus, ErrorCode, ErrorMessage } = req.body;
+      
+      console.log('[Twilio Status Callback]', { MessageSid, MessageStatus, ErrorCode, ErrorMessage });
+      
+      if (!MessageSid || !MessageStatus) {
+        return res.sendStatus(200);
+      }
+      
+      // Find the audit log entry for this message SID (entityId = message SID)
+      const [existingLog] = await db
+        .select()
+        .from(auditLogs)
+        .where(and(
+          eq(auditLogs.entityType, 'sms'),
+          eq(auditLogs.entityId, MessageSid)
+        ))
+        .limit(1);
+      
+      if (existingLog) {
+        const currentValues = (existingLog.newValues as any) || {};
+        const updatedValues = {
+          ...currentValues,
+          status: MessageStatus,
+          ...(ErrorCode ? { errorCode: ErrorCode } : {}),
+          ...(ErrorMessage ? { errorMessage: ErrorMessage } : {}),
+          statusUpdatedAt: new Date().toISOString(),
+        };
+        
+        await db
+          .update(auditLogs)
+          .set({ newValues: updatedValues })
+          .where(eq(auditLogs.id, existingLog.id));
+        
+        console.log(`[Twilio Status Callback] Updated audit log ${existingLog.id} status: ${currentValues.status} → ${MessageStatus}`);
+      } else {
+        console.log(`[Twilio Status Callback] No audit log found for MessageSid: ${MessageSid}`);
+      }
+      
+      res.sendStatus(200);
+    } catch (error) {
+      console.error('[Twilio Status Callback] Error:', error);
+      res.sendStatus(200);
     }
   });
 
