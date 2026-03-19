@@ -7706,7 +7706,7 @@ export default function EnhancedClientDetail() {
                                   </div>
                                   <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
                                     {latestIsInbound ? '← ' : '→ '}
-                                    {(latestMsg.newValues?.message || latestMsg.details || '').slice(0, 100)}
+                                    {(latestMsg.newValues?.message || latestMsg.details || '').replace(/<[^>]*>/g, '').slice(0, 100)}
                                   </p>
                                 </div>
                               </div>
