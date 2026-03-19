@@ -41164,10 +41164,14 @@ ${appointment.description || ""}
   function processMergeTags(message, clientData, userData) {
     let result = message;
     if (clientData) {
-      result = result.replace(/{{firstName}}/g, clientData.firstName || "").replace(/{{lastName}}/g, clientData.lastName || "").replace(/{{name}}/g, clientData.name || `${clientData.firstName || ""} ${clientData.lastName || ""}`.trim()).replace(/{{email}}/g, clientData.email || "").replace(/{{phone}}/g, clientData.phone || "").replace(/{{companyName}}/g, clientData.companyName || "").replace(/{{industry}}/g, clientData.industry || "").replace(/{{website}}/g, clientData.website || "").replace(/{{address1}}/g, clientData.address1 || "").replace(/{{city}}/g, clientData.city || "").replace(/{{state}}/g, clientData.state || "").replace(/{{zipCode}}/g, clientData.zipCode || "").replace(/{{first_name}}/g, clientData.firstName || "").replace(/{{last_name}}/g, clientData.lastName || "").replace(/{{full_name}}/g, clientData.name || `${clientData.firstName || ""} ${clientData.lastName || ""}`.trim()).replace(/{{company}}/g, clientData.companyName || "");
+      const fullName = clientData.name || "";
+      const nameParts = fullName.trim().split(/\s+/);
+      const derivedFirstName = nameParts[0] || "";
+      const derivedLastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+      result = result.replace(/{{firstName}}/g, derivedFirstName).replace(/{{lastName}}/g, derivedLastName).replace(/{{name}}/g, fullName).replace(/{{email}}/g, clientData.email || "").replace(/{{phone}}/g, clientData.phone || "").replace(/{{companyName}}/g, clientData.company || "").replace(/{{industry}}/g, clientData.industry || "").replace(/{{website}}/g, clientData.website || "").replace(/{{address1}}/g, clientData.address || "").replace(/{{city}}/g, clientData.city || "").replace(/{{state}}/g, clientData.state || "").replace(/{{zipCode}}/g, clientData.zipCode || "").replace(/{{first_name}}/g, derivedFirstName).replace(/{{last_name}}/g, derivedLastName).replace(/{{full_name}}/g, fullName).replace(/{{company}}/g, clientData.company || "");
     }
     if (userData) {
-      result = result.replace(/{{user_first_name}}/g, userData.firstName || "").replace(/{{user_last_name}}/g, userData.lastName || "").replace(/{{user_full_name}}/g, `${userData.firstName || ""} ${userData.lastName || ""}`.trim()).replace(/{{user_email}}/g, userData.email || "").replace(/{{user_phone}}/g, userData.phoneNumber || "");
+      result = result.replace(/{{user_first_name}}/g, userData.firstName || "").replace(/{{user_last_name}}/g, userData.lastName || "").replace(/{{user_full_name}}/g, `${userData.firstName || ""} ${userData.lastName || ""}`.trim()).replace(/{{user_email}}/g, userData.email || "").replace(/{{user_phone}}/g, userData.phone || userData.phoneNumber || "");
     }
     const now = /* @__PURE__ */ new Date();
     result = result.replace(/{{today_date}}/g, now.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })).replace(/{{current_time}}/g, now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }));

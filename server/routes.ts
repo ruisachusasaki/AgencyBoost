@@ -22257,24 +22257,29 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     
     // Replace client merge tags
     if (clientData) {
+      const fullName = clientData.name || '';
+      const nameParts = fullName.trim().split(/\s+/);
+      const derivedFirstName = nameParts[0] || '';
+      const derivedLastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+      
       result = result
-        .replace(/{{firstName}}/g, clientData.firstName || '')
-        .replace(/{{lastName}}/g, clientData.lastName || '')
-        .replace(/{{name}}/g, clientData.name || `${clientData.firstName || ''} ${clientData.lastName || ''}`.trim())
+        .replace(/{{firstName}}/g, derivedFirstName)
+        .replace(/{{lastName}}/g, derivedLastName)
+        .replace(/{{name}}/g, fullName)
         .replace(/{{email}}/g, clientData.email || '')
         .replace(/{{phone}}/g, clientData.phone || '')
-        .replace(/{{companyName}}/g, clientData.companyName || '')
+        .replace(/{{companyName}}/g, clientData.company || '')
         .replace(/{{industry}}/g, clientData.industry || '')
         .replace(/{{website}}/g, clientData.website || '')
-        .replace(/{{address1}}/g, clientData.address1 || '')
+        .replace(/{{address1}}/g, clientData.address || '')
         .replace(/{{city}}/g, clientData.city || '')
         .replace(/{{state}}/g, clientData.state || '')
         .replace(/{{zipCode}}/g, clientData.zipCode || '')
         // Also support lowercase with underscores
-        .replace(/{{first_name}}/g, clientData.firstName || '')
-        .replace(/{{last_name}}/g, clientData.lastName || '')
-        .replace(/{{full_name}}/g, clientData.name || `${clientData.firstName || ''} ${clientData.lastName || ''}`.trim())
-        .replace(/{{company}}/g, clientData.companyName || '');
+        .replace(/{{first_name}}/g, derivedFirstName)
+        .replace(/{{last_name}}/g, derivedLastName)
+        .replace(/{{full_name}}/g, fullName)
+        .replace(/{{company}}/g, clientData.company || '');
     }
     
     // Replace user/staff merge tags
@@ -22284,7 +22289,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         .replace(/{{user_last_name}}/g, userData.lastName || '')
         .replace(/{{user_full_name}}/g, `${userData.firstName || ''} ${userData.lastName || ''}`.trim())
         .replace(/{{user_email}}/g, userData.email || '')
-        .replace(/{{user_phone}}/g, userData.phoneNumber || '');
+        .replace(/{{user_phone}}/g, userData.phone || userData.phoneNumber || '');
     }
     
     // Replace system merge tags
