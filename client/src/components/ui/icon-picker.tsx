@@ -1,10 +1,9 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { Search, X } from "lucide-react";
+import { Search, X, ChevronDown } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 
 const EXCLUDED_EXPORTS = new Set([
@@ -46,6 +45,25 @@ export function IconPicker({ value = "", onChange, label = "Icon", placeholder }
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Most Used");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open && searchInputRef.current) {
+      setTimeout(() => searchInputRef.current?.focus(), 50);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
 
   const filteredIcons = useMemo(() => {
     if (searchTerm.trim()) {
@@ -77,40 +95,39 @@ export function IconPicker({ value = "", onChange, label = "Icon", placeholder }
   const selectedIcon = value ? renderIcon(value) : <Search className="w-5 h-5" />;
 
   return (
-    <div className="grid gap-2">
+    <div className="grid gap-2" ref={containerRef}>
       <Label>{label}</Label>
-      <Popover open={open} onOpenChange={setOpen} modal={false}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className="w-full justify-between"
-            data-testid="button-icon-picker"
-          >
-            <div className="flex items-center gap-2">
-              {selectedIcon}
-              <span>{value || placeholder || "Choose icon"}</span>
-            </div>
-            <Search className="w-4 h-4 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-96 p-0 pointer-events-auto" align="start" style={{ zIndex: 9999 }}>
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full justify-between"
+        data-testid="button-icon-picker"
+        onClick={() => setOpen(!open)}
+      >
+        <div className="flex items-center gap-2">
+          {selectedIcon}
+          <span>{value || placeholder || "Choose icon"}</span>
+        </div>
+        <ChevronDown className={`w-4 h-4 opacity-50 transition-transform ${open ? "rotate-180" : ""}`} />
+      </Button>
+
+      {open && (
+        <div className="border rounded-md bg-popover text-popover-foreground shadow-md">
           <div className="flex flex-col" style={{ maxHeight: '400px' }}>
             <div className="p-3 border-b">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
+                  ref={searchInputRef}
                   placeholder="Search icons..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
                   data-testid="input-icon-search"
-                  autoFocus
-                  onFocus={(e) => e.target.select()}
-                  onClick={(e) => e.stopPropagation()}
-                  onPointerDown={(e) => e.stopPropagation()}
                 />
                 {searchTerm && (
                   <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
                     className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
@@ -126,6 +143,7 @@ export function IconPicker({ value = "", onChange, label = "Icon", placeholder }
               <div className="p-3 border-b">
                 <div className="flex flex-wrap gap-1">
                   <Button
+                    type="button"
                     variant={selectedCategory === "All" ? "default" : "outline"}
                     size="sm"
                     onClick={() => setSelectedCategory("All")}
@@ -135,6 +153,7 @@ export function IconPicker({ value = "", onChange, label = "Icon", placeholder }
                   </Button>
                   {Object.keys(iconCategories).map((category) => (
                     <Button
+                      type="button"
                       key={category}
                       variant={selectedCategory === category ? "default" : "outline"}
                       size="sm"
@@ -168,6 +187,7 @@ export function IconPicker({ value = "", onChange, label = "Icon", placeholder }
                 <div className="grid grid-cols-6 gap-2">
                   {filteredIcons.slice(0, 120).map((iconName) => (
                     <Button
+                      type="button"
                       key={iconName}
                       variant={value === iconName ? "default" : "ghost"}
                       size="sm"
@@ -201,6 +221,7 @@ export function IconPicker({ value = "", onChange, label = "Icon", placeholder }
                     <span className="font-medium">{value}</span>
                   </div>
                   <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => {
@@ -214,8 +235,8 @@ export function IconPicker({ value = "", onChange, label = "Icon", placeholder }
               </div>
             )}
           </div>
-        </PopoverContent>
-      </Popover>
+        </div>
+      )}
     </div>
   );
 }
