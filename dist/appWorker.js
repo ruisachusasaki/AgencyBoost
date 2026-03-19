@@ -1,3 +1,4 @@
+import { createRequire } from 'module'; const require = createRequire(import.meta.url);
 var __defProp = Object.defineProperty;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
@@ -41168,6 +41169,8 @@ ${appointment.description || ""}
     if (userData) {
       result = result.replace(/{{user_first_name}}/g, userData.firstName || "").replace(/{{user_last_name}}/g, userData.lastName || "").replace(/{{user_full_name}}/g, `${userData.firstName || ""} ${userData.lastName || ""}`.trim()).replace(/{{user_email}}/g, userData.email || "").replace(/{{user_phone}}/g, userData.phoneNumber || "");
     }
+    const now = /* @__PURE__ */ new Date();
+    result = result.replace(/{{today_date}}/g, now.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })).replace(/{{current_time}}/g, now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }));
     return result;
   }
   app2.post("/api/integrations/twilio/send", requireAuth(), requirePermission("integrations", "canManage"), async (req, res) => {
@@ -41218,10 +41221,14 @@ ${appointment.description || ""}
         }
         console.log("Using fallback Twilio integration:", fallbackIntegration.phoneNumber);
         const client2 = createTwilioClient(fallbackIntegration.accountSid, fallbackIntegration.authToken);
+        const cbHost = req.headers.host || req.hostname;
+        const cbProto = req.headers["x-forwarded-proto"] || req.protocol;
+        const statusCallbackUrl = `${cbProto}://${cbHost}/api/webhooks/twilio/status`;
         const smsMessage2 = await client2.messages.create({
           body: processedMessage,
           from: fallbackIntegration.phoneNumber,
-          to
+          to,
+          statusCallback: statusCallbackUrl
         });
         console.log("Twilio response:", {
           sid: smsMessage2.sid,
@@ -41253,10 +41260,14 @@ ${appointment.description || ""}
         accountSid: integration.accountSid?.substring(0, 10) + "..."
       });
       const client = createTwilioClient(integration.accountSid, integration.authToken);
+      const cbHost2 = req.headers.host || req.hostname;
+      const cbProto2 = req.headers["x-forwarded-proto"] || req.protocol;
+      const statusCallbackUrl2 = `${cbProto2}://${cbHost2}/api/webhooks/twilio/status`;
       const smsMessage = await client.messages.create({
         body: processedMessage,
         from: integration.phoneNumber,
-        to
+        to,
+        statusCallback: statusCallbackUrl2
       });
       console.log("Twilio response:", {
         sid: smsMessage.sid,
@@ -41603,6 +41614,37 @@ ${appointment.description || ""}
       const twiml = new MessagingResponse();
       res.type("text/xml");
       res.send(twiml.toString());
+    }
+  });
+  app2.post("/api/webhooks/twilio/status", async (req, res) => {
+    try {
+      const { MessageSid, MessageStatus, ErrorCode, ErrorMessage } = req.body;
+      console.log("[Twilio Status Callback]", { MessageSid, MessageStatus, ErrorCode, ErrorMessage });
+      if (!MessageSid || !MessageStatus) {
+        return res.sendStatus(200);
+      }
+      const [existingLog] = await db.select().from(auditLogs).where(and18(
+        eq20(auditLogs.entityType, "sms"),
+        eq20(auditLogs.entityId, MessageSid)
+      )).limit(1);
+      if (existingLog) {
+        const currentValues = existingLog.newValues || {};
+        const updatedValues = {
+          ...currentValues,
+          status: MessageStatus,
+          ...ErrorCode ? { errorCode: ErrorCode } : {},
+          ...ErrorMessage ? { errorMessage: ErrorMessage } : {},
+          statusUpdatedAt: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        await db.update(auditLogs).set({ newValues: updatedValues }).where(eq20(auditLogs.id, existingLog.id));
+        console.log(`[Twilio Status Callback] Updated audit log ${existingLog.id} status: ${currentValues.status} \u2192 ${MessageStatus}`);
+      } else {
+        console.log(`[Twilio Status Callback] No audit log found for MessageSid: ${MessageSid}`);
+      }
+      res.sendStatus(200);
+    } catch (error) {
+      console.error("[Twilio Status Callback] Error:", error);
+      res.sendStatus(200);
     }
   });
   app2.get("/api/integrations/twilio/webhook-url", requireAuth(), async (req, res) => {

@@ -1,3 +1,5 @@
+import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+
 // server/prodEntry.ts
 import { createServer, request as httpRequest } from "http";
 import { spawn } from "child_process";
