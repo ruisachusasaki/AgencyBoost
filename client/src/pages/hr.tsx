@@ -1957,6 +1957,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                                 {application.stage === 'offer_sent' && 'Offer Sent'}
                                 {application.stage === 'offer_accepted' && 'Offer Accepted'}
                                 {application.stage === 'offer_declined' && 'Offer Declined'}
+                                {application.stage === 'hired' && 'Hired'}
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
@@ -1969,6 +1970,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                               <SelectItem value="offer_sent">Offer Sent</SelectItem>
                               <SelectItem value="offer_accepted">Offer Accepted</SelectItem>
                               <SelectItem value="offer_declined">Offer Declined</SelectItem>
+                              <SelectItem value="hired">Hired</SelectItem>
                             </SelectContent>
                           </Select>
                         )}
