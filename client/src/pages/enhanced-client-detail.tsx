@@ -8958,32 +8958,30 @@ export default function EnhancedClientDetail() {
 
       {/* SMS Merge Tags Modal */}
       <Dialog open={showSmsMergeTagsModal} onOpenChange={setShowSmsMergeTagsModal}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>SMS Merge Tags</DialogTitle>
             <DialogDescription>
               Click a tag to insert it into your SMS message. Includes all custom fields.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search merge tags..."
-                value={smsMergeTagsSearch}
-                onChange={(e) => setSmsMergeTagsSearch(e.target.value)}
-                className="pl-9"
-                data-testid="input-search-sms-merge-tags"
-              />
-            </div>
-            <div className="overflow-y-auto max-h-96">
-              <SmsMergeTagsSelector 
-                searchTerm={smsMergeTagsSearch} 
-                onSelectTag={insertSmsTag} 
-              />
-            </div>
+          <div className="relative shrink-0">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search merge tags..."
+              value={smsMergeTagsSearch}
+              onChange={(e) => setSmsMergeTagsSearch(e.target.value)}
+              className="pl-9"
+              data-testid="input-search-sms-merge-tags"
+            />
           </div>
-          <div className="flex justify-end mt-4">
+          <div className="overflow-y-auto flex-1 min-h-0">
+            <SmsMergeTagsSelector 
+              searchTerm={smsMergeTagsSearch} 
+              onSelectTag={insertSmsTag} 
+            />
+          </div>
+          <div className="flex justify-end shrink-0 pt-2">
             <Button
               variant="outline"
               onClick={() => setShowSmsMergeTagsModal(false)}
@@ -9250,7 +9248,7 @@ export default function EnhancedClientDetail() {
 
       {/* Email Merge Tags Modal */}
       <Dialog open={showMergeTagsModal} onOpenChange={setShowMergeTagsModal}>
-        <DialogContent className="max-w-lg max-h-[80vh]">
+        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>Email Merge Tags</DialogTitle>
             <DialogDescription>
