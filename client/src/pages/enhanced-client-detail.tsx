@@ -7694,9 +7694,9 @@ export default function EnhancedClientDetail() {
                               </div>
                             </button>
 
-                            {/* Thread Messages — chat-bubble layout */}
+                            {/* Thread Messages */}
                             {isThreadOpen && (
-                              <div className="border-t bg-gray-50 px-4 py-3 space-y-1 max-h-[500px] overflow-y-auto">
+                              <div className={`border-t max-h-[500px] overflow-y-auto ${thread.type === 'sms' ? 'bg-gray-50 px-4 py-3 space-y-1' : 'divide-y divide-gray-100'}`}>
                                 {(() => {
                                   const sortedMsgs = [...thread.messages].sort(
                                     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
@@ -7713,50 +7713,89 @@ export default function EnhancedClientDetail() {
                                     const showDateDivider = dateStr !== lastDateStr;
                                     lastDateStr = dateStr;
 
-                                    return (
-                                      <div key={log.id}>
-                                        {showDateDivider && (
-                                          <div className="flex items-center justify-center my-3">
-                                            <div className="flex items-center gap-2 px-3 py-1 bg-white rounded-full border text-[11px] text-gray-500 font-medium shadow-sm">
-                                              <Calendar className="h-3 w-3" />
-                                              {dateStr}
+                                    if (thread.type === 'sms') {
+                                      return (
+                                        <div key={log.id}>
+                                          {showDateDivider && (
+                                            <div className="flex items-center justify-center my-3">
+                                              <div className="flex items-center gap-2 px-3 py-1 bg-white rounded-full border text-[11px] text-gray-500 font-medium shadow-sm">
+                                                <Calendar className="h-3 w-3" />
+                                                {dateStr}
+                                              </div>
                                             </div>
-                                          </div>
-                                        )}
-                                        <div className={`flex ${isInbound ? 'justify-start' : 'justify-end'} mb-2`} data-testid={`message-card-${log.id}`}>
-                                          <div className={`max-w-[75%] ${isInbound ? '' : ''}`}>
-                                            {logType === 'email' && emailSubject && (
-                                              <p className={`text-[10px] font-semibold mb-0.5 ${isInbound ? 'text-gray-500' : 'text-right text-gray-500'}`}>
-                                                Re: {emailSubject}
-                                              </p>
-                                            )}
-                                            <div className={`rounded-2xl px-4 py-2.5 ${
-                                              isInbound
-                                                ? 'bg-white border border-gray-200 rounded-bl-md'
-                                                : 'text-white rounded-br-md'
-                                            }`} style={!isInbound ? { backgroundColor: 'hsl(179, 100%, 39%)' } : {}}>
-                                              {logType === 'email' ? (
-                                                <div className={`prose prose-sm max-w-none ${isInbound ? 'text-gray-800' : 'text-white'}`} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(fullMessage) }} />
-                                              ) : (
+                                          )}
+                                          <div className={`flex ${isInbound ? 'justify-start' : 'justify-end'} mb-2`} data-testid={`message-card-${log.id}`}>
+                                            <div className="max-w-[75%]">
+                                              <div className={`rounded-2xl px-4 py-2.5 ${
+                                                isInbound
+                                                  ? 'bg-white border border-gray-200 rounded-bl-md'
+                                                  : 'text-white rounded-br-md'
+                                              }`} style={!isInbound ? { backgroundColor: 'hsl(179, 100%, 39%)' } : {}}>
                                                 <p className={`text-sm whitespace-pre-wrap ${isInbound ? 'text-gray-800' : 'text-white'}`}>{fullMessage}</p>
-                                              )}
-                                            </div>
-                                            <div className={`flex items-center gap-1.5 mt-1 ${isInbound ? '' : 'justify-end'}`}>
-                                              <span className="text-[10px] text-gray-400">{timeStr}</span>
-                                              {log.newValues?.status && (
-                                                <span className={`text-[10px] ${
-                                                  log.newValues.status === 'delivered' ? 'text-green-500' :
-                                                  log.newValues.status === 'failed' || log.newValues.status === 'undelivered' ? 'text-red-500' :
-                                                  'text-gray-400'
-                                                }`}>
-                                                  · {log.newValues.status}
-                                                </span>
-                                              )}
-                                              {!isInbound && log.userName && log.userName !== 'Unknown User' && (
-                                                <span className="text-[10px] text-gray-400">· {log.userName}</span>
-                                              )}
+                                              </div>
+                                              <div className={`flex items-center gap-1.5 mt-1 ${isInbound ? '' : 'justify-end'}`}>
+                                                <span className="text-[10px] text-gray-400">{timeStr}</span>
+                                                {log.newValues?.status && (
+                                                  <span className={`text-[10px] ${
+                                                    log.newValues.status === 'delivered' ? 'text-green-500' :
+                                                    log.newValues.status === 'failed' || log.newValues.status === 'undelivered' ? 'text-red-500' :
+                                                    'text-gray-400'
+                                                  }`}>
+                                                    · {log.newValues.status}
+                                                  </span>
+                                                )}
+                                                {!isInbound && log.userName && log.userName !== 'Unknown User' && (
+                                                  <span className="text-[10px] text-gray-400">· {log.userName}</span>
+                                                )}
+                                              </div>
                                             </div>
                                           </div>
+                                        </div>
+                                      );
+                                    }
+
+                                    return (
+                                      <div key={log.id} className="bg-white" data-testid={`message-card-${log.id}`}>
+                                        <div className="px-5 py-4">
+                                          <div className="flex items-start justify-between mb-3">
+                                            <div className="flex items-center gap-3">
+                                              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold ${
+                                                isInbound ? 'bg-blue-100 text-blue-700' : 'bg-teal-100 text-teal-700'
+                                              }`}>
+                                                {isInbound
+                                                  ? (log.newValues?.from || 'U').charAt(0).toUpperCase()
+                                                  : (log.userName || 'A').charAt(0).toUpperCase()
+                                                }
+                                              </div>
+                                              <div>
+                                                <p className="text-sm font-semibold text-gray-900">
+                                                  {isInbound ? (log.newValues?.from || 'Unknown') : (log.userName || 'Agency')}
+                                                </p>
+                                                <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                                  {isInbound && log.newValues?.to && (
+                                                    <span>To: {log.newValues.to}</span>
+                                                  )}
+                                                  {!isInbound && log.newValues?.to && (
+                                                    <span>To: {log.newValues.to}</span>
+                                                  )}
+                                                  {log.newValues?.status && (
+                                                    <>
+                                                      <span className="text-gray-300">·</span>
+                                                      <span className={`${
+                                                        log.newValues.status === 'delivered' || log.newValues.status === 'sent' ? 'text-green-600' :
+                                                        log.newValues.status === 'failed' ? 'text-red-600' : 'text-gray-500'
+                                                      }`}>{log.newValues.status}</span>
+                                                    </>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <span className="text-xs text-gray-400 shrink-0">{timeStr} · {dateStr}</span>
+                                          </div>
+                                          {emailSubject && (
+                                            <p className="text-sm font-medium text-gray-800 mb-2">{emailSubject}</p>
+                                          )}
+                                          <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(fullMessage) }} />
                                         </div>
                                       </div>
                                     );
