@@ -49109,13 +49109,14 @@ ${appointment.description || ""}
   });
   app2.put("/api/knowledge-base/categories/:id", requireAuth(), requirePermission("knowledge_base", "canEdit"), async (req, res) => {
     try {
-      const { name, description, icon, color, isVisible } = req.body;
+      const { name, description, icon, color, isVisible, parentId } = req.body;
       const [updatedCategory] = await db.update(knowledgeBaseCategories).set({
         name: name?.trim(),
         description,
         icon,
         color,
         isVisible,
+        parentId: parentId || null,
         updatedAt: /* @__PURE__ */ new Date()
       }).where(eq20(knowledgeBaseCategories.id, req.params.id)).returning();
       if (!updatedCategory) {

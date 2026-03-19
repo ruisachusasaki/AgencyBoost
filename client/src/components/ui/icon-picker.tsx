@@ -122,8 +122,11 @@ export function IconPicker({ value = "", onChange, label = "Icon", placeholder }
                   placeholder="Search icons..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  onFocus={(e) => e.stopPropagation()}
                   className="pl-9"
                   data-testid="input-icon-search"
+                  autoComplete="off"
                 />
                 {searchTerm && (
                   <Button
