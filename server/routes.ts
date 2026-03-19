@@ -22287,6 +22287,12 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         .replace(/{{user_phone}}/g, userData.phoneNumber || '');
     }
     
+    // Replace system merge tags
+    const now = new Date();
+    result = result
+      .replace(/{{today_date}}/g, now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }))
+      .replace(/{{current_time}}/g, now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }));
+
     return result;
   }
 

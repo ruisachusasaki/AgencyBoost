@@ -524,7 +524,7 @@ function SmsMergeTagsSelector({ searchTerm, onSelectTag }: { searchTerm: string;
                   key={tag.key}
                   variant="outline"
                   className="w-full justify-start text-left mb-1"
-                  onClick={() => onSelectTag(tag.name)}
+                  onClick={() => onSelectTag(tag.key)}
                   data-testid={`button-sms-tag-${tag.key}`}
                 >
                   <Hash className="h-4 w-4 mr-2" />
@@ -544,7 +544,7 @@ function SmsMergeTagsSelector({ searchTerm, onSelectTag }: { searchTerm: string;
                   key={tag.key}
                   variant="outline"
                   className="w-full justify-start text-left mb-1"
-                  onClick={() => onSelectTag(tag.name)}
+                  onClick={() => onSelectTag(tag.key)}
                   data-testid={`button-sms-tag-${tag.key}`}
                 >
                   <Hash className="h-4 w-4 mr-2" />
@@ -564,7 +564,7 @@ function SmsMergeTagsSelector({ searchTerm, onSelectTag }: { searchTerm: string;
                   key={tag.key}
                   variant="outline"
                   className="w-full justify-start text-left mb-1"
-                  onClick={() => onSelectTag(tag.name)}
+                  onClick={() => onSelectTag(tag.key)}
                   data-testid={`button-sms-tag-${tag.key}`}
                 >
                   <Hash className="h-4 w-4 mr-2" />
@@ -584,7 +584,7 @@ function SmsMergeTagsSelector({ searchTerm, onSelectTag }: { searchTerm: string;
                   key={tag.key}
                   variant="outline"
                   className="w-full justify-start text-left mb-1"
-                  onClick={() => onSelectTag(tag.name)}
+                  onClick={() => onSelectTag(tag.key)}
                   data-testid={`button-sms-tag-${tag.key}`}
                 >
                   <Hash className="h-4 w-4 mr-2" />
