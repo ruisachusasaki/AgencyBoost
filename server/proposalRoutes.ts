@@ -440,12 +440,19 @@ export function registerProposalRoutes(
       }));
 
       let clientName = "";
+      let clientEmail = "";
       if (quote.clientId) {
         const [c] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
-        if (c) clientName = c.company || c.contactName || "";
+        if (c) {
+          clientName = c.company || c.contactName || "";
+          clientEmail = c.email || "";
+        }
       } else if (quote.leadId) {
         const [l] = await db.select().from(leads).where(eq(leads.id, quote.leadId));
-        if (l) clientName = l.name || "";
+        if (l) {
+          clientName = l.name || "";
+          clientEmail = l.email || "";
+        }
       }
 
       const activeTerms = await db
@@ -551,6 +558,7 @@ export function registerProposalRoutes(
         quote: { name: quote.name, totalCost: quote.totalCost, clientBudget: quote.clientBudget, notes: quote.notes, oneTimeCost: quote.oneTimeCost, monthlyCost: quote.monthlyCost },
         items: enrichedItems,
         clientName,
+        clientEmail,
         terms: resolvedTerms,
         paymentAmount,
         buildFee,

@@ -18433,12 +18433,19 @@ Thank you!`,
         return { ...item, itemName, itemDescription };
       }));
       let clientName = "";
+      let clientEmail = "";
       if (quote.clientId) {
         const [c] = await db.select().from(clients).where(eq14(clients.id, quote.clientId));
-        if (c) clientName = c.company || c.contactName || "";
+        if (c) {
+          clientName = c.company || c.contactName || "";
+          clientEmail = c.email || "";
+        }
       } else if (quote.leadId) {
         const [l] = await db.select().from(leads).where(eq14(leads.id, quote.leadId));
-        if (l) clientName = l.name || "";
+        if (l) {
+          clientName = l.name || "";
+          clientEmail = l.email || "";
+        }
       }
       const activeTerms = await db.select().from(proposalTerms).where(eq14(proposalTerms.isActive, true)).orderBy(desc3(proposalTerms.version)).limit(1);
       const buildFee = parseFloat(quote.oneTimeCost || "0");
@@ -18525,6 +18532,7 @@ Thank you!`,
         quote: { name: quote.name, totalCost: quote.totalCost, clientBudget: quote.clientBudget, notes: quote.notes, oneTimeCost: quote.oneTimeCost, monthlyCost: quote.monthlyCost },
         items: enrichedItems,
         clientName,
+        clientEmail,
         terms: resolvedTerms,
         paymentAmount,
         buildFee,

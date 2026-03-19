@@ -181,6 +181,17 @@ export default function PublicProposal() {
   }, [data?.stripePublishableKey]);
 
   useEffect(() => {
+    if (data) {
+      if (data.clientName && !signerName) {
+        setSignerName(data.clientName);
+      }
+      if (data.clientEmail && !signerEmail) {
+        setSignerEmail(data.clientEmail);
+      }
+    }
+  }, [data]);
+
+  useEffect(() => {
     if (showTerms && termsScrollRef.current && !hasScrolledTerms) {
       const el = termsScrollRef.current;
       if (el.scrollHeight <= el.clientHeight + 30) {
