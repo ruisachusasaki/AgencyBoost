@@ -940,6 +940,10 @@ export default function CalendarMain() {
       sampleAssignedTo: appointments.slice(0, 3).map(a => ({ title: a.title, assignedTo: a.assignedTo, type: a.type }))
     });
     
+    const systemCalendarIds = calendars
+      .filter(c => c.type === 'system')
+      .map(c => c.id);
+
     // Filter by selected calendars if any are selected
     if (selectedCalendars.length > 0) {
       filtered = filtered.filter(apt => selectedCalendars.includes(apt.calendarId));
@@ -947,9 +951,10 @@ export default function CalendarMain() {
     
     // Filter by selected users if any are selected
     // For Google events, use assignedTo or userId field
+    // System calendars (Birthdays, Anniversaries) bypass user filter — everyone sees them
     if (selectedUsers.length > 0) {
       filtered = filtered.filter(apt => {
-        // Check both assignedTo and userId fields
+        if (systemCalendarIds.includes(apt.calendarId)) return true;
         const userMatch = selectedUsers.includes(apt.assignedTo) || 
                          selectedUsers.includes((apt as any).userId);
         return userMatch;
@@ -959,7 +964,7 @@ export default function CalendarMain() {
     console.log("CalendarMain: After filtering:", { filteredCount: filtered.length });
     
     return filtered;
-  }, [appointments, selectedCalendars, selectedUsers]);
+  }, [appointments, selectedCalendars, selectedUsers, calendars]);
 
   // Appointments filtering and sorting logic
   const filteredAndSortedAppointments = useMemo(() => {
