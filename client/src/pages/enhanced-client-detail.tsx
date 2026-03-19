@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, ArrowDownLeft, ArrowUpRight, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil, ClipboardList, Repeat, Layers, ClipboardCheck, Copy, Link2 } from "lucide-react";
+import { ArrowLeft, ArrowDownLeft, ArrowUpRight, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil, ClipboardList, Repeat, Layers, ClipboardCheck, Copy, Link2, Reply } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 import ContactCardField from "@/components/contact-card-field";
 
@@ -3040,6 +3040,7 @@ export default function EnhancedClientDetail() {
   
   // Ref for right column (left column height tracking removed)
   const rightColumnRef = useRef<HTMLDivElement>(null);
+  const emailComposeRef = useRef<HTMLDivElement>(null);
 
   // State management
   const [sections, setSections] = useState<Section[]>([
@@ -5293,6 +5294,27 @@ export default function EnhancedClientDetail() {
     setSmsMessage("");
   };
 
+  const handleReplyToEmail = (log: any) => {
+    const originalSubject = log.newValues?.subject || '';
+    const replySubject = originalSubject.startsWith('Re:') ? originalSubject : `Re: ${originalSubject}`;
+    const replyTo = log.newValues?.direction === 'inbound'
+      ? (log.newValues?.from || '')
+      : (log.newValues?.to || '');
+
+    setEmailData(prev => ({
+      ...prev,
+      subject: replySubject,
+      message: '',
+    }));
+
+    setCommunicationTab('email');
+    setActiveTab('communication');
+
+    setTimeout(() => {
+      emailComposeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+  };
+
   const sendEmail = () => {
     if (!emailMessage.trim()) return;
     
@@ -7289,7 +7311,7 @@ export default function EnhancedClientDetail() {
                   </TabsContent>
 
                   {/* Email Tab Content */}
-                  <TabsContent value="email" className="space-y-4 mt-0">
+                  <TabsContent value="email" className="space-y-4 mt-0" ref={emailComposeRef}>
                     {client?.dndAll || client?.dndEmail ? (
                       <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                         <div className="flex items-center gap-2 text-red-700">
@@ -7796,6 +7818,18 @@ export default function EnhancedClientDetail() {
                                             <p className="text-sm font-medium text-gray-800 mb-2">{emailSubject}</p>
                                           )}
                                           <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(fullMessage) }} />
+                                          <div className="mt-3 pt-3 border-t border-gray-100">
+                                            <Button
+                                              variant="default"
+                                              size="sm"
+                                              className="text-xs"
+                                              style={{ backgroundColor: 'hsl(179, 100%, 39%)' }}
+                                              onClick={() => handleReplyToEmail(log)}
+                                            >
+                                              <Reply className="h-3.5 w-3.5 mr-1.5" />
+                                              Reply
+                                            </Button>
+                                          </div>
                                         </div>
                                       </div>
                                     );
