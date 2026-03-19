@@ -11044,12 +11044,12 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             from_status: {
               type: "string",
               label: "From Status",
-              options: ["new", "screening", "interview", "offer", "hired", "rejected"]
+              options: ["new", "review", "interview", "not_selected", "test_sent", "send_offer", "offer_sent", "offer_accepted", "offer_declined", "hired"]
             },
             to_status: {
               type: "string",
               label: "To Status",
-              options: ["new", "screening", "interview", "offer", "hired", "rejected"],
+              options: ["new", "review", "interview", "not_selected", "test_sent", "send_offer", "offer_sent", "offer_accepted", "offer_declined", "hired"],
               required: true
             },
             positionTitle: {
