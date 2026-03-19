@@ -51,7 +51,7 @@ import {
   insertSalesTargetSchema, updateSalesTargetSchema,
   insertCapacitySettingsSchema, updateCapacitySettingsSchema,
   insertDashboardSchema,
-  insertOneOnOneMeetingSchema, insertOneOnOneTalkingPointSchema, insertOneOnOneWinSchema, insertOneOnOneActionItemSchema, insertOneOnOneGoalSchema, insertOneOnOneCommentSchema, insertOneOnOneProgressionStatusSchema,
+  insertOneOnOneMeetingSchema, insertOneOnOneTalkingPointSchema, insertOneOnOneWinSchema, insertOneOnOneObjectiveSchema, insertOneOnOneActionItemSchema, insertOneOnOneGoalSchema, insertOneOnOneCommentSchema, insertOneOnOneProgressionStatusSchema,
   oneOnOneProgressionStatuses,
   users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, granularPermissions, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts, productPackages, packageItems, clientPackages, insertProductPackageSchema,
@@ -68,7 +68,7 @@ import {
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
   clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals, salesSettings, salesTargets, capacitySettings,
   knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseLikes, knowledgeBaseBookmarks, knowledgeBasePermissions, knowledgeBaseArticleVersions,
-  oneOnOneMeetings, oneOnOneTalkingPoints, oneOnOneWins, oneOnOneActionItems, oneOnOneGoals, oneOnOneComments, oneOnOneMeetingKpiStatuses,
+  oneOnOneMeetings, oneOnOneTalkingPoints, oneOnOneWins, oneOnOneObjectives, oneOnOneActionItems, oneOnOneGoals, oneOnOneComments, oneOnOneMeetingKpiStatuses,
   clientRoadmapComments, insertClientRoadmapCommentSchema, clientRoadmapEntries, insertClientRoadmapEntrySchema, staffLinkedEmails,
   surveys, surveyFolders, surveySlides, surveyFields, surveyLogicRules, surveySubmissions, surveySubmissionAnswers,
   insertSurveySchema, insertSurveyFolderSchema, insertSurveySlideSchema, insertSurveyFieldSchema, insertSurveyLogicRuleSchema, insertSurveySubmissionSchema,
@@ -30095,6 +30095,11 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         .where(eq(oneOnOneWins.meetingId, meetingId))
         .orderBy(oneOnOneWins.orderIndex);
 
+      const objectives = await db.select()
+        .from(oneOnOneObjectives)
+        .where(eq(oneOnOneObjectives.meetingId, meetingId))
+        .orderBy(oneOnOneObjectives.orderIndex);
+
       const actionItems = await db.select()
         .from(oneOnOneActionItems)
         .where(eq(oneOnOneActionItems.meetingId, meetingId));
@@ -30127,6 +30132,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         meeting: sanitizedMeeting,
         talkingPoints,
         wins,
+        objectives,
         actionItems,
         goals,
         comments,
@@ -30798,6 +30804,42 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     } catch (error) {
       console.error("Error deleting win:", error);
       res.status(500).json({ error: "Failed to delete win" });
+    }
+  });
+
+  // Objectives Routes
+  app.post("/api/hr/one-on-one/objectives", requireAuth(), async (req, res) => {
+    try {
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!rawUserId) return;
+
+      const validatedData = insertOneOnOneObjectiveSchema.parse({
+        ...req.body,
+        addedBy: rawUserId,
+      });
+
+      const [newObjective] = await db.insert(oneOnOneObjectives)
+        .values(validatedData)
+        .returning();
+
+      res.json(newObjective);
+    } catch (error) {
+      console.error("Error creating objective:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create objective" });
+    }
+  });
+
+  app.delete("/api/hr/one-on-one/objectives/:id", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await db.delete(oneOnOneObjectives).where(eq(oneOnOneObjectives.id, id));
+      res.json({ message: "Objective deleted" });
+    } catch (error) {
+      console.error("Error deleting objective:", error);
+      res.status(500).json({ error: "Failed to delete objective" });
     }
   });
 

@@ -4497,6 +4497,24 @@ export const insertOneOnOneWinSchema = createInsertSchema(oneOnOneWins).omit({
 export type OneOnOneWin = typeof oneOnOneWins.$inferSelect;
 export type InsertOneOnOneWin = z.infer<typeof insertOneOnOneWinSchema>;
 
+// Objectives for meetings
+export const oneOnOneObjectives = pgTable("one_on_one_objectives", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  meetingId: varchar("meeting_id").notNull().references(() => oneOnOneMeetings.id, { onDelete: 'cascade' }),
+  content: text("content").notNull(),
+  addedBy: uuid("added_by").notNull().references(() => staff.id),
+  orderIndex: integer("order_index").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertOneOnOneObjectiveSchema = createInsertSchema(oneOnOneObjectives).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type OneOnOneObjective = typeof oneOnOneObjectives.$inferSelect;
+export type InsertOneOnOneObjective = z.infer<typeof insertOneOnOneObjectiveSchema>;
+
 // Action items from meetings
 export const oneOnOneActionItems = pgTable("one_on_one_action_items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -56,6 +56,8 @@ import {
   ChevronDown,
   ChevronUp,
   Check,
+  Target,
+  HelpCircle,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SelectGroup, SelectLabel } from "@/components/ui/select";
@@ -115,6 +117,14 @@ interface TalkingPoint {
 }
 
 interface Win {
+  id: string;
+  meetingId: string;
+  content: string;
+  addedBy: string;
+  orderIndex: number;
+}
+
+interface Objective {
   id: string;
   meetingId: string;
   content: string;
@@ -235,6 +245,7 @@ export default function OneOnOneMeetings() {
     meeting: Meeting;
     talkingPoints: TalkingPoint[];
     wins: Win[];
+    objectives: Objective[];
     actionItems: ActionItem[];
     goals: Goal[];
     comments: Comment[];
@@ -1068,6 +1079,7 @@ function MeetingEditor({
     meeting: Meeting;
     talkingPoints: TalkingPoint[];
     wins: Win[];
+    objectives: Objective[];
     actionItems: ActionItem[];
     goals: Goal[];
     comments: Comment[];
@@ -1148,6 +1160,7 @@ function MeetingEditor({
   // Lists
   const [talkingPoints, setTalkingPoints] = useState<TalkingPoint[]>([]);
   const [wins, setWins] = useState<Win[]>([]);
+  const [objectives, setObjectives] = useState<Objective[]>([]);
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -1157,6 +1170,7 @@ function MeetingEditor({
     if (meetingDetails) {
       setTalkingPoints(meetingDetails.talkingPoints || []);
       setWins(meetingDetails.wins || []);
+      setObjectives(meetingDetails.objectives || []);
       setActionItems(meetingDetails.actionItems || []);
       setGoals(meetingDetails.goals || []);
       setComments(meetingDetails.comments || []);
@@ -1180,6 +1194,7 @@ function MeetingEditor({
   const [newTalkingPointNotes, setNewTalkingPointNotes] = useState("");
   const [expandedTalkingPointId, setExpandedTalkingPointId] = useState<string | null>(null);
   const [newWin, setNewWin] = useState("");
+  const [newObjective, setNewObjective] = useState("");
   const [newActionItem, setNewActionItem] = useState("");
   const [newGoal, setNewGoal] = useState("");
   const [newComment, setNewComment] = useState("");
@@ -1206,6 +1221,24 @@ function MeetingEditor({
   const deleteWinMutation = useMutation({
     mutationFn: async (id: string) => {
       return await apiRequest("DELETE", `/api/hr/one-on-one/wins/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting?.id, "details"] });
+    },
+  });
+
+  const createObjectiveMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/hr/one-on-one/objectives", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting?.id, "details"] });
+    },
+  });
+
+  const deleteObjectiveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/hr/one-on-one/objectives/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting?.id, "details"] });
@@ -1359,6 +1392,15 @@ function MeetingEditor({
             meetingId: savedMeeting.id,
             content: win.content,
             orderIndex: win.orderIndex,
+          });
+        }
+        
+        // Save all objectives
+        for (const objective of objectives) {
+          await apiRequest("POST", "/api/hr/one-on-one/objectives", {
+            meetingId: savedMeeting.id,
+            content: objective.content,
+            orderIndex: objective.orderIndex,
           });
         }
         
@@ -1634,6 +1676,36 @@ function MeetingEditor({
       deleteWinMutation.mutate(winId);
     }
     setWins(wins.filter(w => w.id !== winId));
+  };
+
+  const handleAddObjective = () => {
+    if (!newObjective.trim()) return;
+    
+    if (meeting) {
+      createObjectiveMutation.mutate({
+        meetingId: meeting.id,
+        content: newObjective.trim(),
+        orderIndex: objectives.length,
+      });
+      setNewObjective("");
+    } else {
+      const tempId = `temp-${Date.now()}`;
+      setObjectives([...objectives, {
+        id: tempId,
+        meetingId: "",
+        content: newObjective.trim(),
+        addedBy: "",
+        orderIndex: objectives.length,
+      }]);
+      setNewObjective("");
+    }
+  };
+
+  const handleDeleteObjective = (objectiveId: string) => {
+    if (meeting) {
+      deleteObjectiveMutation.mutate(objectiveId);
+    }
+    setObjectives(objectives.filter(o => o.id !== objectiveId));
   };
 
   const handleAddActionItem = () => {
@@ -2125,6 +2197,55 @@ function MeetingEditor({
                       <div className={`text-sm font-medium ${option.color}`}>{option.label}</div>
                     </button>
                   ))}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Objectives */}
+              <div>
+                <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
+                  <Target className="h-4 w-4 text-blue-500" />
+                  Objectives
+                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" title="Define the meeting's objective" />
+                </Label>
+                <div className="space-y-2">
+                  {objectives.map((objective) => (
+                    <div key={objective.id} className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                      <span className="flex-1">{objective.content}</span>
+                      {!isReadOnly && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteObjective(objective.id)}
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  {!isReadOnly && (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Add an objective..."
+                        value={newObjective}
+                        onChange={(e) => setNewObjective(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddObjective();
+                          }
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleAddObjective}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
 
