@@ -18018,9 +18018,6 @@ function getStripe() {
   }
   return stripeInstance;
 }
-function isStripeConfigured() {
-  return !!process.env.STRIPE_SECRET_KEY || !!stripeInstance;
-}
 async function isStripeConfiguredAsync() {
   const key = await getStripeSecretKey();
   return !!key;
@@ -18548,8 +18545,8 @@ Thank you!`,
         monthlyFee,
         billingMode,
         payNowAmount,
-        stripeConfigured: isStripeConfigured(),
-        stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || null,
+        stripeConfigured: await isStripeConfiguredAsync(),
+        stripePublishableKey: await getStripePublishableKey() || null,
         branding
       });
     } catch (error) {
@@ -18713,7 +18710,7 @@ ${brandName ? `<p style="font-size: 13px; opacity: 0.85; margin-bottom: 8px; let
       if (!paymentMethod || !["card", "ach"].includes(paymentMethod)) {
         return res.status(400).json({ message: "paymentMethod must be 'card' or 'ach'" });
       }
-      if (!isStripeConfigured()) {
+      if (!await isStripeConfiguredAsync()) {
         return res.status(503).json({ message: "Payment processing is not configured" });
       }
       const [quote] = await db.select().from(quotes).where(eq14(quotes.publicToken, token));
@@ -18744,7 +18741,7 @@ ${brandName ? `<p style="font-size: 13px; opacity: 0.85; margin-bottom: 8px; let
         ccFee = payNowAmount * CC_SURCHARGE_RATE;
         chargeAmount = payNowAmount + ccFee;
       }
-      const stripe = getStripe();
+      const stripe = await getStripeAsync();
       if (!stripe) return res.status(503).json({ message: "Stripe not configured" });
       const customerEmail = quote.signedByEmail || "";
       const customerName = quote.signedByName || "";
@@ -18935,8 +18932,8 @@ ${brandName ? `<p style="font-size: 13px; opacity: 0.85; margin-bottom: 8px; let
   });
   app2.get("/api/stripe/config", async (req, res) => {
     res.json({
-      configured: isStripeConfigured(),
-      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || null
+      configured: await isStripeConfiguredAsync(),
+      publishableKey: await getStripePublishableKey() || null
     });
   });
 }

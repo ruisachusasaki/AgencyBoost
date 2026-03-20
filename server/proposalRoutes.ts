@@ -4,7 +4,7 @@ import { proposalTerms, quotes, quoteItems, clients, leads, staff, products, pro
 import { eq, desc, and, sql, lt, isNull, asc } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { z } from "zod";
-import { createPaymentIntent, createACHPaymentIntent, isStripeConfigured, constructWebhookEvent, getStripe, getOrCreateCustomer, createSubscription } from "./stripe";
+import { createPaymentIntent, createACHPaymentIntent, isStripeConfigured, isStripeConfiguredAsync, constructWebhookEvent, getStripe, getStripeAsync, getOrCreateCustomer, createSubscription, getStripePublishableKey } from "./stripe";
 import { NotificationService } from "./notification-service";
 import { generateTasksFromTemplates } from "./taskGenerationEngine";
 import { convertLeadToClient } from "./services/leadConversionService";
@@ -566,8 +566,8 @@ export function registerProposalRoutes(
         monthlyFee,
         billingMode,
         payNowAmount,
-        stripeConfigured: isStripeConfigured(),
-        stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || null,
+        stripeConfigured: await isStripeConfiguredAsync(),
+        stripePublishableKey: await getStripePublishableKey() || null,
         branding,
       });
     } catch (error) {
@@ -759,7 +759,7 @@ ${brandName ? `<p style="font-size: 13px; opacity: 0.85; margin-bottom: 8px; let
         return res.status(400).json({ message: "paymentMethod must be 'card' or 'ach'" });
       }
 
-      if (!isStripeConfigured()) {
+      if (!(await isStripeConfiguredAsync())) {
         return res.status(503).json({ message: "Payment processing is not configured" });
       }
 
@@ -804,7 +804,7 @@ ${brandName ? `<p style="font-size: 13px; opacity: 0.85; margin-bottom: 8px; let
         chargeAmount = payNowAmount + ccFee;
       }
 
-      const stripe = getStripe();
+      const stripe = await getStripeAsync();
       if (!stripe) return res.status(503).json({ message: "Stripe not configured" });
 
       const customerEmail = quote.signedByEmail || "";
@@ -1044,8 +1044,8 @@ ${brandName ? `<p style="font-size: 13px; opacity: 0.85; margin-bottom: 8px; let
 
   app.get("/api/stripe/config", async (req, res) => {
     res.json({
-      configured: isStripeConfigured(),
-      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || null,
+      configured: await isStripeConfiguredAsync(),
+      publishableKey: await getStripePublishableKey() || null,
     });
   });
 }
