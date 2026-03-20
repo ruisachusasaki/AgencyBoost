@@ -14607,6 +14607,7 @@ var mailgun, NotificationService, _sharedInstance;
 var init_notification_service = __esm({
   "server/notification-service.ts"() {
     "use strict";
+    init_encryption();
     mailgun = new Mailgun(formData);
     NotificationService = class {
       storage;
@@ -14618,6 +14619,11 @@ var init_notification_service = __esm({
         this.storage = storage3;
         this.initializeIntegrations();
       }
+      async reinitializeIntegrations() {
+        this.mailgunClient = null;
+        this.emailConfig = null;
+        await this.initializeIntegrations();
+      }
       /**
        * Initialize email and SMS integrations from database and environment
        */
@@ -14627,9 +14633,14 @@ var init_notification_service = __esm({
           const activeEmailIntegration = emailIntegrations2.find((i) => i.isActive && i.provider === "mailgun");
           if (activeEmailIntegration) {
             this.emailConfig = activeEmailIntegration;
+            let decryptedKey = activeEmailIntegration.apiKey;
+            try {
+              decryptedKey = EncryptionService.decrypt(activeEmailIntegration.apiKey);
+            } catch {
+            }
             this.mailgunClient = mailgun.client({
               username: "api",
-              key: activeEmailIntegration.apiKey
+              key: decryptedKey
             });
             console.log("[NotificationService] Mailgun initialized from database:", activeEmailIntegration.domain);
           } else {
@@ -41978,6 +41989,8 @@ ${appointment.description || ""}
         });
       });
       console.log("Database transaction completed successfully");
+      await notificationService.reinitializeIntegrations();
+      console.log("NotificationService reinitialized with new Mailgun config");
       try {
         const userId2 = await getAuthenticatedUserIdOrFail(req);
         await createAuditLog(

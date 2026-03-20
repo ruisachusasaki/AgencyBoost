@@ -23180,6 +23180,9 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
       console.log('Database transaction completed successfully');
 
+      await notificationService.reinitializeIntegrations();
+      console.log('NotificationService reinitialized with new Mailgun config');
+
       // Create audit log for MailGun connection
       try {
         const userId = await getAuthenticatedUserIdOrFail(req);

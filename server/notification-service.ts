@@ -2,6 +2,7 @@ import { IStorage } from "./storage";
 import { InsertNotification, NotificationSettings } from "@shared/schema";
 import Mailgun from "mailgun.js";
 import formData from "form-data";
+import { EncryptionService } from "./encryption";
 
 const mailgun = new Mailgun(formData);
 
@@ -44,6 +45,12 @@ export class NotificationService {
     this.initializeIntegrations();
   }
 
+  async reinitializeIntegrations() {
+    this.mailgunClient = null;
+    this.emailConfig = null;
+    await this.initializeIntegrations();
+  }
+
   /**
    * Initialize email and SMS integrations from database and environment
    */
@@ -55,9 +62,14 @@ export class NotificationService {
       
       if (activeEmailIntegration) {
         this.emailConfig = activeEmailIntegration;
+        let decryptedKey = activeEmailIntegration.apiKey;
+        try {
+          decryptedKey = EncryptionService.decrypt(activeEmailIntegration.apiKey);
+        } catch {
+        }
         this.mailgunClient = mailgun.client({
           username: 'api',
-          key: activeEmailIntegration.apiKey
+          key: decryptedKey
         });
         console.log('[NotificationService] Mailgun initialized from database:', activeEmailIntegration.domain);
       } else {
