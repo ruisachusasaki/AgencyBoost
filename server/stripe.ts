@@ -193,17 +193,28 @@ export async function createSubscription(
   const stripe = await getStripeAsync();
   if (!stripe) return null;
 
+  let attachedPaymentMethodId: string | undefined;
   if (defaultPaymentMethodId) {
     try {
       await stripe.paymentMethods.attach(defaultPaymentMethodId, { customer: customerId });
+      attachedPaymentMethodId = defaultPaymentMethodId;
     } catch (e: any) {
-      if (!e.message?.includes('already been attached')) {
-        console.error('[Stripe] Error attaching payment method:', e.message);
+      if (e.message?.includes('already been attached')) {
+        attachedPaymentMethodId = defaultPaymentMethodId;
+      } else {
+        console.warn('[Stripe] Could not attach payment method, will create subscription without it:', e.message);
       }
     }
-    await stripe.customers.update(customerId, {
-      invoice_settings: { default_payment_method: defaultPaymentMethodId },
-    });
+    if (attachedPaymentMethodId) {
+      try {
+        await stripe.customers.update(customerId, {
+          invoice_settings: { default_payment_method: attachedPaymentMethodId },
+        });
+      } catch (e: any) {
+        console.warn('[Stripe] Could not set default payment method:', e.message);
+        attachedPaymentMethodId = undefined;
+      }
+    }
   }
 
   const price = await stripe.prices.create({
@@ -223,8 +234,8 @@ export async function createSubscription(
     payment_behavior: 'allow_incomplete',
   };
 
-  if (defaultPaymentMethodId) {
-    subscriptionData.default_payment_method = defaultPaymentMethodId;
+  if (attachedPaymentMethodId) {
+    subscriptionData.default_payment_method = attachedPaymentMethodId;
   }
 
   if (trialDays > 0) {
