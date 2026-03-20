@@ -1084,13 +1084,14 @@ export default function PublicProposal() {
             </div>
             {onboardingUrl ? (
               <div className="mt-8">
-                <p className="text-gray-600 mb-3">One more step — please complete your onboarding form so we can get started right away.</p>
+                <h3 className="text-3xl font-bold text-gray-900 mb-3">Next Step</h3>
+                <p className="text-gray-600 mb-5 max-w-lg mx-auto">We are super excited to get your campaigns launched! We need your help with this... The faster we are able to get everything we need, the faster we can launch. So please start your onboarding process below (you can start now, save and come back to it later).</p>
                 <a
                   href={onboardingUrl}
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium transition-opacity hover:opacity-90"
                   style={{ backgroundColor: brandColor || '#00C9C6' }}
                 >
-                  Complete Onboarding
+                  Start Your Onboarding
                   <ChevronRight className="h-4 w-4" />
                 </a>
               </div>
