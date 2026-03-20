@@ -240,12 +240,12 @@ export async function retrievePaymentIntent(paymentIntentId: string): Promise<St
   return stripe.paymentIntents.retrieve(paymentIntentId);
 }
 
-export function constructWebhookEvent(
+export async function constructWebhookEvent(
   body: string | Buffer,
   signature: string,
   webhookSecret: string
-): Stripe.Event {
-  const stripe = getStripe();
+): Promise<Stripe.Event> {
+  const stripe = await getStripeAsync();
   if (!stripe) throw new Error('Stripe not configured');
   return stripe.webhooks.constructEvent(body, signature, webhookSecret);
 }

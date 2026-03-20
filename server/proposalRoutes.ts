@@ -1234,15 +1234,16 @@ function adjustColor(hex: string, amount: number): string {
 
 export async function handleStripeWebhook(req: any, res: any, notificationService: NotificationService) {
   const sig = req.headers["stripe-signature"];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecret = await getStripeWebhookSecret();
 
   if (!sig || !webhookSecret) {
+    console.error("[Stripe Webhook] Missing signature or webhook secret", { hasSig: !!sig, hasSecret: !!webhookSecret });
     return res.status(400).json({ message: "Missing signature or webhook secret" });
   }
 
   let event;
   try {
-    event = constructWebhookEvent(req.body, sig, webhookSecret);
+    event = await constructWebhookEvent(req.body, sig, webhookSecret);
   } catch (err: any) {
     console.error("Webhook signature verification failed:", err.message);
     return res.status(400).json({ message: `Webhook Error: ${err.message}` });

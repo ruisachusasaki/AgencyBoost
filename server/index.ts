@@ -1969,24 +1969,23 @@ app.post('/api/integrations/slack/events',
 
 // Stripe webhook with raw body for signature verification
 // MUST be registered before express.json()
-app.post('/api/webhooks/stripe',
-  express.raw({ type: 'application/json' }),
-  async (req, res) => {
-    try {
-      const { handleStripeWebhook } = await import('./proposalRoutes');
-      const { getNotificationService } = await import('./notification-service');
-      const notificationService = getNotificationService();
-      if (notificationService) {
-        await handleStripeWebhook(req, res, notificationService);
-      } else {
-        res.status(503).json({ message: 'Service not ready' });
-      }
-    } catch (error) {
-      console.error('[Stripe Webhook] Error:', error);
-      res.status(500).json({ error: 'Failed to process webhook' });
+const stripeWebhookHandler: express.RequestHandler = async (req, res) => {
+  try {
+    const { handleStripeWebhook } = await import('./proposalRoutes');
+    const { getNotificationService } = await import('./notification-service');
+    const notificationService = getNotificationService();
+    if (notificationService) {
+      await handleStripeWebhook(req, res, notificationService);
+    } else {
+      res.status(503).json({ message: 'Service not ready' });
     }
+  } catch (error) {
+    console.error('[Stripe Webhook] Error:', error);
+    res.status(500).json({ error: 'Failed to process webhook' });
   }
-);
+};
+app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhookHandler);
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), stripeWebhookHandler);
 
 // Standard body parsers for all other routes
 // Increased limit for CSV imports which can be large

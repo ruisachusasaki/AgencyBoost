@@ -17992,7 +17992,7 @@ async function getStripePublishableKey() {
   }
   return process.env.STRIPE_PUBLISHABLE_KEY || null;
 }
-async function getStripeWebhookSecret() {
+async function getStripeWebhookSecret2() {
   try {
     const [dbConfig] = await db.select().from(stripeIntegrations).where(eq13(stripeIntegrations.isActive, true)).limit(1);
     if (dbConfig?.webhookSecret) {
@@ -18014,18 +18014,6 @@ async function getStripeAsync() {
       apiVersion: "2024-12-18.acacia"
     });
     lastSecretKey = secretKey;
-  }
-  return stripeInstance;
-}
-function getStripe() {
-  if (!process.env.STRIPE_SECRET_KEY && !stripeInstance) {
-    return null;
-  }
-  if (!stripeInstance) {
-    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: "2024-12-18.acacia"
-    });
-    lastSecretKey = process.env.STRIPE_SECRET_KEY;
   }
   return stripeInstance;
 }
@@ -18082,8 +18070,8 @@ async function createSubscription(customerId, monthlyAmount, metadata = {}, tria
   }
   return stripe.subscriptions.create(subscriptionData);
 }
-function constructWebhookEvent(body, signature, webhookSecret) {
-  const stripe = getStripe();
+async function constructWebhookEvent(body, signature, webhookSecret) {
+  const stripe = await getStripeAsync();
   if (!stripe) throw new Error("Stripe not configured");
   return stripe.webhooks.constructEvent(body, signature, webhookSecret);
 }
@@ -19107,13 +19095,14 @@ function adjustColor(hex, amount) {
 }
 async function handleStripeWebhook(req, res, notificationService) {
   const sig = req.headers["stripe-signature"];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecret = await getStripeWebhookSecret();
   if (!sig || !webhookSecret) {
+    console.error("[Stripe Webhook] Missing signature or webhook secret", { hasSig: !!sig, hasSecret: !!webhookSecret });
     return res.status(400).json({ message: "Missing signature or webhook secret" });
   }
   let event;
   try {
-    event = constructWebhookEvent(req.body, sig, webhookSecret);
+    event = await constructWebhookEvent(req.body, sig, webhookSecret);
   } catch (err) {
     console.error("Webhook signature verification failed:", err.message);
     return res.status(400).json({ message: `Webhook Error: ${err.message}` });
@@ -41500,7 +41489,7 @@ ${appointment.description || ""}
     try {
       const configured = await isStripeConfiguredAsync();
       const publishableKey = await getStripePublishableKey();
-      const webhookSecret = await getStripeWebhookSecret();
+      const webhookSecret = await getStripeWebhookSecret2();
       const [dbConfig] = await db.select().from(stripeIntegrations).where(eq20(stripeIntegrations.isActive, true)).limit(1);
       const source = dbConfig ? "database" : process.env.STRIPE_SECRET_KEY ? "environment" : "none";
       if (!configured) {
@@ -60483,25 +60472,23 @@ app.post(
     }
   }
 );
-app.post(
-  "/api/webhooks/stripe",
-  express2.raw({ type: "application/json" }),
-  async (req, res) => {
-    try {
-      const { handleStripeWebhook: handleStripeWebhook3 } = await Promise.resolve().then(() => (init_proposalRoutes(), proposalRoutes_exports));
-      const { getNotificationService: getNotificationService2 } = await Promise.resolve().then(() => (init_notification_service(), notification_service_exports));
-      const notificationService = getNotificationService2();
-      if (notificationService) {
-        await handleStripeWebhook3(req, res, notificationService);
-      } else {
-        res.status(503).json({ message: "Service not ready" });
-      }
-    } catch (error) {
-      console.error("[Stripe Webhook] Error:", error);
-      res.status(500).json({ error: "Failed to process webhook" });
+var stripeWebhookHandler = async (req, res) => {
+  try {
+    const { handleStripeWebhook: handleStripeWebhook3 } = await Promise.resolve().then(() => (init_proposalRoutes(), proposalRoutes_exports));
+    const { getNotificationService: getNotificationService2 } = await Promise.resolve().then(() => (init_notification_service(), notification_service_exports));
+    const notificationService = getNotificationService2();
+    if (notificationService) {
+      await handleStripeWebhook3(req, res, notificationService);
+    } else {
+      res.status(503).json({ message: "Service not ready" });
     }
+  } catch (error) {
+    console.error("[Stripe Webhook] Error:", error);
+    res.status(500).json({ error: "Failed to process webhook" });
   }
-);
+};
+app.post("/api/webhooks/stripe", express2.raw({ type: "application/json" }), stripeWebhookHandler);
+app.post("/api/stripe/webhook", express2.raw({ type: "application/json" }), stripeWebhookHandler);
 app.use(express2.json({ limit: "10mb" }));
 app.use(express2.urlencoded({ extended: false, limit: "10mb" }));
 app.get("/_health", (_req, res) => {
