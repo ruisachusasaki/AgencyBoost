@@ -4,7 +4,7 @@ import { proposalTerms, quotes, quoteItems, clients, leads, staff, products, pro
 import { eq, desc, and, sql, lt, isNull, asc } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { z } from "zod";
-import { createPaymentIntent, createACHPaymentIntent, isStripeConfigured, isStripeConfiguredAsync, constructWebhookEvent, getStripe, getStripeAsync, getOrCreateCustomer, createSubscription, getStripePublishableKey } from "./stripe";
+import { createPaymentIntent, createACHPaymentIntent, isStripeConfigured, isStripeConfiguredAsync, constructWebhookEvent, getStripe, getStripeAsync, getOrCreateCustomer, createSubscription, getStripePublishableKey, getStripeWebhookSecret } from "./stripe";
 import { NotificationService } from "./notification-service";
 import { generateTasksFromTemplates } from "./taskGenerationEngine";
 import { convertLeadToClient } from "./services/leadConversionService";

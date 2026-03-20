@@ -17992,7 +17992,7 @@ async function getStripePublishableKey() {
   }
   return process.env.STRIPE_PUBLISHABLE_KEY || null;
 }
-async function getStripeWebhookSecret2() {
+async function getStripeWebhookSecret() {
   try {
     const [dbConfig] = await db.select().from(stripeIntegrations).where(eq13(stripeIntegrations.isActive, true)).limit(1);
     if (dbConfig?.webhookSecret) {
@@ -41489,7 +41489,7 @@ ${appointment.description || ""}
     try {
       const configured = await isStripeConfiguredAsync();
       const publishableKey = await getStripePublishableKey();
-      const webhookSecret = await getStripeWebhookSecret2();
+      const webhookSecret = await getStripeWebhookSecret();
       const [dbConfig] = await db.select().from(stripeIntegrations).where(eq20(stripeIntegrations.isActive, true)).limit(1);
       const source = dbConfig ? "database" : process.env.STRIPE_SECRET_KEY ? "environment" : "none";
       if (!configured) {
