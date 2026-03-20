@@ -26820,6 +26820,45 @@ AgencyBoost CRM`
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
       }
+      if (validatedData.customFieldValues) {
+        try {
+          const allCustomFields = await db.select().from(customFields);
+          const cfv = validatedData.customFieldValues;
+          const syncUpdates = {};
+          for (const field of allCustomFields) {
+            const fieldNameLower = field.name.toLowerCase();
+            if (cfv[field.id] !== void 0) {
+              if (fieldNameLower === "email" || fieldNameLower === "e-mail") {
+                syncUpdates.email = cfv[field.id];
+              } else if (fieldNameLower === "phone" || fieldNameLower === "mobile") {
+                syncUpdates.phone = cfv[field.id];
+              } else if (fieldNameLower === "first name" || fieldNameLower === "firstname") {
+                const lastNameField = allCustomFields.find((f) => {
+                  const n = f.name.toLowerCase();
+                  return n === "last name" || n === "lastname";
+                });
+                const lastName = lastNameField ? cfv[lastNameField.id] || client.customFieldValues?.[lastNameField.id] || "" : "";
+                syncUpdates.name = `${cfv[field.id]} ${lastName}`.trim();
+              } else if (fieldNameLower === "last name" || fieldNameLower === "lastname") {
+                const firstNameField = allCustomFields.find((f) => {
+                  const n = f.name.toLowerCase();
+                  return n === "first name" || n === "firstname";
+                });
+                const firstName = firstNameField ? cfv[firstNameField.id] || client.customFieldValues?.[firstNameField.id] || "" : "";
+                syncUpdates.name = `${firstName} ${cfv[field.id]}`.trim();
+              }
+            }
+          }
+          if (Object.keys(syncUpdates).length > 0) {
+            const syncedClient = await storage2.updateClient(req.params.id, syncUpdates);
+            if (syncedClient) {
+              Object.assign(client, syncedClient);
+            }
+          }
+        } catch (syncErr) {
+          console.error("[Client Sync] Error syncing custom field values to core fields:", syncErr);
+        }
+      }
       if (validatedData.assignee && validatedData.assignee !== oldClient.assignee) {
         void notificationService.notifyClientAssigned(
           validatedData.assignee,
