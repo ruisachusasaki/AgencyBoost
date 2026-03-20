@@ -78,7 +78,11 @@ function CardPaymentForm({
 
     setProcessing(false);
     if (error) {
-      onError(error.message || "Payment failed");
+      if (error.message?.includes('No such payment_intent')) {
+        onError("Payment session expired. Please re-select your payment method to try again.");
+      } else {
+        onError(error.message || "Payment failed");
+      }
     } else if (paymentIntent?.status === "succeeded") {
       onSuccess();
     }
@@ -174,8 +178,10 @@ export default function PublicProposal() {
     enabled: !!token,
   });
 
+  const [loadedStripeKey, setLoadedStripeKey] = useState<string | null>(null);
   useEffect(() => {
-    if (data?.stripePublishableKey && !stripePromise) {
+    if (data?.stripePublishableKey && data.stripePublishableKey !== loadedStripeKey) {
+      setLoadedStripeKey(data.stripePublishableKey);
       setStripePromise(loadStripe(data.stripePublishableKey));
     }
   }, [data?.stripePublishableKey]);

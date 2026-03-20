@@ -378,6 +378,7 @@ export function registerProposalRoutes(
   });
 
   app.get("/api/quotes/public/:token", async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     try {
       const { token } = req.params;
       const [quote] = await db

@@ -18385,6 +18385,7 @@ Thank you!`,
     }
   });
   app2.get("/api/quotes/public/:token", async (req, res) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     try {
       const { token } = req.params;
       const [quote] = await db.select().from(quotes).where(eq14(quotes.publicToken, token));
