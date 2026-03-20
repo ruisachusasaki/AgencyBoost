@@ -31,7 +31,7 @@ interface ClientTask {
   id: string;
   title: string;
   description: string | null;
-  status: 'not_started' | 'in_progress' | 'completed' | 'on_hold';
+  status: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   dueDate: string | null;
   projectName: string | null;
@@ -56,11 +56,26 @@ interface TaskFilters {
   dueDateTo?: Date;
 }
 
+const statusLabels: Record<string, string> = {
+  todo: "To Do",
+  not_started: "Not Started",
+  in_progress: "In Progress",
+  review: "Review",
+  blocked: "Blocked",
+  completed: "Completed",
+  cancelled: "Cancelled",
+  on_hold: "On Hold"
+};
+
 // Status color mapping
-const statusColors = {
+const statusColors: Record<string, string> = {
+  todo: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
   not_started: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
   in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+  review: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
+  blocked: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
   completed: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+  cancelled: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
   on_hold: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
 };
 
@@ -74,10 +89,11 @@ const priorityColors = {
 
 // Available filter options
 const statusOptions = [
-  { value: 'not_started', label: 'Not Started' },
+  { value: 'todo', label: 'To Do' },
   { value: 'in_progress', label: 'In Progress' },
+  { value: 'review', label: 'Review' },
   { value: 'completed', label: 'Completed' },
-  { value: 'on_hold', label: 'On Hold' }
+  { value: 'cancelled', label: 'Cancelled' }
 ];
 
 const priorityOptions = [
@@ -207,8 +223,8 @@ function TaskCard({ task }: { task: ClientTask }) {
             <Badge variant="outline" className={priorityColors[task.priority]} data-testid={`badge-priority-${task.id}`}>
               {task.priority}
             </Badge>
-            <Badge variant="outline" className={statusColors[task.status]} data-testid={`badge-status-${task.id}`}>
-              {task.status.replace('_', ' ')}
+            <Badge variant="outline" className={statusColors[task.status] || "bg-gray-100 text-gray-800"} data-testid={`badge-status-${task.id}`}>
+              {statusLabels[task.status] || task.status.replace('_', ' ')}
             </Badge>
           </div>
         </div>
@@ -563,7 +579,7 @@ export default function ClientPortalDashboard() {
   // Calculate task statistics
   const completedTasks = tasks.filter(task => task.status === 'completed');
   const inProgressTasks = tasks.filter(task => task.status === 'in_progress');
-  const upcomingTasks = tasks.filter(task => task.status === 'not_started');
+  const upcomingTasks = tasks.filter(task => task.status === 'todo' || task.status === 'not_started');
   const overdueTasks = tasks.filter(task => 
     task.dueDate && 
     new Date(task.dueDate) < new Date() && 

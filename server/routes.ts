@@ -37049,7 +37049,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         })
         .from(tasks)
         .leftJoin(projects, eq(tasks.projectId, projects.id))
-        .leftJoin(staff, eq(tasks.assigneeId, staff.id))
+        .leftJoin(staff, eq(tasks.assignedTo, staff.id))
         .where(and(...filterConditions))
         .orderBy(desc(tasks.createdAt))
         .limit(parseInt(limit as string))
@@ -37060,7 +37060,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         .select({ count: sql<number>`count(*)` })
         .from(tasks)
         .leftJoin(projects, eq(tasks.projectId, projects.id))
-        .leftJoin(staff, eq(tasks.assigneeId, staff.id))
+        .leftJoin(staff, eq(tasks.assignedTo, staff.id))
         .where(and(...filterConditions));
 
       const totalCount = totalCountResult[0]?.count || 0;
