@@ -451,6 +451,11 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
     enabled: isManager || isAdmin,
   });
 
+  const { data: onboardingFormConfig } = useQuery<{ fields: Array<{ id: string; label: string; type: string; order: number }> }>({
+    queryKey: ["/api/new-hire-onboarding-form-config"],
+    enabled: isManager || isAdmin,
+  });
+
   const { data: myOnboardingData } = useQuery<{ instance: any | null }>({
     queryKey: ["/api/onboarding/my-checklist"],
     queryFn: async () => {
@@ -2603,6 +2608,50 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                                     </div>
                                   </div>
                                 </div>
+                                {(() => {
+                                  const customData = submission.customFieldData as Record<string, any> | null;
+                                  const formFields = onboardingFormConfig?.fields || [];
+                                  const standardFieldIds = new Set(['name', 'address', 'phone_number', 'date_of_birth', 'start_date', 'emergency_contact_name', 'emergency_contact_number', 'emergency_contact_relationship', 'tshirt_size', 'payment_platform', 'payment_email']);
+                                  const customFields = formFields
+                                    .filter(f => !standardFieldIds.has(f.id) && customData?.[f.id] !== undefined && customData?.[f.id] !== '')
+                                    .sort((a, b) => a.order - b.order);
+                                  if (customFields.length === 0) return null;
+                                  return (
+                                    <div className="border-t pt-4">
+                                      <h4 className="text-sm font-medium text-slate-600 mb-3">Additional Information</h4>
+                                      <div className="space-y-3">
+                                        {customFields.map(field => {
+                                          const value = customData?.[field.id];
+                                          const filename = customData?.[`${field.id}_filename`];
+                                          if (field.type === 'file' || (typeof value === 'string' && value.startsWith('/objects/'))) {
+                                            return (
+                                              <div key={field.id}>
+                                                <label className="text-sm font-medium text-slate-600">{field.label}</label>
+                                                <div className="mt-1">
+                                                  <a
+                                                    href={value}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 underline"
+                                                  >
+                                                    <FileText className="h-4 w-4" />
+                                                    {filename || 'Download File'}
+                                                  </a>
+                                                </div>
+                                              </div>
+                                            );
+                                          }
+                                          return (
+                                            <div key={field.id}>
+                                              <label className="text-sm font-medium text-slate-600">{field.label}</label>
+                                              <p className="text-sm text-slate-900">{String(value)}</p>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
                                 <div className="border-t pt-4">
                                   <div className="flex justify-between items-center">
                                     <div>
