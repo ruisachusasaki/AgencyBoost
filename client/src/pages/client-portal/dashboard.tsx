@@ -554,6 +554,24 @@ export default function ClientPortalDashboard() {
   const queryObject = buildQueryObject(filters, currentPage, pageSize);
   const { data: tasksResponse, isLoading: tasksLoading } = useQuery({
     queryKey: ["/api/client-portal/tasks", queryObject],
+    queryFn: async () => {
+      const searchParams = new URLSearchParams();
+      for (const [key, value] of Object.entries(queryObject)) {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      }
+      const paramString = searchParams.toString();
+      const url = `/api/client-portal/tasks${paramString ? '?' + paramString : ''}`;
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) {
+        if (res.status === 401) {
+          return { tasks: [], total: 0 };
+        }
+        throw new Error(`Failed to fetch tasks: ${res.status}`);
+      }
+      return await res.json();
+    },
   });
   
   const tasks = tasksResponse?.tasks || [];
