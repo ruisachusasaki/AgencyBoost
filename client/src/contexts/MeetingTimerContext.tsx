@@ -31,12 +31,15 @@ interface MeetingTimerProviderProps {
 export function MeetingTimerProvider({ children }: MeetingTimerProviderProps) {
   const [meetingElapsedTime, setMeetingElapsedTime] = useState(0);
 
+  const isClientPortal = typeof window !== 'undefined' && window.location.pathname.startsWith('/client-portal');
+
   const { data: activeMeeting = null } = useQuery<ActiveMeeting | null>({
     queryKey: ['/api/meetings/active-timer'],
     refetchInterval: 5000,
     staleTime: 0,
     gcTime: 0,
     refetchOnWindowFocus: true,
+    enabled: !isClientPortal,
   });
 
   const isMeetingTimerRunning = !!activeMeeting;

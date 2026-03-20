@@ -40,9 +40,12 @@ export function TimerProvider({ children }: TimerProviderProps) {
   const [elapsedTime, setElapsedTime] = useState(0);
   const { toast } = useToast();
 
+  const isClientPortal = typeof window !== 'undefined' && window.location.pathname.startsWith('/client-portal');
+
   // Fetch current user data for proper user ID association
   const { data: currentUser } = useQuery<{ id: string; firstName: string; lastName: string }>({
     queryKey: ['/api/auth/current-user'],
+    enabled: !isClientPortal,
   });
 
   const isTimerRunning = !!currentTimer;
