@@ -697,21 +697,45 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
         setSlashQuery('');
         setSelectedIndex(0);
         
-        // Use native browser selection for viewport-based positioning
         try {
           const domSel = window.getSelection();
+          let posTop = 200;
+          let posLeft = 200;
+
           if (domSel && domSel.rangeCount > 0) {
             const range = domSel.getRangeAt(0);
             const rect = range.getBoundingClientRect();
-            if (rect.top !== 0 || rect.left !== 0) {
-              setSlashMenuPosition({
-                top: rect.bottom + 5,
-                left: rect.left
-              });
+
+            if (rect.top > 0 || rect.left > 0 || rect.height > 0) {
+              posTop = rect.bottom + 5;
+              posLeft = rect.left;
             } else {
-              setSlashMenuPosition({ top: 200, left: 200 });
+              const node = range.startContainer;
+              const el = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
+              if (el) {
+                const elRect = el.getBoundingClientRect();
+                posTop = elRect.bottom + 5;
+                posLeft = elRect.left;
+              } else if (editorRef.current) {
+                const editorRect = editorRef.current.getBoundingClientRect();
+                posTop = editorRect.top + 100;
+                posLeft = editorRect.left + 20;
+              }
             }
           }
+
+          const menuHeight = 300;
+          const menuWidth = 200;
+          if (posTop + menuHeight > window.innerHeight) {
+            posTop = Math.max(10, posTop - menuHeight - 30);
+          }
+          if (posLeft + menuWidth > window.innerWidth) {
+            posLeft = Math.max(10, window.innerWidth - menuWidth - 10);
+          }
+          posTop = Math.max(10, posTop);
+          posLeft = Math.max(10, posLeft);
+
+          setSlashMenuPosition({ top: posTop, left: posLeft });
         } catch (error) {
           setSlashMenuPosition({ top: 200, left: 200 });
         }
