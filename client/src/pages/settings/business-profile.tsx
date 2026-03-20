@@ -10,7 +10,7 @@ import { Building, Upload, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { UploadResult } from "@uppy/core";
 
 export default function BusinessProfile() {
@@ -86,6 +86,7 @@ export default function BusinessProfile() {
       return response.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/business-profile'] });
       toast({
         title: "Success",
         variant: "default",
