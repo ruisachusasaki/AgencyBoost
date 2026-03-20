@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, ArrowDownLeft, ArrowUpRight, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil, ClipboardList, Repeat, Layers, ClipboardCheck, Copy, Link2, Reply } from "lucide-react";
+import { ArrowLeft, ArrowDownLeft, ArrowUpRight, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil, ClipboardList, Repeat, Layers, ClipboardCheck, Copy, Link2, Reply, UserPlus } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 import ContactCardField from "@/components/contact-card-field";
 
@@ -3083,6 +3083,12 @@ export default function EnhancedClientDetail() {
   // Selected contacts for SMS multi-select (array of contact indices)
   const [selectedSmsContactIndices, setSelectedSmsContactIndices] = useState<number[]>([0]);
   
+  // Additional SMS recipients (manual numbers or staff)
+  const [additionalSmsNumbers, setAdditionalSmsNumbers] = useState<Array<{ id: string; name: string; phone: string }>>([]);
+  const [manualSmsNumber, setManualSmsNumber] = useState("");
+  const [showStaffSmsPicker, setShowStaffSmsPicker] = useState(false);
+  const [staffSmsSearch, setStaffSmsSearch] = useState("");
+  
   // Selected contacts for Email multi-select (array of contact indices)
   const [selectedEmailContactIndices, setSelectedEmailContactIndices] = useState<number[]>([0]);
   
@@ -3101,27 +3107,11 @@ export default function EnhancedClientDetail() {
       return await apiRequest("POST", "/api/integrations/twilio/send", smsPayload);
     },
     onSuccess: () => {
-      // Invalidate audit logs to refresh the communication history
       queryClient.invalidateQueries({ 
         queryKey: ['/api/audit-logs/entity/contact', clientId],
-        exact: false // This will invalidate all queries that start with this key
+        exact: false
       });
-      toast({
-        title: "SMS Sent",
-        variant: "default",
-        description: "Your message has been sent successfully.",
-      });
-      setShowSmsSendModal(false);
-      // Clear the form
-      setSmsData(prev => ({ ...prev, message: '' }));
     },
-    onError: (error: any) => {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to send SMS. Please try again."
-      });
-    }
   });
 
   // Helper function to format phone number for Twilio
@@ -3149,28 +3139,40 @@ export default function EnhancedClientDetail() {
   };
 
   const handleSendSms = () => {
-    // Get all selected contacts with phone numbers
     const selectedContacts = selectedSmsContactIndices
       .map(index => availableContacts[index])
       .filter(contact => contact?.phone);
     
-    if (!smsData.fromNumber || !smsData.message.trim() || selectedContacts.length === 0) {
+    const allRecipients = [
+      ...selectedContacts.map(c => ({ name: c.name, phone: c.phone! })),
+      ...additionalSmsNumbers.map(n => ({ name: n.name, phone: n.phone })),
+    ];
+    
+    // Deduplicate by normalized phone number
+    const seen = new Set<string>();
+    const uniqueRecipients = allRecipients.filter(r => {
+      const normalized = formatPhoneNumber(r.phone);
+      if (seen.has(normalized)) return false;
+      seen.add(normalized);
+      return true;
+    });
+    
+    if (!smsData.fromNumber || !smsData.message.trim() || uniqueRecipients.length === 0) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: selectedContacts.length === 0 
-          ? "Please select at least one contact with a phone number"
+        description: uniqueRecipients.length === 0 
+          ? "Please select at least one contact or add a phone number"
           : "Please fill in all required fields"
       });
       return;
     }
 
-    // Send SMS to all selected contacts
     let successCount = 0;
     let errorCount = 0;
     
-    const sendPromises = selectedContacts.map(contact => {
-      const formattedToNumber = formatPhoneNumber(contact.phone!);
+    const sendPromises = uniqueRecipients.map(recipient => {
+      const formattedToNumber = formatPhoneNumber(recipient.phone);
       return sendSmsMutation.mutateAsync({
         fromNumber: smsData.fromNumber,
         to: formattedToNumber,
@@ -3190,16 +3192,17 @@ export default function EnhancedClientDetail() {
           variant: "default",
           description: successCount === 1 
             ? "Your message has been sent successfully."
-            : `Your message has been sent to ${successCount} contacts.`,
+            : `Your message has been sent to ${successCount} recipient(s).`,
         });
         setShowSmsSendModal(false);
         setSmsData(prev => ({ ...prev, message: '' }));
+        setAdditionalSmsNumbers([]);
       }
       if (errorCount > 0) {
         toast({
           variant: "destructive",
           title: "Partial Failure",
-          description: `Failed to send SMS to ${errorCount} contact(s).`
+          description: `Failed to send SMS to ${errorCount} recipient(s).`
         });
       }
     });
@@ -7220,6 +7223,141 @@ export default function EnhancedClientDetail() {
                             </div>
                           )}
                           
+                          {/* Additional Recipients (Staff / Manual Numbers) */}
+                          <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div className="flex items-center justify-between mb-2">
+                              <Label className="text-sm font-medium flex items-center gap-1">
+                                <UserPlus className="h-4 w-4" />
+                                Additional Recipients
+                              </Label>
+                              <span className="text-xs text-muted-foreground">Team members or other numbers</span>
+                            </div>
+                            
+                            {additionalSmsNumbers.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mb-2">
+                                {additionalSmsNumbers.map(entry => (
+                                  <div key={entry.id} className="flex items-center gap-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full px-3 py-1 text-sm">
+                                    <span className="font-medium">{entry.name}</span>
+                                    <span className="text-muted-foreground text-xs">({entry.phone})</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setAdditionalSmsNumbers(prev => prev.filter(n => n.id !== entry.id))}
+                                      className="ml-1 text-gray-400 hover:text-red-500"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            
+                            <div className="flex gap-2">
+                              <div className="relative flex-1">
+                                <Input
+                                  placeholder="Enter phone number..."
+                                  value={manualSmsNumber}
+                                  onChange={(e) => setManualSmsNumber(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && manualSmsNumber.trim()) {
+                                      e.preventDefault();
+                                      const digits = manualSmsNumber.replace(/\D/g, '');
+                                      if (digits.length >= 10) {
+                                        const formatted = manualSmsNumber.trim();
+                                        const normalized = formatPhoneNumber(formatted);
+                                        const isDuplicate = additionalSmsNumbers.some(n => formatPhoneNumber(n.phone) === normalized);
+                                        if (!isDuplicate) {
+                                          setAdditionalSmsNumbers(prev => [...prev, {
+                                            id: `manual-${Date.now()}`,
+                                            name: formatted,
+                                            phone: formatted
+                                          }]);
+                                        }
+                                        setManualSmsNumber("");
+                                      }
+                                    }
+                                  }}
+                                  className="text-sm"
+                                />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="shrink-0"
+                                disabled={!manualSmsNumber.trim() || manualSmsNumber.replace(/\D/g, '').length < 10}
+                                onClick={() => {
+                                  const formatted = manualSmsNumber.trim();
+                                  const normalized = formatPhoneNumber(formatted);
+                                  const isDuplicate = additionalSmsNumbers.some(n => formatPhoneNumber(n.phone) === normalized);
+                                  if (!isDuplicate) {
+                                    setAdditionalSmsNumbers(prev => [...prev, {
+                                      id: `manual-${Date.now()}`,
+                                      name: formatted,
+                                      phone: formatted
+                                    }]);
+                                  }
+                                  setManualSmsNumber("");
+                                }}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add
+                              </Button>
+                              <Popover open={showStaffSmsPicker} onOpenChange={setShowStaffSmsPicker}>
+                                <PopoverTrigger asChild>
+                                  <Button type="button" variant="outline" size="sm" className="shrink-0">
+                                    <Users className="h-3 w-3 mr-1" />
+                                    Staff
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-64 p-0" align="end">
+                                  <div className="p-2 border-b">
+                                    <Input
+                                      placeholder="Search staff..."
+                                      value={staffSmsSearch}
+                                      onChange={(e) => setStaffSmsSearch(e.target.value)}
+                                      className="text-sm h-8"
+                                    />
+                                  </div>
+                                  <div className="max-h-48 overflow-y-auto p-1">
+                                    {(staffData as any[])
+                                      ?.filter((s: any) => s.isActive !== false && s.phone)
+                                      ?.filter((s: any) => {
+                                        if (!staffSmsSearch) return true;
+                                        const search = staffSmsSearch.toLowerCase();
+                                        return `${s.firstName} ${s.lastName}`.toLowerCase().includes(search);
+                                      })
+                                      ?.filter((s: any) => !additionalSmsNumbers.some(n => n.id === `staff-${s.id}`))
+                                      ?.map((s: any) => (
+                                        <button
+                                          key={s.id}
+                                          type="button"
+                                          className="w-full text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between"
+                                          onClick={() => {
+                                            setAdditionalSmsNumbers(prev => [...prev, {
+                                              id: `staff-${s.id}`,
+                                              name: `${s.firstName} ${s.lastName}`,
+                                              phone: s.phone
+                                            }]);
+                                            setShowStaffSmsPicker(false);
+                                            setStaffSmsSearch("");
+                                          }}
+                                        >
+                                          <div>
+                                            <div className="text-sm font-medium">{s.firstName} {s.lastName}</div>
+                                            <div className="text-xs text-muted-foreground">{s.phone}</div>
+                                          </div>
+                                          <Plus className="h-3 w-3 text-muted-foreground" />
+                                        </button>
+                                      )) || null}
+                                    {(staffData as any[])?.filter((s: any) => s.isActive !== false && s.phone)?.length === 0 && (
+                                      <div className="p-3 text-sm text-muted-foreground text-center">No staff with phone numbers</div>
+                                    )}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          </div>
+                          
                           <div>
                             <div className="flex items-center justify-between mb-2">
                               <Label htmlFor="sms-message">Message</Label>
@@ -7274,24 +7412,24 @@ export default function EnhancedClientDetail() {
                             onClick={() => {
                               setShowSmsChoiceModal(true);
                             }}
-                            disabled={selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length === 0}
+                            disabled={selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length === 0 && additionalSmsNumbers.length === 0}
                             className="w-full"
                             data-testid="button-send-sms"
                             title={
-                              selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length === 0
-                                ? "Select at least one contact with a phone number"
-                                : `Send SMS to ${selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length} contact(s)`
+                              selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length === 0 && additionalSmsNumbers.length === 0
+                                ? "Select at least one contact or add a phone number"
+                                : `Send SMS to ${selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length + additionalSmsNumbers.length} recipient(s)`
                             }
                           >
                             <Send className="h-4 w-4 mr-2" />
-                            Send SMS {selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length > 1 && 
-                              `(${selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length})`}
+                            Send SMS {(selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length + additionalSmsNumbers.length) > 1 && 
+                              `(${selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length + additionalSmsNumbers.length})`}
                           </Button>
                         </div>
                         
                         
                         {/* Show helpful message when no contacts with phone are selected */}
-                        {selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length === 0 && (
+                        {selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length === 0 && additionalSmsNumbers.length === 0 && (
                           <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded text-sm text-yellow-700 dark:text-yellow-400">
                             <div className="flex items-center gap-1">
                               <AlertCircle className="h-3 w-3" />
