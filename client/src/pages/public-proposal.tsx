@@ -210,11 +210,11 @@ export default function PublicProposal() {
     if (data?.proposal?.status === "completed") {
       setCurrentStep("complete");
     } else if (data?.proposal?.status === "signed" || data?.proposal?.status === "payment_pending") {
-      setCurrentStep("pay");
+      setCurrentStep(prev => prev === "complete" ? "complete" : "pay");
       if (data?.proposal?.signedByName) setSignerName(data.proposal.signedByName);
       if (data?.proposal?.signedByEmail) setSignerEmail(data.proposal.signedByEmail);
     } else if (data?.proposal?.signedAt) {
-      setCurrentStep("pay");
+      setCurrentStep(prev => prev === "complete" ? "complete" : "pay");
     }
   }, [data]);
 
