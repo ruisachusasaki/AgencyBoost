@@ -648,17 +648,92 @@ export function registerProposalRoutes(
       (async () => {
         try {
           const qItems = await db.select().from(quoteItems).where(eq(quoteItems.quoteId, quote.id));
+
+          const enrichedItems: { name: string; quantity: number }[] = [];
+          for (const item of qItems) {
+            let itemName = "";
+            if (item.itemType === "product" && item.productId) {
+              const [p] = await db.select().from(products).where(eq(products.id, item.productId));
+              itemName = p?.name || "Product";
+            } else if (item.itemType === "bundle" && item.bundleId) {
+              const [b] = await db.select().from(productBundles).where(eq(productBundles.id, item.bundleId));
+              itemName = b?.name || "Bundle";
+            } else if (item.itemType === "package" && item.packageId) {
+              const [pkg] = await db.select().from(productPackages).where(eq(productPackages.id, item.packageId));
+              itemName = pkg?.name || "Package";
+            }
+            enrichedItems.push({ name: itemName || item.itemType, quantity: item.quantity });
+          }
+
           let companyName = "";
+          let businessData: any = null;
           try {
             const [bp] = await db.select().from(businessProfile).limit(1);
             companyName = bp?.companyName || "";
+            businessData = bp;
           } catch (e) {}
+
+          let clientData: any = null;
+          if (quote.clientId) {
+            const [c] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
+            if (c) clientData = c;
+          }
+          if (!clientData && quote.leadId) {
+            const [l] = await db.select().from(leads).where(eq(leads.id, quote.leadId));
+            if (l) clientData = l;
+          }
+
+          let termsContent = activeTerms[0]?.content || "";
+          if (quote.customAgreement) {
+            termsContent = quote.customAgreement;
+          }
+
+          const buildFee = Number(quote.buildFee) || 0;
+          const monthlyFee = Number(quote.monthlyCost) || 0;
+          const servicesList = enrichedItems.map(i => i.name).filter(Boolean).join(", ");
+          const formatCurrencyFn = (val: number) => val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          const effectiveDateStr = quote.sentAt ? new Date(quote.sentAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+          const mergeMap: Record<string, string> = {
+            "{{clientCompany}}": clientData?.company || clientData?.name || signerName || "",
+            "{{clientContactName}}": clientData?.contactName || clientData?.name || signerName || "",
+            "{{clientEmail}}": clientData?.email || signerEmail || "",
+            "{{clientPhone}}": clientData?.phone || "",
+            "{{clientAddress}}": clientData?.address || "",
+            "{{clientAddress2}}": clientData?.address2 || "",
+            "{{clientCity}}": clientData?.city || "",
+            "{{clientState}}": clientData?.state || "",
+            "{{clientZipCode}}": clientData?.zipCode || "",
+            "{{clientCityStateZip}}": [clientData?.city, clientData?.state, clientData?.zipCode].filter(Boolean).join(", ") || "",
+            "{{clientWebsite}}": clientData?.website || "",
+            "{{proposalName}}": quote.name || "",
+            "{{effectiveDate}}": effectiveDateStr,
+            "{{buildInvestment}}": `$${formatCurrencyFn(buildFee)}`,
+            "{{monthlyInvestment}}": `$${formatCurrencyFn(monthlyFee)}`,
+            "{{servicesList}}": servicesList,
+            "{{billingFrequency}}": monthlyFee > 0 ? "monthly" : "one-time",
+            "{{businessName}}": businessData?.companyName || "",
+            "{{businessEmail}}": businessData?.email || "",
+            "{{businessPhone}}": businessData?.phone || "",
+            "{{businessAddress}}": businessData?.address || "",
+            "{{businessCity}}": businessData?.city || "",
+            "{{businessState}}": businessData?.state || "",
+            "{{businessZipCode}}": businessData?.zipCode || "",
+            "{{signerName}}": signerName || "",
+            "{{signerEmail}}": signerEmail || "",
+            "{{signerIpAddress}}": signerIpAddress || "",
+            "{{SIGNER_IP_ADDRESS}}": signerIpAddress || "",
+            "{{signatureDate}}": updated.signedAt ? new Date(updated.signedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "",
+          };
+          for (const [tag, value] of Object.entries(mergeMap)) {
+            termsContent = termsContent.split(tag).join(value);
+          }
 
           const signedAt = updated.signedAt || new Date();
           const pdfBuffer = await generateSignedAgreementPdf({
             quote,
-            quoteItemsList: qItems,
-            termsContent: activeTerms[0]?.content || "",
+            quoteItemsList: enrichedItems,
+            termsContent,
             termsTitle: activeTerms[0]?.title || "Service Agreement",
             signerName,
             signerEmail,
