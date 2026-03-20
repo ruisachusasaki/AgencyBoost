@@ -19135,7 +19135,8 @@ async function handleStripeWebhook(req, res, notificationService) {
           await triggerQuoteFulfillment(quote, notificationService);
           const monthlyFee = parseFloat(paymentIntent.metadata?.monthlyFee || quote.clientBudget || "0");
           const billingMode = paymentIntent.metadata?.billingMode || quote.billingMode || "trial";
-          const customerId = quote.stripeCustomerId || paymentIntent.customer;
+          const customerId = paymentIntent.customer || quote.stripeCustomerId;
+          console.log(`[Quote Fulfillment] Subscription check: monthlyFee=${monthlyFee}, customerId=${customerId}, hasExistingSub=${!!quote.stripeSubscriptionId}, billingMode=${billingMode}`);
           const pmMethod = paymentIntent.metadata?.paymentMethod || quote.paymentMethod || "";
           const ccSurchargeRate = parseFloat(paymentIntent.metadata?.ccSurchargeRate || "0");
           if (monthlyFee > 0 && customerId && !quote.stripeSubscriptionId) {
