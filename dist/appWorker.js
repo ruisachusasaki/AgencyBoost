@@ -52191,7 +52191,7 @@ ${appointment.description || ""}
           t.id, t.title, t.description, t.status, t.priority, 
           t.due_date as "dueDate", t.completed_at as "completedAt", t.created_at as "createdAt",
           p.name as "projectName",
-          s.name as "assigneeName"
+          COALESCE(s.first_name || ' ' || s.last_name, null) as "assigneeName"
         FROM tasks t
         LEFT JOIN projects p ON p.id = t.project_id
         LEFT JOIN staff s ON s.id = t.assigned_to
