@@ -37044,11 +37044,10 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           dueDate: tasks.dueDate,
           completedAt: tasks.completedAt,
           createdAt: tasks.createdAt,
-          projectName: projects.name,
+          projectName: sql<string>`(SELECT p.name FROM projects p WHERE p.id = ${tasks.projectId})`,
           assigneeName: staff.name
         })
         .from(tasks)
-        .leftJoin(projects, eq(tasks.projectId, projects.id))
         .leftJoin(staff, eq(tasks.assignedTo, staff.id))
         .where(and(...filterConditions))
         .orderBy(desc(tasks.createdAt))
@@ -37059,8 +37058,6 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const totalCountResult = await db
         .select({ count: sql<number>`count(*)` })
         .from(tasks)
-        .leftJoin(projects, eq(tasks.projectId, projects.id))
-        .leftJoin(staff, eq(tasks.assignedTo, staff.id))
         .where(and(...filterConditions));
 
       const totalCount = totalCountResult[0]?.count || 0;

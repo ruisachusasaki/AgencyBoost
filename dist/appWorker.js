@@ -52193,10 +52193,10 @@ ${appointment.description || ""}
         dueDate: tasks.dueDate,
         completedAt: tasks.completedAt,
         createdAt: tasks.createdAt,
-        projectName: projects.name,
+        projectName: sql11`(SELECT p.name FROM projects p WHERE p.id = ${tasks.projectId})`,
         assigneeName: staff.name
-      }).from(tasks).leftJoin(projects, eq20(tasks.projectId, projects.id)).leftJoin(staff, eq20(tasks.assignedTo, staff.id)).where(and18(...filterConditions)).orderBy(desc5(tasks.createdAt)).limit(parseInt(limit)).offset(parseInt(offset));
-      const totalCountResult = await db.select({ count: sql11`count(*)` }).from(tasks).leftJoin(projects, eq20(tasks.projectId, projects.id)).leftJoin(staff, eq20(tasks.assignedTo, staff.id)).where(and18(...filterConditions));
+      }).from(tasks).leftJoin(staff, eq20(tasks.assignedTo, staff.id)).where(and18(...filterConditions)).orderBy(desc5(tasks.createdAt)).limit(parseInt(limit)).offset(parseInt(offset));
+      const totalCountResult = await db.select({ count: sql11`count(*)` }).from(tasks).where(and18(...filterConditions));
       const totalCount = totalCountResult[0]?.count || 0;
       res.json({
         tasks: clientTasks3,
