@@ -37320,6 +37320,178 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  // Client Portal Task Detail - get single task with full details
+  app.get("/api/client-portal/tasks/:taskId", requireClientPortalAuth(), async (req, res) => {
+    try {
+      const clientPortalUserId = getAuthenticatedClientPortalUserIdOrFail(req, res);
+      if (!clientPortalUserId) return;
+
+      const { taskId } = req.params;
+
+      const [cpUser] = await db
+        .select({ clientId: clientPortalUsers.clientId })
+        .from(clientPortalUsers)
+        .where(eq(clientPortalUsers.id, clientPortalUserId))
+        .limit(1);
+
+      if (!cpUser) return res.status(404).json({ message: "Client portal user not found" });
+
+      const taskResult = await db.execute(sql`
+        SELECT 
+          t.id, t.title, t.description, t.status, t.priority,
+          t.due_date as "dueDate", t.start_date as "startDate",
+          t.completed_at as "completedAt", t.created_at as "createdAt",
+          t.requires_client_approval as "requiresClientApproval",
+          t.client_approval_status as "clientApprovalStatus",
+          t.client_approval_notes as "clientApprovalNotes",
+          t.client_approval_date as "clientApprovalDate",
+          p.name as "projectName",
+          COALESCE(s.first_name || ' ' || s.last_name, null) as "assigneeName"
+        FROM tasks t
+        LEFT JOIN projects p ON p.id = t.project_id
+        LEFT JOIN staff s ON s.id = t.assigned_to
+        WHERE t.id = ${taskId}
+          AND t.client_id = ${cpUser.clientId}
+          AND t.visible_to_client = true
+        LIMIT 1
+      `);
+
+      const taskRows = (taskResult as any).rows || taskResult;
+      if (!taskRows || taskRows.length === 0) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      res.json(taskRows[0]);
+    } catch (error) {
+      console.error("Get client portal task detail error:", error);
+      res.status(500).json({ message: "Failed to get task details" });
+    }
+  });
+
+  // Client Portal Task Comments - GET comments for a task
+  app.get("/api/client-portal/tasks/:taskId/comments", requireClientPortalAuth(), async (req, res) => {
+    try {
+      const clientPortalUserId = getAuthenticatedClientPortalUserIdOrFail(req, res);
+      if (!clientPortalUserId) return;
+
+      const { taskId } = req.params;
+
+      const [cpUser] = await db
+        .select({ clientId: clientPortalUsers.clientId })
+        .from(clientPortalUsers)
+        .where(eq(clientPortalUsers.id, clientPortalUserId))
+        .limit(1);
+
+      if (!cpUser) return res.status(404).json({ message: "Client portal user not found" });
+
+      // Verify task belongs to client and is visible
+      const taskCheck = await db.execute(sql`
+        SELECT id FROM tasks 
+        WHERE id = ${taskId} AND client_id = ${cpUser.clientId} AND visible_to_client = true
+        LIMIT 1
+      `);
+      const taskRows = (taskCheck as any).rows || taskCheck;
+      if (!taskRows || taskRows.length === 0) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      // Get comments - include both staff comments and client portal comments
+      const commentsResult = await db.execute(sql`
+        SELECT 
+          tc.id, tc.content, tc.created_at as "createdAt",
+          tc.author_id as "authorId",
+          tc.client_portal_user_id as "clientPortalUserId",
+          CASE 
+            WHEN tc.client_portal_user_id IS NOT NULL THEN 
+              (SELECT cpu.first_name || ' ' || cpu.last_name FROM client_portal_users cpu WHERE cpu.id = tc.client_portal_user_id)
+            ELSE 
+              COALESCE(s.first_name || ' ' || s.last_name, 'Team Member')
+          END as "authorName",
+          CASE 
+            WHEN tc.client_portal_user_id IS NOT NULL THEN 'client'
+            ELSE 'staff'
+          END as "authorType"
+        FROM task_comments tc
+        LEFT JOIN staff s ON s.id = tc.author_id
+        WHERE tc.task_id = ${taskId}
+        ORDER BY tc.created_at ASC
+      `);
+
+      const comments = (commentsResult as any).rows || commentsResult;
+      res.json(comments || []);
+    } catch (error) {
+      console.error("Get client portal task comments error:", error);
+      res.status(500).json({ message: "Failed to get task comments" });
+    }
+  });
+
+  // Client Portal Task Comments - POST a new comment
+  app.post("/api/client-portal/tasks/:taskId/comments", requireClientPortalAuth(), async (req, res) => {
+    try {
+      const clientPortalUserId = getAuthenticatedClientPortalUserIdOrFail(req, res);
+      if (!clientPortalUserId) return;
+
+      const { taskId } = req.params;
+      const { content } = req.body;
+
+      if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        return res.status(400).json({ message: "Comment content is required" });
+      }
+
+      const [cpUser] = await db
+        .select({ 
+          clientId: clientPortalUsers.clientId,
+          firstName: clientPortalUsers.firstName,
+          lastName: clientPortalUsers.lastName
+        })
+        .from(clientPortalUsers)
+        .where(eq(clientPortalUsers.id, clientPortalUserId))
+        .limit(1);
+
+      if (!cpUser) return res.status(404).json({ message: "Client portal user not found" });
+
+      // Verify task belongs to client and is visible
+      const taskCheck = await db.execute(sql`
+        SELECT id, assigned_to FROM tasks 
+        WHERE id = ${taskId} AND client_id = ${cpUser.clientId} AND visible_to_client = true
+        LIMIT 1
+      `);
+      const taskRows = (taskCheck as any).rows || taskCheck;
+      if (!taskRows || taskRows.length === 0) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      // Insert comment with client_portal_user_id
+      // We need a staff ID for the author_id (required field) - use the task assignee or first staff
+      const assignedTo = taskRows[0].assigned_to;
+      
+      const commentResult = await db.execute(sql`
+        INSERT INTO task_comments (id, task_id, content, author_id, client_portal_user_id, created_at, updated_at)
+        VALUES (
+          gen_random_uuid(), 
+          ${taskId}, 
+          ${content.trim()}, 
+          ${assignedTo || '00000000-0000-0000-0000-000000000000'},
+          ${clientPortalUserId},
+          NOW(), 
+          NOW()
+        )
+        RETURNING id, content, created_at as "createdAt", client_portal_user_id as "clientPortalUserId"
+      `);
+
+      const newComment = ((commentResult as any).rows || commentResult)?.[0];
+      
+      res.status(201).json({
+        ...newComment,
+        authorName: `${cpUser.firstName} ${cpUser.lastName}`,
+        authorType: 'client'
+      });
+    } catch (error) {
+      console.error("Post client portal task comment error:", error);
+      res.status(500).json({ message: "Failed to post comment" });
+    }
+  });
+
   // ==== CLIENT PORTAL USER MANAGEMENT ENDPOINTS ====
   
   // Get all client portal users (for admin management)

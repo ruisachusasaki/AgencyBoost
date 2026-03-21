@@ -10,7 +10,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Calendar as CalendarIcon, CheckCircle2, Clock, Users, LogOut, BarChart3, Filter, X, ChevronLeft, ChevronRight, ThumbsUp, MessageCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Calendar as CalendarIcon, CheckCircle2, Clock, Users, LogOut, BarChart3, Filter, X, ChevronLeft, ChevronRight, ThumbsUp, MessageCircle, Send, ArrowLeft, Paperclip, User } from "lucide-react";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format, subDays, subMonths, startOfDay, endOfDay } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
@@ -119,7 +122,7 @@ const dueDateOptions = [
   { value: 'custom', label: 'Custom Due Date' }
 ];
 
-function TaskCard({ task }: { task: ClientTask }) {
+function TaskCard({ task, onOpenDetail }: { task: ClientTask; onOpenDetail: (task: ClientTask) => void }) {
   const [approvalNotes, setApprovalNotes] = useState("");
   const [changesNotes, setChangesNotes] = useState("");
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
@@ -206,7 +209,7 @@ function TaskCard({ task }: { task: ClientTask }) {
   };
 
   return (
-    <Card className="hover:shadow-md transition-shadow" data-testid={`card-task-${task.id}`}>
+    <Card className="hover:shadow-md transition-shadow cursor-pointer" data-testid={`card-task-${task.id}`} onClick={() => onOpenDetail(task)}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
@@ -232,9 +235,16 @@ function TaskCard({ task }: { task: ClientTask }) {
       
       <CardContent className="pt-0">
         {task.description && (
-          <p className="text-sm text-muted-foreground mb-3 line-clamp-2" data-testid={`text-description-${task.id}`}>
-            {task.description}
-          </p>
+          <div 
+            className="text-sm text-muted-foreground mb-3 line-clamp-2 [&_a]:text-blue-600 [&_a]:underline"
+            data-testid={`text-description-${task.id}`}
+            dangerouslySetInnerHTML={{ __html: task.description }}
+            onClick={(e) => {
+              if ((e.target as HTMLElement).tagName === 'A') {
+                e.stopPropagation();
+              }
+            }}
+          />
         )}
         
         <div className="flex items-center justify-between text-sm text-muted-foreground">
@@ -261,13 +271,13 @@ function TaskCard({ task }: { task: ClientTask }) {
         </div>
         
         {/* Display attachments in compact mode */}
-        <div className="mt-3 pt-3 border-t border-muted/50">
+        <div className="mt-3 pt-3 border-t border-muted/50" onClick={(e) => e.stopPropagation()}>
           <ClientPortalTaskAttachments taskId={task.id} compact={true} />
         </div>
 
         {/* Client Approval Section */}
         {task.requiresClientApproval && (
-          <div className="mt-3 pt-3 border-t border-muted/50">
+          <div className="mt-3 pt-3 border-t border-muted/50" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-muted-foreground">Client Approval</h4>
               <Badge 
@@ -413,6 +423,211 @@ function TaskCard({ task }: { task: ClientTask }) {
   );
 }
 
+interface TaskComment {
+  id: string;
+  content: string;
+  createdAt: string;
+  authorName: string;
+  authorType: 'staff' | 'client';
+  clientPortalUserId: string | null;
+}
+
+function TaskDetailDialog({ task, open, onClose }: { task: ClientTask; open: boolean; onClose: () => void }) {
+  const [newComment, setNewComment] = useState("");
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: comments = [], isLoading: commentsLoading } = useQuery<TaskComment[]>({
+    queryKey: ['/api/client-portal/tasks', task.id, 'comments'],
+    queryFn: async () => {
+      const res = await fetch(`/api/client-portal/tasks/${task.id}/comments`, { credentials: "include" });
+      if (!res.ok) return [];
+      return await res.json();
+    },
+    enabled: open,
+  });
+
+  const postCommentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const res = await fetch(`/api/client-portal/tasks/${task.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) throw new Error('Failed to post comment');
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/client-portal/tasks', task.id, 'comments'] });
+      setNewComment("");
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to post comment. Please try again.", variant: "destructive" });
+    },
+  });
+
+  const handleSubmitComment = () => {
+    if (!newComment.trim()) return;
+    postCommentMutation.mutate(newComment.trim());
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmitComment();
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-lg font-semibold">{task.title}</DialogTitle>
+              {task.projectName && (
+                <DialogDescription className="mt-1">{task.projectName}</DialogDescription>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Badge variant="outline" className={priorityColors[task.priority]}>
+                {task.priority}
+              </Badge>
+              <Badge variant="outline" className={statusColors[task.status] || "bg-gray-100 text-gray-800"}>
+                {statusLabels[task.status] || task.status}
+              </Badge>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <ScrollArea className="flex-1 overflow-y-auto">
+          <div className="px-6 py-4 space-y-6">
+            {/* Task Details */}
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              {task.assigneeName && (
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Assigned to:</span>
+                  <span className="font-medium">{task.assigneeName}</span>
+                </div>
+              )}
+              {task.dueDate && (
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Due:</span>
+                  <span className="font-medium">{format(new Date(task.dueDate), "MMM d, yyyy")}</span>
+                </div>
+              )}
+              {task.completedAt && (
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span className="text-muted-foreground">Completed:</span>
+                  <span className="font-medium">{format(new Date(task.completedAt), "MMM d, yyyy")}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Created:</span>
+                <span className="font-medium">{format(new Date(task.createdAt), "MMM d, yyyy")}</span>
+              </div>
+            </div>
+
+            {/* Description */}
+            {task.description && (
+              <div>
+                <h4 className="text-sm font-medium mb-2">Description</h4>
+                <div 
+                  className="text-sm text-muted-foreground prose prose-sm max-w-none dark:prose-invert [&_a]:text-blue-600 [&_a]:underline"
+                  dangerouslySetInnerHTML={{ __html: task.description }}
+                />
+              </div>
+            )}
+
+            {/* Attachments */}
+            <div>
+              <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                <Paperclip className="h-4 w-4" />
+                Attachments
+              </h4>
+              <ClientPortalTaskAttachments taskId={task.id} compact={false} />
+            </div>
+
+            <Separator />
+
+            {/* Comments Section */}
+            <div>
+              <h4 className="text-sm font-medium mb-4 flex items-center gap-2">
+                <MessageCircle className="h-4 w-4" />
+                Comments ({comments.length})
+              </h4>
+
+              {commentsLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : comments.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  No comments yet. Be the first to leave a comment!
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {comments.map((comment) => (
+                    <div key={comment.id} className={`flex gap-3 ${comment.authorType === 'client' ? '' : ''}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-medium ${
+                        comment.authorType === 'client' 
+                          ? 'bg-primary/10 text-primary' 
+                          : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                      }`}>
+                        {comment.authorName?.charAt(0)?.toUpperCase() || 'U'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-medium">{comment.authorName}</span>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            {comment.authorType === 'client' ? 'You' : 'Team'}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(comment.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{comment.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </ScrollArea>
+
+        {/* Comment Input */}
+        <div className="px-6 py-4 border-t shrink-0">
+          <div className="flex gap-2">
+            <Textarea
+              placeholder="Write a comment..."
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={2}
+              className="resize-none"
+            />
+            <Button 
+              size="icon" 
+              onClick={handleSubmitComment}
+              disabled={!newComment.trim() || postCommentMutation.isPending}
+              className="shrink-0 self-end"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Press Enter to send, Shift+Enter for new line</p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 interface PortalBranding {
   logoUrl?: string;
   companyName?: string;
@@ -436,6 +651,9 @@ export default function ClientPortalDashboard() {
       .then(data => setBranding(data || {}))
       .catch(() => {});
   }, []);
+
+  // Task detail dialog state
+  const [selectedTask, setSelectedTask] = useState<ClientTask | null>(null);
 
   // Filter state
   const [filters, setFilters] = useState<TaskFilters>({
@@ -1028,7 +1246,7 @@ export default function ClientPortalDashboard() {
               ) : (
                 <div className="grid gap-4">
                   {tasks.map((task) => (
-                    <TaskCard key={task.id} task={task} />
+                    <TaskCard key={task.id} task={task} onOpenDetail={setSelectedTask} />
                   ))}
                 </div>
               )}
@@ -1050,7 +1268,7 @@ export default function ClientPortalDashboard() {
               ) : (
                 <div className="grid gap-4">
                   {inProgressTasks.map((task) => (
-                    <TaskCard key={task.id} task={task} />
+                    <TaskCard key={task.id} task={task} onOpenDetail={setSelectedTask} />
                   ))}
                 </div>
               )}
@@ -1072,7 +1290,7 @@ export default function ClientPortalDashboard() {
               ) : (
                 <div className="grid gap-4">
                   {completedTasks.map((task) => (
-                    <TaskCard key={task.id} task={task} />
+                    <TaskCard key={task.id} task={task} onOpenDetail={setSelectedTask} />
                   ))}
                 </div>
               )}
@@ -1094,7 +1312,7 @@ export default function ClientPortalDashboard() {
               ) : (
                 <div className="grid gap-4">
                   {upcomingTasks.map((task) => (
-                    <TaskCard key={task.id} task={task} />
+                    <TaskCard key={task.id} task={task} onOpenDetail={setSelectedTask} />
                   ))}
                 </div>
               )}
@@ -1155,6 +1373,15 @@ export default function ClientPortalDashboard() {
           </div>
         )}
       </main>
+
+      {/* Task Detail Dialog */}
+      {selectedTask && (
+        <TaskDetailDialog 
+          task={selectedTask} 
+          open={!!selectedTask} 
+          onClose={() => setSelectedTask(null)} 
+        />
+      )}
 
       {/* Footer */}
       {(branding.footerText || branding.companyName) && (

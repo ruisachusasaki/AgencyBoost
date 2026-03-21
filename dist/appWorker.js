@@ -52369,6 +52369,134 @@ ${appointment.description || ""}
       res.status(500).json({ message: "Failed to fetch task attachments" });
     }
   });
+  app2.get("/api/client-portal/tasks/:taskId", requireClientPortalAuth(), async (req, res) => {
+    try {
+      const clientPortalUserId = getAuthenticatedClientPortalUserIdOrFail(req, res);
+      if (!clientPortalUserId) return;
+      const { taskId } = req.params;
+      const [cpUser] = await db.select({ clientId: clientPortalUsers.clientId }).from(clientPortalUsers).where(eq20(clientPortalUsers.id, clientPortalUserId)).limit(1);
+      if (!cpUser) return res.status(404).json({ message: "Client portal user not found" });
+      const taskResult = await db.execute(sql11`
+        SELECT 
+          t.id, t.title, t.description, t.status, t.priority,
+          t.due_date as "dueDate", t.start_date as "startDate",
+          t.completed_at as "completedAt", t.created_at as "createdAt",
+          t.requires_client_approval as "requiresClientApproval",
+          t.client_approval_status as "clientApprovalStatus",
+          t.client_approval_notes as "clientApprovalNotes",
+          t.client_approval_date as "clientApprovalDate",
+          p.name as "projectName",
+          COALESCE(s.first_name || ' ' || s.last_name, null) as "assigneeName"
+        FROM tasks t
+        LEFT JOIN projects p ON p.id = t.project_id
+        LEFT JOIN staff s ON s.id = t.assigned_to
+        WHERE t.id = ${taskId}
+          AND t.client_id = ${cpUser.clientId}
+          AND t.visible_to_client = true
+        LIMIT 1
+      `);
+      const taskRows = taskResult.rows || taskResult;
+      if (!taskRows || taskRows.length === 0) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      res.json(taskRows[0]);
+    } catch (error) {
+      console.error("Get client portal task detail error:", error);
+      res.status(500).json({ message: "Failed to get task details" });
+    }
+  });
+  app2.get("/api/client-portal/tasks/:taskId/comments", requireClientPortalAuth(), async (req, res) => {
+    try {
+      const clientPortalUserId = getAuthenticatedClientPortalUserIdOrFail(req, res);
+      if (!clientPortalUserId) return;
+      const { taskId } = req.params;
+      const [cpUser] = await db.select({ clientId: clientPortalUsers.clientId }).from(clientPortalUsers).where(eq20(clientPortalUsers.id, clientPortalUserId)).limit(1);
+      if (!cpUser) return res.status(404).json({ message: "Client portal user not found" });
+      const taskCheck = await db.execute(sql11`
+        SELECT id FROM tasks 
+        WHERE id = ${taskId} AND client_id = ${cpUser.clientId} AND visible_to_client = true
+        LIMIT 1
+      `);
+      const taskRows = taskCheck.rows || taskCheck;
+      if (!taskRows || taskRows.length === 0) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      const commentsResult = await db.execute(sql11`
+        SELECT 
+          tc.id, tc.content, tc.created_at as "createdAt",
+          tc.author_id as "authorId",
+          tc.client_portal_user_id as "clientPortalUserId",
+          CASE 
+            WHEN tc.client_portal_user_id IS NOT NULL THEN 
+              (SELECT cpu.first_name || ' ' || cpu.last_name FROM client_portal_users cpu WHERE cpu.id = tc.client_portal_user_id)
+            ELSE 
+              COALESCE(s.first_name || ' ' || s.last_name, 'Team Member')
+          END as "authorName",
+          CASE 
+            WHEN tc.client_portal_user_id IS NOT NULL THEN 'client'
+            ELSE 'staff'
+          END as "authorType"
+        FROM task_comments tc
+        LEFT JOIN staff s ON s.id = tc.author_id
+        WHERE tc.task_id = ${taskId}
+        ORDER BY tc.created_at ASC
+      `);
+      const comments = commentsResult.rows || commentsResult;
+      res.json(comments || []);
+    } catch (error) {
+      console.error("Get client portal task comments error:", error);
+      res.status(500).json({ message: "Failed to get task comments" });
+    }
+  });
+  app2.post("/api/client-portal/tasks/:taskId/comments", requireClientPortalAuth(), async (req, res) => {
+    try {
+      const clientPortalUserId = getAuthenticatedClientPortalUserIdOrFail(req, res);
+      if (!clientPortalUserId) return;
+      const { taskId } = req.params;
+      const { content } = req.body;
+      if (!content || typeof content !== "string" || content.trim().length === 0) {
+        return res.status(400).json({ message: "Comment content is required" });
+      }
+      const [cpUser] = await db.select({
+        clientId: clientPortalUsers.clientId,
+        firstName: clientPortalUsers.firstName,
+        lastName: clientPortalUsers.lastName
+      }).from(clientPortalUsers).where(eq20(clientPortalUsers.id, clientPortalUserId)).limit(1);
+      if (!cpUser) return res.status(404).json({ message: "Client portal user not found" });
+      const taskCheck = await db.execute(sql11`
+        SELECT id, assigned_to FROM tasks 
+        WHERE id = ${taskId} AND client_id = ${cpUser.clientId} AND visible_to_client = true
+        LIMIT 1
+      `);
+      const taskRows = taskCheck.rows || taskCheck;
+      if (!taskRows || taskRows.length === 0) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      const assignedTo = taskRows[0].assigned_to;
+      const commentResult = await db.execute(sql11`
+        INSERT INTO task_comments (id, task_id, content, author_id, client_portal_user_id, created_at, updated_at)
+        VALUES (
+          gen_random_uuid(), 
+          ${taskId}, 
+          ${content.trim()}, 
+          ${assignedTo || "00000000-0000-0000-0000-000000000000"},
+          ${clientPortalUserId},
+          NOW(), 
+          NOW()
+        )
+        RETURNING id, content, created_at as "createdAt", client_portal_user_id as "clientPortalUserId"
+      `);
+      const newComment = (commentResult.rows || commentResult)?.[0];
+      res.status(201).json({
+        ...newComment,
+        authorName: `${cpUser.firstName} ${cpUser.lastName}`,
+        authorType: "client"
+      });
+    } catch (error) {
+      console.error("Post client portal task comment error:", error);
+      res.status(500).json({ message: "Failed to post comment" });
+    }
+  });
   app2.get("/api/client-portal-users", requireAuth(), requirePermission("clients", "canView"), async (req, res) => {
     try {
       const portalUsers = await db.select({
@@ -60754,6 +60882,18 @@ async function ensureFormsTablesExist() {
     log(`Forms tables migration error: ${error.message}`);
   }
 }
+async function ensureTaskCommentsClientPortalColumn() {
+  try {
+    log("Running startup migration: ensureTaskCommentsClientPortalColumn");
+    await db.execute(sql16`
+      ALTER TABLE task_comments 
+      ADD COLUMN IF NOT EXISTS client_portal_user_id varchar REFERENCES client_portal_users(id);
+    `);
+    log("Task comments client_portal_user_id column ensured");
+  } catch (error) {
+    log(`Task comments migration error: ${error.message}`);
+  }
+}
 async function runStartupMigrations() {
   log("Starting background migrations...");
   try {
@@ -60778,6 +60918,7 @@ async function runStartupMigrations() {
     await syncStaffRolesToUserRoles();
     await syncTaskTagsToSettingsTags();
     await seedIntakeDescriptionTemplates();
+    await ensureTaskCommentsClientPortalColumn();
     log("\u2705 All startup migrations completed successfully");
   } catch (error) {
     log(`\u26A0\uFE0F Startup migrations encountered an error: ${error}`);

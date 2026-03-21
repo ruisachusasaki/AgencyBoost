@@ -2232,6 +2232,19 @@ async function ensureFormsTablesExist() {
   }
 }
 
+async function ensureTaskCommentsClientPortalColumn() {
+  try {
+    log("Running startup migration: ensureTaskCommentsClientPortalColumn");
+    await db.execute(sql`
+      ALTER TABLE task_comments 
+      ADD COLUMN IF NOT EXISTS client_portal_user_id varchar REFERENCES client_portal_users(id);
+    `);
+    log("Task comments client_portal_user_id column ensured");
+  } catch (error: any) {
+    log(`Task comments migration error: ${error.message}`);
+  }
+}
+
 async function runStartupMigrations() {
   log("Starting background migrations...");
   try {
@@ -2256,6 +2269,7 @@ async function runStartupMigrations() {
     await syncStaffRolesToUserRoles();
     await syncTaskTagsToSettingsTags();
     await seedIntakeDescriptionTemplates();
+    await ensureTaskCommentsClientPortalColumn();
     log("✅ All startup migrations completed successfully");
   } catch (error) {
     log(`⚠️ Startup migrations encountered an error: ${error}`);
