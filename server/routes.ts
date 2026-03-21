@@ -36755,9 +36755,9 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         .where(eq(clients.id, clientPortalUser.clientId))
         .limit(1);
 
-      // Client portal auth is handled via frontend sessionStorage (not server sessions).
-      // Do NOT regenerate or clear the express session here — doing so destroys the
-      // staff user's auth session when testing client portal in the same browser.
+      // Set client portal session — add to existing session without regenerating
+      // so we don't destroy a staff user's session in the same browser.
+      req.session.clientPortalUserId = clientPortalUser.id;
 
       // Update last login time
       await db

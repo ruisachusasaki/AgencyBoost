@@ -51983,6 +51983,7 @@ ${appointment.description || ""}
       const [client] = await db.select({
         name: clients.name
       }).from(clients).where(eq20(clients.id, clientPortalUser.clientId)).limit(1);
+      req.session.clientPortalUserId = clientPortalUser.id;
       await db.update(clientPortalUsers).set({
         lastLogin: /* @__PURE__ */ new Date(),
         lastActivity: /* @__PURE__ */ new Date()
