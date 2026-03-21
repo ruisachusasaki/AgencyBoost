@@ -52184,22 +52184,32 @@ ${appointment.description || ""}
           )
         );
       }
-      const clientTasks3 = await db.select({
-        id: tasks.id,
-        title: tasks.title,
-        description: tasks.description,
-        status: tasks.status,
-        priority: tasks.priority,
-        dueDate: tasks.dueDate,
-        completedAt: tasks.completedAt,
-        createdAt: tasks.createdAt,
-        projectName: sql11`(SELECT p.name FROM projects p WHERE p.id = ${tasks.projectId})`,
-        assigneeName: staff.name
-      }).from(tasks).leftJoin(staff, eq20(tasks.assignedTo, staff.id)).where(and18(...filterConditions)).orderBy(desc5(tasks.createdAt)).limit(parseInt(limit)).offset(parseInt(offset));
-      const totalCountResult = await db.select({ count: sql11`count(*)` }).from(tasks).where(and18(...filterConditions));
-      const totalCount = totalCountResult[0]?.count || 0;
+      const limitNum = parseInt(limit) || 100;
+      const offsetNum = parseInt(offset) || 0;
+      const clientTasks3 = await db.execute(sql11`
+        SELECT 
+          t.id, t.title, t.description, t.status, t.priority, 
+          t.due_date as "dueDate", t.completed_at as "completedAt", t.created_at as "createdAt",
+          p.name as "projectName",
+          s.name as "assigneeName"
+        FROM tasks t
+        LEFT JOIN projects p ON p.id = t.project_id
+        LEFT JOIN staff s ON s.id = t.assigned_to
+        WHERE t.client_id = ${clientPortalUser.clientId}
+          AND t.visible_to_client = true
+        ORDER BY t.created_at DESC
+        LIMIT ${limitNum} OFFSET ${offsetNum}
+      `);
+      const totalCountResult = await db.execute(sql11`
+        SELECT count(*)::int as count 
+        FROM tasks 
+        WHERE client_id = ${clientPortalUser.clientId} 
+          AND visible_to_client = true
+      `);
+      const taskRows = clientTasks3.rows || clientTasks3;
+      const totalCount = totalCountResult.rows?.[0]?.count ?? totalCountResult[0]?.count ?? 0;
       res.json({
-        tasks: clientTasks3,
+        tasks: taskRows,
         total: totalCount,
         page: Math.floor(parseInt(offset) / parseInt(limit)) + 1,
         pageSize: parseInt(limit),

@@ -37033,37 +37033,37 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         );
       }
 
-      // Get tasks that are visible to client and belong to this client
-      const clientTasks = await db
-        .select({
-          id: tasks.id,
-          title: tasks.title,
-          description: tasks.description,
-          status: tasks.status,
-          priority: tasks.priority,
-          dueDate: tasks.dueDate,
-          completedAt: tasks.completedAt,
-          createdAt: tasks.createdAt,
-          projectName: sql<string>`(SELECT p.name FROM projects p WHERE p.id = ${tasks.projectId})`,
-          assigneeName: staff.name
-        })
-        .from(tasks)
-        .leftJoin(staff, eq(tasks.assignedTo, staff.id))
-        .where(and(...filterConditions))
-        .orderBy(desc(tasks.createdAt))
-        .limit(parseInt(limit as string))
-        .offset(parseInt(offset as string));
+      // Use raw SQL to avoid Drizzle bundling issues with table references
+      const limitNum = parseInt(limit as string) || 100;
+      const offsetNum = parseInt(offset as string) || 0;
 
-      // Get total count for pagination (using same filter conditions, no limit/offset)
-      const totalCountResult = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(tasks)
-        .where(and(...filterConditions));
+      const clientTasks = await db.execute(sql`
+        SELECT 
+          t.id, t.title, t.description, t.status, t.priority, 
+          t.due_date as "dueDate", t.completed_at as "completedAt", t.created_at as "createdAt",
+          p.name as "projectName",
+          s.name as "assigneeName"
+        FROM tasks t
+        LEFT JOIN projects p ON p.id = t.project_id
+        LEFT JOIN staff s ON s.id = t.assigned_to
+        WHERE t.client_id = ${clientPortalUser.clientId}
+          AND t.visible_to_client = true
+        ORDER BY t.created_at DESC
+        LIMIT ${limitNum} OFFSET ${offsetNum}
+      `);
 
-      const totalCount = totalCountResult[0]?.count || 0;
+      const totalCountResult = await db.execute(sql`
+        SELECT count(*)::int as count 
+        FROM tasks 
+        WHERE client_id = ${clientPortalUser.clientId} 
+          AND visible_to_client = true
+      `);
+
+      const taskRows = (clientTasks as any).rows || clientTasks;
+      const totalCount = ((totalCountResult as any).rows?.[0]?.count) ?? ((totalCountResult as any)[0]?.count) ?? 0;
 
       res.json({
-        tasks: clientTasks,
+        tasks: taskRows,
         total: totalCount,
         page: Math.floor(parseInt(offset as string) / parseInt(limit as string)) + 1,
         pageSize: parseInt(limit as string),
