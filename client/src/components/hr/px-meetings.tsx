@@ -275,10 +275,11 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     }
   };
 
-  // Helper to check if a meeting element is enabled
   const isElementEnabled = (elementId: string): boolean => {
-    // If no enabledElements set, default to all enabled
     if (!selectedMeeting?.enabledElements || selectedMeeting.enabledElements.length === 0) {
+      return true;
+    }
+    if (elementId === "objectives" && !selectedMeeting.enabledElements.includes("objectives")) {
       return true;
     }
     return selectedMeeting.enabledElements.includes(elementId);
