@@ -33,6 +33,8 @@ export default function ClientHealthModal({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   // Get current week range for auto-population
   const { weekStart, weekEnd, displayRange } = getCurrentWeekRange();
@@ -148,7 +150,7 @@ export default function ClientHealthModal({
                   control={form.control}
                   name="weekStartDate"
                   render={({ field }) => (
-                    <Popover modal={false}>
+                    <Popover modal={false} open={startDateOpen} onOpenChange={setStartDateOpen}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
@@ -168,6 +170,7 @@ export default function ClientHealthModal({
                           onSelect={(date) => {
                             if (date) {
                               field.onChange(format(date, "yyyy-MM-dd"));
+                              setStartDateOpen(false);
                             }
                           }}
                           initialFocus
@@ -181,7 +184,7 @@ export default function ClientHealthModal({
                   control={form.control}
                   name="weekEndDate"
                   render={({ field }) => (
-                    <Popover modal={false}>
+                    <Popover modal={false} open={endDateOpen} onOpenChange={setEndDateOpen}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
@@ -201,6 +204,7 @@ export default function ClientHealthModal({
                           onSelect={(date) => {
                             if (date) {
                               field.onChange(format(date, "yyyy-MM-dd"));
+                              setEndDateOpen(false);
                             }
                           }}
                           initialFocus
