@@ -1,6 +1,6 @@
 # Agency Boost Platform Development
 **Project Sponsor:** Joe Hupp  
-**Date:** January 2026 (Updated)
+**Date:** March 2026 (Updated)
 
 ---
 
@@ -93,6 +93,11 @@ The following features have been implemented and are working:
 | Offboarding Submissions | **DONE** | Filters (Status, Time Frame), Submitted By column, pagination |
 | Task Dependencies UI | **DONE** | Task dependency icons and configuration components |
 | Knowledge Base | **DONE** | Notion-like with categories, RBAC, version history, ToC |
+| IC Agreement & Job Offers | **DONE** | Template builder, send offer flow, public signing page, offer status tracking |
+| Lead-to-Client Conversion Service | **DONE** | Shared `convertLeadToClient()` service with transactional, idempotent conversion |
+| Client Onboarding Form | **DONE** | Multi-step configurable form, custom fields, token-based public access |
+| Stripe DB-backed Integration | **DONE** | Async DB-backed functions (`getStripeAsync`, etc.), dual webhook URLs, fully async webhook handler |
+| Task Generation from Bundles/Packages | **DONE** | Engine expands bundles and packages to find product-level task mapping templates |
 
 ---
 
@@ -121,10 +126,15 @@ The following features have been implemented and are working:
 
 ### Bug Fixes / Issues Still Outstanding
 
-| Issue | Area |
-|---|---|
-| Production database missing quantity column | Bundle products display - requires republish |
-| Permissions logic needs verification | Manager vs PM access levels |
+| Issue | Area | Status |
+|---|---|---|
+| Production database missing quantity column | Bundle products display - requires republish | Open |
+| Permissions logic needs verification | Manager vs PM access levels | Open |
+| Payment flow race condition on Thank You page | Proposals — stale refetch overriding webhook state | **Fixed** |
+| Signed PDF merge tags not resolving | Proposals — quote item names missing | **Fixed** |
+| Client custom field sync to core columns | Client Management — email/phone/name out of sync | **Fixed** |
+| Business Profile stale data after save | Settings — query cache not invalidated | **Fixed** |
+| Subscription using wrong cost field | Proposals — was using `monthlyCost` instead of `clientBudget` | **Fixed** |
 
 ---
 
@@ -144,7 +154,11 @@ The following features have been implemented and are working:
 - **Design Choice:** Offboarding form uses Popover+Calendar date pickers storing yyyy-MM-dd format
 - **UX Preference:** Bulk action checkboxes should be square, task completion checkboxes should be circular
 - **Color Scheme:** Primary teal theme color (`hsl(179, 100%, 39%)` / `#00C9C6`) throughout all features
+- **Architecture Decision:** All Stripe calls migrated to async DB-backed functions for consistency and reliability
+- **Architecture Decision:** Mailgun API key uses EncryptionService for secure storage and decryption at initialization
+- **Architecture Decision:** Customer ID resolution prioritizes payment intent's customer over stored quote customer to handle edge cases
+- **Architecture Decision:** Task generation engine recursively expands bundles and packages to resolve product-level task mappings
 
 ---
 
-*Last Updated: January 2026*
+*Last Updated: March 2026*
