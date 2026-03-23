@@ -645,6 +645,19 @@ export function registerProposalRoutes(
         }
       }
 
+      let conversionClientId: string | null = null;
+      if (quote.leadId) {
+        try {
+          const conversionResult = await convertLeadToClient(quote.leadId, "online_proposal", { quoteId: quote.id });
+          conversionClientId = conversionResult.clientId;
+          console.log(`✅ [ProposalSign] Auto-converted lead ${quote.leadId} → client ${conversionClientId} (alreadyConverted: ${conversionResult.alreadyConverted})`);
+        } catch (conversionError) {
+          console.error(`❌ [ProposalSign] Auto-conversion failed for lead ${quote.leadId}:`, conversionError);
+        }
+      }
+
+      res.json({ success: true, clientId: conversionClientId, proposal: { status: updated.status, signedAt: updated.signedAt } });
+
       (async () => {
         try {
           const qItems = await db.select().from(quoteItems).where(eq(quoteItems.quoteId, quote.id));
@@ -674,8 +687,9 @@ export function registerProposalRoutes(
           } catch (e) {}
 
           let clientData: any = null;
-          if (quote.clientId) {
-            const [c] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
+          const resolvedClientId = quote.clientId || conversionClientId;
+          if (resolvedClientId) {
+            const [c] = await db.select().from(clients).where(eq(clients.id, resolvedClientId));
             if (c) clientData = c;
           }
           if (!clientData && quote.leadId) {
@@ -746,8 +760,8 @@ export function registerProposalRoutes(
           const sanitizedName = quote.name.replace(/[^a-zA-Z0-9_-]/g, '_');
           const fileName = `Signed_Agreement_${sanitizedName}_${new Date(signedAt).toISOString().split('T')[0]}.pdf`;
 
-          const clientId = quote.clientId;
-          if (clientId) {
+          const finalClientId = quote.clientId || conversionClientId;
+          if (finalClientId) {
             const objectStorage = new ObjectStorageService();
             const fileUrl = await objectStorage.uploadBuffer(pdfBuffer, fileName, 'application/pdf');
 
@@ -758,11 +772,13 @@ export function registerProposalRoutes(
               fileType: 'pdf',
               fileSize: pdfBuffer.length,
               fileUrl,
-              clientId,
+              clientId: finalClientId,
               uploadedBy,
             });
 
-            console.log(`[PDF] Signed agreement PDF generated and stored for client ${clientId}: ${fileName}`);
+            console.log(`[PDF] Signed agreement PDF generated and stored for client ${finalClientId}: ${fileName}`);
+          } else {
+            console.warn(`[PDF] No clientId available for quote ${quote.id} — PDF generated but not stored in documents`);
           }
 
           const branding = await loadBranding();
@@ -806,19 +822,6 @@ ${brandName ? `<p style="font-size: 13px; opacity: 0.85; margin-bottom: 8px; let
           console.error("[PDF] Error generating signed agreement PDF:", pdfError);
         }
       })();
-
-      let conversionClientId: string | null = null;
-      if (quote.leadId) {
-        try {
-          const conversionResult = await convertLeadToClient(quote.leadId, "online_proposal", { quoteId: quote.id });
-          conversionClientId = conversionResult.clientId;
-          console.log(`✅ [ProposalSign] Auto-converted lead ${quote.leadId} → client ${conversionClientId} (alreadyConverted: ${conversionResult.alreadyConverted})`);
-        } catch (conversionError) {
-          console.error(`❌ [ProposalSign] Auto-conversion failed for lead ${quote.leadId}:`, conversionError);
-        }
-      }
-
-      res.json({ success: true, clientId: conversionClientId, proposal: { status: updated.status, signedAt: updated.signedAt } });
     } catch (error) {
       console.error("Error signing proposal:", error);
       res.status(500).json({ message: "Failed to sign proposal" });
