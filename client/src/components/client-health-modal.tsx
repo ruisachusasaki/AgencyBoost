@@ -148,7 +148,7 @@ export default function ClientHealthModal({
                   control={form.control}
                   name="weekStartDate"
                   render={({ field }) => (
-                    <Popover>
+                    <Popover modal={false}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
@@ -161,7 +161,7 @@ export default function ClientHealthModal({
                           <CalendarIcon className="ml-2 h-3.5 w-3.5 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 z-[9999]" align="start" style={{ pointerEvents: 'auto' }}>
                         <CalendarPicker
                           mode="single"
                           selected={field.value ? parseISO(field.value) : undefined}
@@ -181,7 +181,7 @@ export default function ClientHealthModal({
                   control={form.control}
                   name="weekEndDate"
                   render={({ field }) => (
-                    <Popover>
+                    <Popover modal={false}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
@@ -194,7 +194,7 @@ export default function ClientHealthModal({
                           <CalendarIcon className="ml-2 h-3.5 w-3.5 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 z-[9999]" align="start" style={{ pointerEvents: 'auto' }}>
                         <CalendarPicker
                           mode="single"
                           selected={field.value ? parseISO(field.value) : undefined}
