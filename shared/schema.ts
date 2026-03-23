@@ -5029,6 +5029,7 @@ export const pxMeetings = pgTable("px_meetings", {
   areasOfOpportunities: text("areas_of_opportunities"),
   actionPlan: text("action_plan"),
   actionItems: text("action_items"),
+  objectives: text("objectives"),
   
   // Notes field
   notes: text("notes"),

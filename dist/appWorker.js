@@ -4727,6 +4727,7 @@ var init_schema = __esm({
       areasOfOpportunities: text("areas_of_opportunities"),
       actionPlan: text("action_plan"),
       actionItems: text("action_items"),
+      objectives: text("objectives"),
       // Notes field
       notes: text("notes"),
       // Privacy setting - if true, only attendees can see this meeting
@@ -54645,6 +54646,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
     "areasOfOpportunities",
     "actionPlan",
     "actionItems",
+    "objectives",
     "notes"
   ]);
   app2.patch("/api/px-meetings/:id/segments", requireAuth(), async (req, res) => {
@@ -54656,7 +54658,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       if (typeof value !== "string") {
         return res.status(400).json({ error: "Value must be a string" });
       }
-      const JSON_FIELDS = /* @__PURE__ */ new Set(["salesOpportunities", "areasOfOpportunities", "actionItems"]);
+      const JSON_FIELDS = /* @__PURE__ */ new Set(["salesOpportunities", "areasOfOpportunities", "actionItems", "objectives"]);
       if (JSON_FIELDS.has(field)) {
         try {
           const parsed = JSON.parse(value);
@@ -60894,6 +60896,18 @@ async function ensureTaskCommentsClientPortalColumn() {
     log(`Task comments migration error: ${error.message}`);
   }
 }
+async function ensurePxMeetingsObjectivesColumn() {
+  try {
+    log("Running startup migration: ensurePxMeetingsObjectivesColumn");
+    await db.execute(sql16`
+      ALTER TABLE px_meetings 
+      ADD COLUMN IF NOT EXISTS objectives text;
+    `);
+    log("PX meetings objectives column ensured");
+  } catch (error) {
+    log(`PX meetings objectives migration error: ${error.message}`);
+  }
+}
 async function runStartupMigrations() {
   log("Starting background migrations...");
   try {
@@ -60919,6 +60933,7 @@ async function runStartupMigrations() {
     await syncTaskTagsToSettingsTags();
     await seedIntakeDescriptionTemplates();
     await ensureTaskCommentsClientPortalColumn();
+    await ensurePxMeetingsObjectivesColumn();
     log("\u2705 All startup migrations completed successfully");
   } catch (error) {
     log(`\u26A0\uFE0F Startup migrations encountered an error: ${error}`);

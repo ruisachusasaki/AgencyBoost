@@ -87,6 +87,7 @@ interface PxMeeting {
   areasOfOpportunities?: string;
   actionPlan?: string;
   actionItems?: string;
+  objectives?: string;
   notes?: string;
   isPrivate?: boolean;
   enabledElements?: string[];
@@ -129,10 +130,11 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   
   // Define available meeting elements
   const meetingElements = [
+    { id: "objectives", label: "Objectives", icon: Target },
     { id: "whatsWorkingKpis", label: "What's Working / KPI's", icon: ChartBar },
     { id: "salesOpportunities", label: "Sales Opportunities", icon: TrendingUp },
     { id: "areasOfOpportunities", label: "Areas of Opportunities", icon: AlertCircle },
-    { id: "actionPlan", label: "Action Plan", icon: Target },
+    { id: "actionPlan", label: "Action Plan", icon: Lightbulb },
     { id: "actionItems", label: "Action Items", icon: ListTodo },
   ];
 
@@ -145,7 +147,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     attendeeIds: [] as string[],
     facilitatorId: "",
     noteTakerId: "",
-    enabledElements: ["whatsWorkingKpis", "salesOpportunities", "areasOfOpportunities", "actionPlan", "actionItems"] as string[],
+    enabledElements: ["objectives", "whatsWorkingKpis", "salesOpportunities", "areasOfOpportunities", "actionPlan", "actionItems"] as string[],
     isRecurring: false,
     recurringFrequency: "weekly" as string,
     recurringEndType: "never" as string,
@@ -186,6 +188,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     pushedFromMeetingId?: string;
   }
   
+  const [objectives, setObjectives] = useState<CheckableItem[]>([]);
+  const [newObjective, setNewObjective] = useState("");
   const [salesOpportunities, setSalesOpportunities] = useState<CheckableItem[]>([]);
   const [areasOfOpportunities, setAreasOfOpportunities] = useState<CheckableItem[]>([]);
   const [actionItems, setActionItems] = useState<CheckableItem[]>([]);
@@ -326,6 +330,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
           isPrivate: selectedMeeting.isPrivate || false,
           attendeeIds: selectedMeeting.attendees?.map(a => a.id) || [],
         });
+        setObjectives(parseJsonArray(selectedMeeting.objectives));
         setSalesOpportunities(parseJsonArray(selectedMeeting.salesOpportunities));
         setAreasOfOpportunities(parseJsonArray(selectedMeeting.areasOfOpportunities));
         setActionItems(parseJsonArray(selectedMeeting.actionItems));
@@ -345,6 +350,9 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
           ...(editingFieldsRef.current.has("actionPlan") ? {} : { actionPlan: selectedMeeting.actionPlan || "" }),
           ...(editingFieldsRef.current.has("notes") ? {} : { notes: selectedMeeting.notes || "" }),
         }));
+        if (!editingFieldsRef.current.has("objectives")) {
+          setObjectives(parseJsonArray(selectedMeeting.objectives));
+        }
         if (!editingFieldsRef.current.has("salesOpportunities")) {
           setSalesOpportunities(parseJsonArray(selectedMeeting.salesOpportunities));
         }
@@ -484,7 +492,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   const debounceTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const lastSavedRef = useRef<Map<string, string>>(new Map());
 
-  const CHECKLIST_FIELDS = new Set(["salesOpportunities", "areasOfOpportunities", "actionItems"]);
+  const CHECKLIST_FIELDS = new Set(["salesOpportunities", "areasOfOpportunities", "actionItems", "objectives"]);
 
   const autoSaveSegment = useCallback((field: string, value: string) => {
     if (!meetingId) return;
@@ -677,7 +685,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
       attendeeIds: [],
       facilitatorId: "",
       noteTakerId: "",
-      enabledElements: ["whatsWorkingKpis", "salesOpportunities", "areasOfOpportunities", "actionPlan", "actionItems"],
+      enabledElements: ["objectives", "whatsWorkingKpis", "salesOpportunities", "areasOfOpportunities", "actionPlan", "actionItems"],
       isRecurring: false,
       recurringFrequency: "weekly",
       recurringEndType: "never",
@@ -765,6 +773,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
         areasOfOpportunities: areasOppData,
         actionPlan: editFormData.actionPlan,
         actionItems: JSON.stringify(actionItems),
+        objectives: JSON.stringify(objectives),
         notes: editFormData.notes,
         isPrivate: editFormData.isPrivate,
         attendeeIds: editFormData.attendeeIds,
@@ -895,6 +904,42 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     setAreasOfOpportunities(newArr);
     markFieldEditing("areasOfOpportunities");
     autoSaveSegment("areasOfOpportunities", JSON.stringify(newArr));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleAddObjective = () => {
+    if (newObjective.trim()) {
+      const currentUserId = currentUser?.staffId || currentUser?.id;
+      const newArr = [...objectives, { 
+        id: `obj-${Date.now()}`, 
+        content: newObjective.trim(), 
+        isCompleted: false,
+        createdById: currentUserId,
+        createdAt: new Date().toISOString()
+      }];
+      setObjectives(newArr);
+      markFieldEditing("objectives");
+      autoSaveSegment("objectives", JSON.stringify(newArr));
+      setHasUnsavedChanges(true);
+      setNewObjective("");
+    }
+  };
+
+  const handleRemoveObjective = (id: string) => {
+    const newArr = objectives.filter(item => item.id !== id);
+    setObjectives(newArr);
+    markFieldEditing("objectives");
+    autoSaveSegment("objectives", JSON.stringify(newArr));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleToggleObjective = (id: string) => {
+    const newArr = objectives.map(item => 
+      item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
+    );
+    setObjectives(newArr);
+    markFieldEditing("objectives");
+    autoSaveSegment("objectives", JSON.stringify(newArr));
     setHasUnsavedChanges(true);
   };
 
@@ -1531,6 +1576,59 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
             </div>
 
             <Separator />
+
+            {isElementEnabled("objectives") && (
+              <>
+                <div>
+                  <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
+                    <Target className="h-4 w-4 text-indigo-500" />
+                    Objectives
+                  </Label>
+                  <div className="space-y-2">
+                    {objectives.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded border border-indigo-200 dark:border-indigo-800">
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            type="checkbox"
+                            checked={item.isCompleted}
+                            onChange={() => handleToggleObjective(item.id)}
+                            className="h-4 w-4 rounded-full cursor-pointer accent-primary"
+                          />
+                          <span className={`flex-1 ${item.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                            {item.content}
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveObjective(item.id)}
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Add an objective..."
+                        value={newObjective}
+                        onChange={(e) => setNewObjective(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddObjective();
+                          }
+                        }}
+                      />
+                      <Button size="sm" onClick={handleAddObjective}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <Separator />
+              </>
+            )}
 
             {isElementEnabled("whatsWorkingKpis") && (
               <>

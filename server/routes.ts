@@ -40504,6 +40504,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     "areasOfOpportunities",
     "actionPlan",
     "actionItems",
+    "objectives",
     "notes",
   ]);
 
@@ -40516,7 +40517,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       if (typeof value !== "string") {
         return res.status(400).json({ error: "Value must be a string" });
       }
-      const JSON_FIELDS = new Set(["salesOpportunities", "areasOfOpportunities", "actionItems"]);
+      const JSON_FIELDS = new Set(["salesOpportunities", "areasOfOpportunities", "actionItems", "objectives"]);
       if (JSON_FIELDS.has(field)) {
         try {
           const parsed = JSON.parse(value);

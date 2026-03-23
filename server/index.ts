@@ -2245,6 +2245,19 @@ async function ensureTaskCommentsClientPortalColumn() {
   }
 }
 
+async function ensurePxMeetingsObjectivesColumn() {
+  try {
+    log("Running startup migration: ensurePxMeetingsObjectivesColumn");
+    await db.execute(sql`
+      ALTER TABLE px_meetings 
+      ADD COLUMN IF NOT EXISTS objectives text;
+    `);
+    log("PX meetings objectives column ensured");
+  } catch (error: any) {
+    log(`PX meetings objectives migration error: ${error.message}`);
+  }
+}
+
 async function runStartupMigrations() {
   log("Starting background migrations...");
   try {
@@ -2270,6 +2283,7 @@ async function runStartupMigrations() {
     await syncTaskTagsToSettingsTags();
     await seedIntakeDescriptionTemplates();
     await ensureTaskCommentsClientPortalColumn();
+    await ensurePxMeetingsObjectivesColumn();
     log("✅ All startup migrations completed successfully");
   } catch (error) {
     log(`⚠️ Startup migrations encountered an error: ${error}`);
