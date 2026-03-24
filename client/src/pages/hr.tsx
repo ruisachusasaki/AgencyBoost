@@ -399,6 +399,8 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
     'hr.one_on_one.manage',
     'hr.offboarding.view',
     'hr.offboarding.manage',
+    'hr.onboarding.view',
+    'hr.onboarding.manage',
   ]);
   
   // Permission-based access (falls back to role-based for backwards compatibility)
@@ -445,15 +447,17 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
     queryKey: ["/api/hr/job-applications"],
   });
 
-  // Fetch new hire onboarding submissions (Admin/Manager only)
+  const canViewOnboarding = isManager || isAdmin || hrPermissions['hr.onboarding.view'] || hrPermissions['hr.onboarding.manage'];
+
+  // Fetch new hire onboarding submissions (Admin/Manager/Onboarding permission)
   const { data: onboardingSubmissions = [] } = useQuery({
     queryKey: ["/api/new-hire-onboarding-submissions"],
-    enabled: isManager || isAdmin,
+    enabled: canViewOnboarding,
   });
 
   const { data: onboardingFormConfig } = useQuery<{ fields: Array<{ id: string; label: string; type: string; order: number }> }>({
     queryKey: ["/api/new-hire-onboarding-form-config"],
-    enabled: isManager || isAdmin,
+    enabled: canViewOnboarding,
   });
 
   const { data: myOnboardingData } = useQuery<{ instance: any | null }>({
@@ -1262,7 +1266,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
               ...(canViewExpenseReports ? [{ id: "expense-submissions", name: "Expense Submissions", icon: Receipt, count: 0, overflowOnly: true }] : []),
               ...(canViewOffboarding ? [{ id: "offboarding-form", name: "Offboarding Form", icon: UserCheck, count: 0, overflowOnly: true }] : []),
               ...(canViewOffboarding ? [{ id: "offboarding-submissions", name: "Offboarding Submissions", icon: Users, count: 0, overflowOnly: true }] : []),
-              ...(isManager || isAdmin ? [{ id: "onboarding", name: "New Hire Onboarding", icon: Users, count: 0, overflowOnly: true }] : []),
+              ...(canViewOnboarding ? [{ id: "onboarding", name: "New Hire Onboarding", icon: Users, count: 0, overflowOnly: true }] : []),
               ...(hasOnboardingChecklist ? [{ id: "onboarding-checklist", name: "Onboarding Checklist", icon: ClipboardCheck, count: 0, overflowOnly: true }] : []),
               ...(canManageStaff || isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0, overflowOnly: true }] : [])
             ];
@@ -3738,7 +3742,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
         <PxMeetings meetingId={activeMeetingId} />
       )}
 
-      {activeTab === "onboarding" && (isManager || isAdmin) && (
+      {activeTab === "onboarding" && canViewOnboarding && (
         <OnboardingDashboard />
       )}
 
