@@ -1047,7 +1047,7 @@ export function TaskIntakeDialog({
           {trigger}
         </DialogTrigger>
       )}
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>
             {parentTaskId ? "Add Sub-task" : "Add New Task"}
