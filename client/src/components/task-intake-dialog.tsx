@@ -360,6 +360,7 @@ function QuestionRenderer({
   clients = [],
   departments = [],
 }: QuestionRendererProps) {
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const settings = question.settings || {};
 
   const renderInput = () => {
@@ -431,7 +432,7 @@ function QuestionRenderer({
       case "date":
         const dateValue = value ? parseISO(value as string) : undefined;
         return (
-          <Popover>
+          <Popover modal={false} open={datePickerOpen} onOpenChange={setDatePickerOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
@@ -450,12 +451,13 @@ function QuestionRenderer({
                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
+            <PopoverContent className="w-auto p-0 z-[9999]" align="start">
               <Calendar
                 mode="single"
                 selected={dateValue}
                 onSelect={(date) => {
                   onChange(date ? format(date, "yyyy-MM-dd") : null);
+                  setDatePickerOpen(false);
                 }}
                 disabled={disabled}
                 initialFocus
@@ -1208,7 +1210,7 @@ export function TaskIntakeDialog({
                           {recurringEndType === "on_date" && (
                             <div>
                               <Label className="text-sm">End Date</Label>
-                              <Popover open={recurringEndDateOpen} onOpenChange={setRecurringEndDateOpen}>
+                              <Popover modal={false} open={recurringEndDateOpen} onOpenChange={setRecurringEndDateOpen}>
                                 <PopoverTrigger asChild>
                                   <Button
                                     variant="outline"
@@ -1223,7 +1225,7 @@ export function TaskIntakeDialog({
                                     {recurringEndDate ? format(recurringEndDate, "PPP") : "Pick an end date"}
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
+                                <PopoverContent className="w-auto p-0 z-[9999]" align="start">
                                   <Calendar
                                     mode="single"
                                     selected={recurringEndDate || undefined}
