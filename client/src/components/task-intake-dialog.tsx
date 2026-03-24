@@ -451,7 +451,7 @@ function QuestionRenderer({
                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 z-[9999]" align="start">
+            <PopoverContent className="w-auto p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()} style={{ pointerEvents: "auto" }}>
               <Calendar
                 mode="single"
                 selected={dateValue}
@@ -1225,7 +1225,7 @@ export function TaskIntakeDialog({
                                     {recurringEndDate ? format(recurringEndDate, "PPP") : "Pick an end date"}
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 z-[9999]" align="start">
+                                <PopoverContent className="w-auto p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()} style={{ pointerEvents: "auto" }}>
                                   <Calendar
                                     mode="single"
                                     selected={recurringEndDate || undefined}
