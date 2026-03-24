@@ -403,8 +403,9 @@ export class NotificationService {
    * Generate HTML email template
    */
   private generateEmailHtml(options: NotificationOptions): string {
-    const appUrl = process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    const replitDomains = process.env.REPLIT_DOMAINS || process.env.REPLIT_DEV_DOMAIN;
+    const appUrl = replitDomains
+      ? `https://${replitDomains}`
       : 'https://agencyflow.app';
 
     return `
@@ -533,8 +534,9 @@ export class NotificationService {
    * Generate a branded HTML email for reports
    */
   generateReportEmailHtml(options: { title: string; bodyHtml: string; actionUrl?: string; actionText?: string }): string {
-    const appUrl = process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    const replitDomains = process.env.REPLIT_DOMAINS || process.env.REPLIT_DEV_DOMAIN;
+    const appUrl = replitDomains
+      ? `https://${replitDomains}`
       : 'https://agencyflow.app';
 
     return `
