@@ -857,6 +857,11 @@ export default function StaffDetail() {
                                 setHireDateOpen(false);
                               }}
                               disabled={(date) => date > new Date()}
+                              captionLayout="dropdown-buttons"
+                              fromYear={2000}
+                              toYear={new Date().getFullYear()}
+                              defaultMonth={field.value ? new Date(field.value + "T00:00:00") : new Date()}
+                              classNames={{ caption_label: "hidden" }}
                               initialFocus
                             />
                           </PopoverContent>
@@ -901,6 +906,11 @@ export default function StaffDetail() {
                                 field.onChange(date ? format(date, "yyyy-MM-dd") : "");
                                 setStartDateOpen(false);
                               }}
+                              captionLayout="dropdown-buttons"
+                              fromYear={2000}
+                              toYear={new Date().getFullYear()}
+                              defaultMonth={field.value ? new Date(field.value + "T00:00:00") : new Date()}
+                              classNames={{ caption_label: "hidden" }}
                               initialFocus
                             />
                           </PopoverContent>
