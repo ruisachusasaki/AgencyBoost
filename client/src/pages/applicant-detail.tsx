@@ -39,6 +39,7 @@ import { LinkifyText } from "@/components/ui/linkify-text";
 import { useToast } from "@/hooks/use-toast";
 import SendOfferModal from "@/components/applications/SendOfferModal";
 import OfferStatusPanel from "@/components/applications/OfferStatusPanel";
+import { RichTextEditor } from "@/components/rich-text-editor";
 
 export default function ApplicantDetailPage() {
   const { id } = useParams();
@@ -959,29 +960,18 @@ export default function ApplicantDetailPage() {
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Email Body</Label>
                 {hiredEmailEditing ? (
-                  <Textarea
-                    value={hiredEmailHtml}
-                    onChange={(e) => setHiredEmailHtml(e.target.value)}
-                    rows={12}
-                    className="font-mono text-xs"
-                    placeholder="Email HTML content..."
-                  />
+                  <div className="border rounded-md overflow-hidden max-h-[350px] overflow-y-auto">
+                    <RichTextEditor
+                      content={hiredEmailHtml}
+                      onChange={(html) => setHiredEmailHtml(html)}
+                      placeholder="Write your welcome email..."
+                    />
+                  </div>
                 ) : (
                   <div
                     className="border rounded-md p-4 bg-white dark:bg-gray-950 max-h-[300px] overflow-y-auto text-sm"
                     dangerouslySetInnerHTML={{ __html: hiredEmailHtml }}
                   />
-                )}
-                {hiredEmailEditing && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setHiredEmailEditing(false)}
-                    className="text-xs"
-                  >
-                    <Eye className="h-3 w-3 mr-1" />
-                    Preview
-                  </Button>
                 )}
               </div>
 
