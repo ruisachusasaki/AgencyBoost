@@ -478,6 +478,7 @@ export default function OnboardingPage() {
                       captionLayout="dropdown-buttons"
                       fromYear={1940}
                       toYear={new Date().getFullYear()}
+                      classNames={{ caption_label: "hidden" }}
                       initialFocus
                     />
                   </PopoverContent>
