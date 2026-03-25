@@ -383,6 +383,7 @@ __export(schema_exports, {
   salesSettings: () => salesSettings,
   salesTargets: () => salesTargets,
   scheduledEmails: () => scheduledEmails,
+  scheduledHiredEmails: () => scheduledHiredEmails,
   sessions: () => sessions,
   slackWorkspaces: () => slackWorkspaces,
   smartLists: () => smartLists,
@@ -471,7 +472,7 @@ import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb, uuid, date, serial, unique, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-var sessions, uuidDefault, users, businessProfile, customFieldFolders, customFields, clientNotes, clientTasks, clientAppointments, clientDocuments, clientContacts, clientTransactions, tags, clientGroups, productCategories, products, productBundles, bundleProducts, productPackages, packageItems, clientProducts, clientBundles, clientPackages, quotes, quoteItems, salesSettings, salesTargets, capacitySettings, notes, appointments, documents, activities, clients, clientRoadmapEntries, insertClientRoadmapEntrySchema, clientRoadmapComments, insertClientRoadmapCommentSchema, clientPortalUsers, clientHealthScores, clientBriefSections, clientBriefValues, projects, campaigns, templateFolders, emailTemplates, smsTemplates, scheduledEmails, leadPipelineStages, leadSources, leadNoteTemplates, leads, leadStageTransitions, salesActivities, deals, smartLists, tasks, taskDependencies, taskComments, taskCommentReactions, commentFiles, imageAnnotations, timeOffPolicies, timeOffTypes, timeOffRequests, timeOffRequestDays, jobApplications, applicationStageHistory, jobApplicationComments, jobApplicationWatchers, timeOffBalances, taskActivities, invoices, socialMediaAccounts, socialMediaPosts, socialMediaTemplates, socialMediaAnalytics, insertUserSchema, insertCustomFieldFolderSchema, insertCustomFieldSchema, insertClientGroupSchema, insertClientProductSchema, insertClientBundleSchema, insertClientAppointmentSchema, insertNoteSchema, insertDocumentSchema, insertActivitySchema, insertClientSchema, inputClientHealthScoreSchema, insertClientHealthScoreSchema, insertClientBriefSectionSchema, insertClientBriefValueSchema, insertCampaignSchema, insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema, insertScheduledEmailSchema, insertSmartListSchema, insertLeadPipelineStagSchema, insertLeadSourceSchema, insertLeadNoteTemplateSchema, insertLeadSchema, insertLeadStageTransitionSchema, insertSalesActivitySchema, insertDealSchema, insertTaskSchema, insertTaskSchemaValidated, insertTaskActivitySchema, insertInvoiceSchema, insertSocialMediaAccountSchema, insertSocialMediaPostSchema, insertSocialMediaTemplateSchema, insertSocialMediaAnalyticsSchema, insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema, insertImageAnnotationSchema, insertTimeOffRequestSchema, insertJobApplicationSchema, insertApplicationStageHistorySchema, insertJobApplicationWatcherSchema, insertTimeOffBalanceSchema, insertTimeOffRequestDaySchema, workflows, workflowExecutions, workflowActionAnalytics, workflowTemplates, taskCategories, taskTemplates, enhancedTasks, taskHistory, automationTriggers, automationActions, notifications, roles, permissions, userRoles, granularPermissions, permissionAuditLogs, permissionChangeHistory, insertWorkflowSchema, insertWorkflowExecutionSchema, insertWorkflowActionAnalyticsSchema, insertWorkflowTemplateSchema, insertTaskCategorySchema, insertTaskTemplateSchema, insertEnhancedTaskSchema, insertTaskHistorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema, insertNotificationSchema, insertClientNoteSchema, insertClientTaskSchema, insertClientDocumentSchema, insertClientContactSchema, insertClientTransactionSchema, healthScoreFilterSchema, departments, positions, positionKpis2, insertPositionKpiSchema, staff, salaryHistory, insertStaffSchema, authUsers, insertAuthUserSchema, staffLinkedEmails, insertStaffLinkedEmailSchema, jobOpenings, insertJobOpeningSchema, insertDepartmentSchema, insertPositionSchema, insertTagSchema, insertProductCategorySchema, insertProductSchema, insertProductBundleSchema, insertBundleProductSchema, insertProductPackageSchema, insertPackageItemSchema, insertClientPackageSchema, auditLogs, insertAuditLogSchema, insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertGranularPermissionSchema, insertPermissionAuditLogSchema, insertPermissionChangeHistorySchema, notificationSettings, insertNotificationSettingsSchema, calendars, calendarStaff, calendarAvailability, calendarDateOverrides, calendarIntegrations, smsIntegrations, emailIntegrations, aiIntegrations, insertAiIntegrationSchema, stripeIntegrations, insertStripeIntegrationSchema, aiAssistantSettings, insertAiAssistantSettingsSchema, goHighLevelIntegration, insertGoHighLevelIntegrationSchema, slackWorkspaces, insertSlackWorkspaceSchema, leadNotes, leadAppointments, insertLeadNoteSchema, insertLeadAppointmentSchema, calendarAppointments, appointmentReminders, roundRobinTracking, insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema, insertCalendarDateOverrideSchema, insertCalendarIntegrationSchema, insertSmsIntegrationSchema, insertEmailIntegrationSchema, insertCalendarAppointmentSchema, insertAppointmentReminderSchema, insertRoundRobinTrackingSchema, customFieldFileUploads, insertCustomFieldFileUploadSchema, taskAttachments, insertTaskAttachmentSchema, taskStatuses, teamWorkflows, teamWorkflowStatuses, taskPriorities, taskSettings, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema, insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema, formFolders, forms, formFields, formSubmissions, insertFormSchema, jobApplicationFormConfig, insertJobApplicationFormConfigSchema, newHireOnboardingFormConfig, insertNewHireOnboardingFormConfigSchema, clientOnboardingFormConfig, insertClientOnboardingFormConfigSchema, newHireOnboardingSubmissions, insertNewHireOnboardingSubmissionSchema, expenseReportFormConfig, insertExpenseReportFormConfigSchema, expenseReportSubmissions, insertExpenseReportSubmissionSchema, offboardingFormConfig, insertOffboardingFormConfigSchema, offboardingSubmissions, insertOffboardingSubmissionSchema, insertFormFieldSchema, insertFormSubmissionSchema, insertFormFolderSchema, insertTaskDependencySchema, teamPositions, clientTeamAssignments, positionDescriptionVersions, insertTeamPositionSchema, reorderTeamPositionsSchema, insertClientTeamAssignmentSchema, knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBasePermissions, knowledgeBaseBookmarks, knowledgeBaseLikes, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseSettings, knowledgeBaseArticleVersions, insertKnowledgeBaseCategorySchema, insertKnowledgeBaseArticleSchema, insertKnowledgeBasePermissionSchema, insertKnowledgeBaseBookmarkSchema, insertKnowledgeBaseLikeSchema, insertKnowledgeBaseCommentSchema, insertKnowledgeBaseViewSchema, insertKnowledgeBaseSettingSchema, insertKnowledgeBaseArticleVersionSchema, trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress, trainingCoursePermissions, trainingQuizzes, trainingQuizQuestions, trainingLessonResources, trainingQuizAttempts, trainingAssignments, trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, userViewPreferences, dashboards, dashboardWidgets, userDashboardWidgets, insertTrainingCategorySchema, insertTrainingCourseSchema, insertTrainingModuleSchema, insertTrainingLessonSchema, insertTrainingEnrollmentSchema, insertTrainingProgressSchema, insertTrainingCoursePermissionSchema, insertTrainingQuizSchema, insertTrainingQuizQuestionSchema, insertTrainingQuizAttemptSchema, insertTrainingAssignmentSchema, insertTrainingAssignmentSubmissionSchema, insertTrainingDiscussionSchema, insertTrainingDiscussionLikeSchema, insertTrainingLessonResourceSchema, insertUserViewPreferenceSchema, insertDashboardSchema, insertDashboardWidgetSchema, insertUserDashboardWidgetSchema, insertQuoteSchema, insertQuoteItemSchema, insertSalesSettingsSchema, updateSalesSettingsSchema, insertSalesTargetSchema, updateSalesTargetSchema, insertCapacitySettingsSchema, updateCapacitySettingsSchema, timeTrackingReportFiltersSchema, oneOnOneMeetings, insertOneOnOneMeetingSchema, oneOnOneTalkingPoints, insertOneOnOneTalkingPointSchema, oneOnOneWins, insertOneOnOneWinSchema, oneOnOneObjectives, insertOneOnOneObjectiveSchema, oneOnOneActionItems, insertOneOnOneActionItemSchema, oneOnOneGoals, insertOneOnOneGoalSchema, oneOnOneMeetingKpiStatuses, insertOneOnOneMeetingKpiStatusSchema, oneOnOneComments, insertOneOnOneCommentSchema, oneOnOneProgressionStatuses, insertOneOnOneProgressionStatusSchema, orgChartStructures, insertOrgChartStructureSchema, orgChartNodes, insertOrgChartNodeSchema, orgChartNodeAssignments, insertOrgChartNodeAssignmentSchema, insertTimeOffTypeSchema, calendarConnections, calendarSyncState, calendarEvents, calendarEventCache, insertCalendarConnectionSchema, insertCalendarSyncStateSchema, insertCalendarEventSchema, eventTimeEntries, insertEventTimeEntrySchema, surveyFolders, surveys, surveySlides, surveyFields, surveyLogicRules, surveySubmissions, surveySubmissionAnswers, insertSurveyFolderSchema, PX_MEETING_SEGMENTS, pxMeetings, pxMeetingAttendees, insertPxMeetingSchema, insertPxMeetingAttendeeSchema, staffIncidents, insertStaffIncidentSchema, insertSurveySchema, insertSurveySlideSchema, insertSurveyFieldSchema, insertSurveyLogicRuleSchema, insertSurveySubmissionSchema, insertSurveySubmissionAnswerSchema, taskIntakeForms, taskIntakeSections, taskIntakeQuestions, taskIntakeOptions, taskIntakeLogicRules, taskIntakeAssignmentRules, insertTaskIntakeFormSchema, insertTaskIntakeSectionSchema, insertTaskIntakeQuestionSchema, insertTaskIntakeOptionSchema, insertTaskIntakeLogicRuleSchema, insertTaskIntakeAssignmentRuleSchema, taskIntakeSubmissions, taskIntakeAnswers, insertTaskIntakeSubmissionSchema, insertTaskIntakeAnswerSchema, toolDirectoryCategories, toolDirectoryTools, insertToolDirectoryCategorySchema, insertToolDirectoryToolSchema, tickets, ticketRoutingRules, ticketComments, ticketAttachments, insertTicketSchema, insertTicketCommentSchema, insertTicketAttachmentSchema, insertTicketRoutingRuleSchema, callCenterTimeEntries, insertCallCenterTimeEntrySchema, productTaskTemplates, insertProductTaskTemplateSchema, clientTaskGenerations, insertClientTaskGenerationSchema, clientRecurringConfig, insertClientRecurringConfigSchema, proposals, insertProposalSchema, proposalTerms, insertProposalTermsSchema, customForms, customFormFields, customFormSubmissions, insertCustomFormSchema, insertCustomFormFieldSchema, insertCustomFormSubmissionSchema, onboardingTemplates, onboardingTemplateItems, onboardingInstances, onboardingInstanceItems, insertOnboardingTemplateSchema, insertOnboardingTemplateItemSchema, insertOnboardingInstanceSchema, insertOnboardingInstanceItemSchema, icAgreementTemplates, jobOffers, offerSignatures, offerStatusLog, insertIcAgreementTemplateSchema, insertJobOfferSchema, insertOfferSignatureSchema, insertOfferStatusLogSchema;
+var sessions, uuidDefault, users, businessProfile, customFieldFolders, customFields, clientNotes, clientTasks, clientAppointments, clientDocuments, clientContacts, clientTransactions, tags, clientGroups, productCategories, products, productBundles, bundleProducts, productPackages, packageItems, clientProducts, clientBundles, clientPackages, quotes, quoteItems, salesSettings, salesTargets, capacitySettings, notes, appointments, documents, activities, clients, clientRoadmapEntries, insertClientRoadmapEntrySchema, clientRoadmapComments, insertClientRoadmapCommentSchema, clientPortalUsers, clientHealthScores, clientBriefSections, clientBriefValues, projects, campaigns, templateFolders, emailTemplates, smsTemplates, scheduledEmails, scheduledHiredEmails, leadPipelineStages, leadSources, leadNoteTemplates, leads, leadStageTransitions, salesActivities, deals, smartLists, tasks, taskDependencies, taskComments, taskCommentReactions, commentFiles, imageAnnotations, timeOffPolicies, timeOffTypes, timeOffRequests, timeOffRequestDays, jobApplications, applicationStageHistory, jobApplicationComments, jobApplicationWatchers, timeOffBalances, taskActivities, invoices, socialMediaAccounts, socialMediaPosts, socialMediaTemplates, socialMediaAnalytics, insertUserSchema, insertCustomFieldFolderSchema, insertCustomFieldSchema, insertClientGroupSchema, insertClientProductSchema, insertClientBundleSchema, insertClientAppointmentSchema, insertNoteSchema, insertDocumentSchema, insertActivitySchema, insertClientSchema, inputClientHealthScoreSchema, insertClientHealthScoreSchema, insertClientBriefSectionSchema, insertClientBriefValueSchema, insertCampaignSchema, insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema, insertScheduledEmailSchema, insertSmartListSchema, insertLeadPipelineStagSchema, insertLeadSourceSchema, insertLeadNoteTemplateSchema, insertLeadSchema, insertLeadStageTransitionSchema, insertSalesActivitySchema, insertDealSchema, insertTaskSchema, insertTaskSchemaValidated, insertTaskActivitySchema, insertInvoiceSchema, insertSocialMediaAccountSchema, insertSocialMediaPostSchema, insertSocialMediaTemplateSchema, insertSocialMediaAnalyticsSchema, insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema, insertImageAnnotationSchema, insertTimeOffRequestSchema, insertJobApplicationSchema, insertApplicationStageHistorySchema, insertJobApplicationWatcherSchema, insertTimeOffBalanceSchema, insertTimeOffRequestDaySchema, workflows, workflowExecutions, workflowActionAnalytics, workflowTemplates, taskCategories, taskTemplates, enhancedTasks, taskHistory, automationTriggers, automationActions, notifications, roles, permissions, userRoles, granularPermissions, permissionAuditLogs, permissionChangeHistory, insertWorkflowSchema, insertWorkflowExecutionSchema, insertWorkflowActionAnalyticsSchema, insertWorkflowTemplateSchema, insertTaskCategorySchema, insertTaskTemplateSchema, insertEnhancedTaskSchema, insertTaskHistorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema, insertNotificationSchema, insertClientNoteSchema, insertClientTaskSchema, insertClientDocumentSchema, insertClientContactSchema, insertClientTransactionSchema, healthScoreFilterSchema, departments, positions, positionKpis2, insertPositionKpiSchema, staff, salaryHistory, insertStaffSchema, authUsers, insertAuthUserSchema, staffLinkedEmails, insertStaffLinkedEmailSchema, jobOpenings, insertJobOpeningSchema, insertDepartmentSchema, insertPositionSchema, insertTagSchema, insertProductCategorySchema, insertProductSchema, insertProductBundleSchema, insertBundleProductSchema, insertProductPackageSchema, insertPackageItemSchema, insertClientPackageSchema, auditLogs, insertAuditLogSchema, insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertGranularPermissionSchema, insertPermissionAuditLogSchema, insertPermissionChangeHistorySchema, notificationSettings, insertNotificationSettingsSchema, calendars, calendarStaff, calendarAvailability, calendarDateOverrides, calendarIntegrations, smsIntegrations, emailIntegrations, aiIntegrations, insertAiIntegrationSchema, stripeIntegrations, insertStripeIntegrationSchema, aiAssistantSettings, insertAiAssistantSettingsSchema, goHighLevelIntegration, insertGoHighLevelIntegrationSchema, slackWorkspaces, insertSlackWorkspaceSchema, leadNotes, leadAppointments, insertLeadNoteSchema, insertLeadAppointmentSchema, calendarAppointments, appointmentReminders, roundRobinTracking, insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema, insertCalendarDateOverrideSchema, insertCalendarIntegrationSchema, insertSmsIntegrationSchema, insertEmailIntegrationSchema, insertCalendarAppointmentSchema, insertAppointmentReminderSchema, insertRoundRobinTrackingSchema, customFieldFileUploads, insertCustomFieldFileUploadSchema, taskAttachments, insertTaskAttachmentSchema, taskStatuses, teamWorkflows, teamWorkflowStatuses, taskPriorities, taskSettings, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema, insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema, formFolders, forms, formFields, formSubmissions, insertFormSchema, jobApplicationFormConfig, insertJobApplicationFormConfigSchema, newHireOnboardingFormConfig, insertNewHireOnboardingFormConfigSchema, clientOnboardingFormConfig, insertClientOnboardingFormConfigSchema, newHireOnboardingSubmissions, insertNewHireOnboardingSubmissionSchema, expenseReportFormConfig, insertExpenseReportFormConfigSchema, expenseReportSubmissions, insertExpenseReportSubmissionSchema, offboardingFormConfig, insertOffboardingFormConfigSchema, offboardingSubmissions, insertOffboardingSubmissionSchema, insertFormFieldSchema, insertFormSubmissionSchema, insertFormFolderSchema, insertTaskDependencySchema, teamPositions, clientTeamAssignments, positionDescriptionVersions, insertTeamPositionSchema, reorderTeamPositionsSchema, insertClientTeamAssignmentSchema, knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBasePermissions, knowledgeBaseBookmarks, knowledgeBaseLikes, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseSettings, knowledgeBaseArticleVersions, insertKnowledgeBaseCategorySchema, insertKnowledgeBaseArticleSchema, insertKnowledgeBasePermissionSchema, insertKnowledgeBaseBookmarkSchema, insertKnowledgeBaseLikeSchema, insertKnowledgeBaseCommentSchema, insertKnowledgeBaseViewSchema, insertKnowledgeBaseSettingSchema, insertKnowledgeBaseArticleVersionSchema, trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress, trainingCoursePermissions, trainingQuizzes, trainingQuizQuestions, trainingLessonResources, trainingQuizAttempts, trainingAssignments, trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, userViewPreferences, dashboards, dashboardWidgets, userDashboardWidgets, insertTrainingCategorySchema, insertTrainingCourseSchema, insertTrainingModuleSchema, insertTrainingLessonSchema, insertTrainingEnrollmentSchema, insertTrainingProgressSchema, insertTrainingCoursePermissionSchema, insertTrainingQuizSchema, insertTrainingQuizQuestionSchema, insertTrainingQuizAttemptSchema, insertTrainingAssignmentSchema, insertTrainingAssignmentSubmissionSchema, insertTrainingDiscussionSchema, insertTrainingDiscussionLikeSchema, insertTrainingLessonResourceSchema, insertUserViewPreferenceSchema, insertDashboardSchema, insertDashboardWidgetSchema, insertUserDashboardWidgetSchema, insertQuoteSchema, insertQuoteItemSchema, insertSalesSettingsSchema, updateSalesSettingsSchema, insertSalesTargetSchema, updateSalesTargetSchema, insertCapacitySettingsSchema, updateCapacitySettingsSchema, timeTrackingReportFiltersSchema, oneOnOneMeetings, insertOneOnOneMeetingSchema, oneOnOneTalkingPoints, insertOneOnOneTalkingPointSchema, oneOnOneWins, insertOneOnOneWinSchema, oneOnOneObjectives, insertOneOnOneObjectiveSchema, oneOnOneActionItems, insertOneOnOneActionItemSchema, oneOnOneGoals, insertOneOnOneGoalSchema, oneOnOneMeetingKpiStatuses, insertOneOnOneMeetingKpiStatusSchema, oneOnOneComments, insertOneOnOneCommentSchema, oneOnOneProgressionStatuses, insertOneOnOneProgressionStatusSchema, orgChartStructures, insertOrgChartStructureSchema, orgChartNodes, insertOrgChartNodeSchema, orgChartNodeAssignments, insertOrgChartNodeAssignmentSchema, insertTimeOffTypeSchema, calendarConnections, calendarSyncState, calendarEvents, calendarEventCache, insertCalendarConnectionSchema, insertCalendarSyncStateSchema, insertCalendarEventSchema, eventTimeEntries, insertEventTimeEntrySchema, surveyFolders, surveys, surveySlides, surveyFields, surveyLogicRules, surveySubmissions, surveySubmissionAnswers, insertSurveyFolderSchema, PX_MEETING_SEGMENTS, pxMeetings, pxMeetingAttendees, insertPxMeetingSchema, insertPxMeetingAttendeeSchema, staffIncidents, insertStaffIncidentSchema, insertSurveySchema, insertSurveySlideSchema, insertSurveyFieldSchema, insertSurveyLogicRuleSchema, insertSurveySubmissionSchema, insertSurveySubmissionAnswerSchema, taskIntakeForms, taskIntakeSections, taskIntakeQuestions, taskIntakeOptions, taskIntakeLogicRules, taskIntakeAssignmentRules, insertTaskIntakeFormSchema, insertTaskIntakeSectionSchema, insertTaskIntakeQuestionSchema, insertTaskIntakeOptionSchema, insertTaskIntakeLogicRuleSchema, insertTaskIntakeAssignmentRuleSchema, taskIntakeSubmissions, taskIntakeAnswers, insertTaskIntakeSubmissionSchema, insertTaskIntakeAnswerSchema, toolDirectoryCategories, toolDirectoryTools, insertToolDirectoryCategorySchema, insertToolDirectoryToolSchema, tickets, ticketRoutingRules, ticketComments, ticketAttachments, insertTicketSchema, insertTicketCommentSchema, insertTicketAttachmentSchema, insertTicketRoutingRuleSchema, callCenterTimeEntries, insertCallCenterTimeEntrySchema, productTaskTemplates, insertProductTaskTemplateSchema, clientTaskGenerations, insertClientTaskGenerationSchema, clientRecurringConfig, insertClientRecurringConfigSchema, proposals, insertProposalSchema, proposalTerms, insertProposalTermsSchema, customForms, customFormFields, customFormSubmissions, insertCustomFormSchema, insertCustomFormFieldSchema, insertCustomFormSubmissionSchema, onboardingTemplates, onboardingTemplateItems, onboardingInstances, onboardingInstanceItems, insertOnboardingTemplateSchema, insertOnboardingTemplateItemSchema, insertOnboardingInstanceSchema, insertOnboardingInstanceItemSchema, icAgreementTemplates, jobOffers, offerSignatures, offerStatusLog, insertIcAgreementTemplateSchema, insertJobOfferSchema, insertOfferSignatureSchema, insertOfferStatusLogSchema;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -1174,6 +1175,22 @@ var init_schema = __esm({
       retryCount: integer("retry_count").default(0),
       createdAt: timestamp("created_at").defaultNow(),
       updatedAt: timestamp("updated_at").defaultNow()
+    });
+    scheduledHiredEmails = pgTable("scheduled_hired_emails", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      applicationId: varchar("application_id").notNull().references(() => jobApplications.id),
+      toEmail: text("to_email").notNull(),
+      subject: text("subject").notNull(),
+      htmlContent: text("html_content").notNull(),
+      scheduledFor: timestamp("scheduled_for").notNull(),
+      timezone: text("timezone").notNull().default("America/New_York"),
+      status: text("status").notNull().default("pending"),
+      sentAt: timestamp("sent_at"),
+      failureReason: text("failure_reason"),
+      createdBy: varchar("created_by"),
+      candidateName: text("candidate_name"),
+      positionTitle: text("position_title"),
+      createdAt: timestamp("created_at").defaultNow()
     });
     leadPipelineStages = pgTable("lead_pipeline_stages", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -16312,6 +16329,261 @@ var init_workflow_engine = __esm({
   }
 });
 
+// server/services/hiredNotificationService.ts
+var hiredNotificationService_exports = {};
+__export(hiredNotificationService_exports, {
+  getWelcomeEmailPreview: () => getWelcomeEmailPreview,
+  processScheduledHiredEmails: () => processScheduledHiredEmails,
+  sendHiredNotifications: () => sendHiredNotifications,
+  startScheduledEmailProcessor: () => startScheduledEmailProcessor
+});
+import { eq as eq11, ilike, and as and10, lte as lte2 } from "drizzle-orm";
+async function getWelcomeEmailPreview(applicationId) {
+  const [application] = await db.select().from(jobApplications).where(eq11(jobApplications.id, applicationId)).limit(1);
+  if (!application) {
+    throw new Error("Application not found");
+  }
+  const candidateName = application.applicantName || "New Hire";
+  const candidateEmail = application.applicantEmail || "";
+  const position = application.positionTitle || "Team Member";
+  const [offer] = await db.select().from(jobOffers).where(eq11(jobOffers.applicationId, applicationId)).limit(1);
+  const startDate = offer?.startDate ? new Date(offer.startDate).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  }) : "TBD";
+  let workEmail = null;
+  let usedPersonalFallback = false;
+  try {
+    const nameParts = candidateName.trim().split(/\s+/);
+    if (nameParts.length >= 2) {
+      const firstName = nameParts[0];
+      const lastName = nameParts[nameParts.length - 1];
+      const matchingStaff = await db.select({ email: staff.email }).from(staff).where(
+        and10(
+          ilike(staff.firstName, firstName),
+          ilike(staff.lastName, lastName),
+          ilike(staff.email, "%@themediaoptimizers.com")
+        )
+      ).limit(1);
+      if (matchingStaff.length > 0) {
+        workEmail = matchingStaff[0].email;
+      }
+    }
+  } catch (err) {
+    console.error("[HiredNotif] Error looking up staff record:", err);
+  }
+  const recipientEmail = workEmail || candidateEmail;
+  if (!workEmail) {
+    usedPersonalFallback = true;
+  }
+  let emailSubject = `Welcome to The Media Optimizers, ${candidateName}! \u{1F389}`;
+  let emailHtml = buildFallbackWelcomeEmail(candidateName, position, startDate);
+  try {
+    const templates = await db.select().from(emailTemplates).where(ilike(emailTemplates.name, "%welcome%")).limit(5);
+    const activeTemplate = templates.find((t) => t.content && t.subject);
+    if (!activeTemplate) {
+      const onboardingTemplates2 = await db.select().from(emailTemplates).where(ilike(emailTemplates.name, "%onboarding%")).limit(5);
+      const fallbackTemplate = onboardingTemplates2.find((t) => t.content && t.subject);
+      if (fallbackTemplate) {
+        emailSubject = renderTemplate(fallbackTemplate.subject, candidateName, position, startDate);
+        emailHtml = renderTemplate(fallbackTemplate.content, candidateName, position, startDate);
+      }
+    } else {
+      emailSubject = renderTemplate(activeTemplate.subject, candidateName, position, startDate);
+      emailHtml = renderTemplate(activeTemplate.content, candidateName, position, startDate);
+    }
+  } catch (err) {
+    console.error("[HiredNotif] Error fetching email template:", err);
+  }
+  return {
+    recipientEmail,
+    subject: emailSubject,
+    htmlContent: emailHtml,
+    candidateName,
+    position,
+    startDate,
+    usedPersonalFallback
+  };
+}
+async function sendHiredNotifications(applicationId, changedBy, emailOptions) {
+  try {
+    const preview = await getWelcomeEmailPreview(applicationId);
+    const { recipientEmail, candidateName, position, startDate, usedPersonalFallback } = preview;
+    const emailSubject = emailOptions?.customSubject || preview.subject;
+    const emailHtml = emailOptions?.customHtml || preview.htmlContent;
+    if (emailOptions?.sendOption === "scheduled" && emailOptions.scheduledFor) {
+      if (!recipientEmail) {
+        console.error("[HiredNotif] Cannot schedule email: no recipient email found");
+        return;
+      }
+      const scheduledDate = new Date(emailOptions.scheduledFor);
+      if (isNaN(scheduledDate.getTime()) || scheduledDate <= /* @__PURE__ */ new Date()) {
+        console.error("[HiredNotif] Cannot schedule email: invalid or past date");
+        return;
+      }
+      await db.insert(scheduledHiredEmails).values({
+        applicationId,
+        toEmail: recipientEmail,
+        subject: emailSubject,
+        htmlContent: emailHtml,
+        scheduledFor: new Date(emailOptions.scheduledFor),
+        timezone: emailOptions.timezone || "America/New_York",
+        status: "pending",
+        createdBy: changedBy,
+        candidateName,
+        positionTitle: position
+      });
+      console.log(`[HiredNotif] Welcome email scheduled for ${emailOptions.scheduledFor} to ${recipientEmail}`);
+      const notificationService = getNotificationService();
+      if (notificationService && changedBy) {
+        const scheduledDate2 = new Date(emailOptions.scheduledFor).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit"
+        });
+        void notificationService.notify({
+          userId: changedBy,
+          type: "applicant_hired",
+          title: `${candidateName} has been marked as Hired`,
+          message: `You have successfully hired ${candidateName} for the ${position} role. A welcome email has been scheduled to send on ${scheduledDate2} to ${recipientEmail}.`,
+          entityType: "job_application",
+          entityId: applicationId,
+          actionUrl: `/applicants/${applicationId}`,
+          actionText: "View Application",
+          priority: "normal",
+          metadata: { position, startDate }
+        }).catch(
+          (err) => console.error("[HiredNotif] Failed to send manager notification:", err)
+        );
+      }
+    } else {
+      const notificationService = getNotificationService();
+      if (notificationService && recipientEmail) {
+        try {
+          await notificationService.sendDirectEmail({
+            to: recipientEmail,
+            subject: emailSubject,
+            text: emailSubject,
+            html: emailHtml
+          });
+          console.log(`[HiredNotif] Welcome email sent to ${recipientEmail}`);
+        } catch (err) {
+          console.error("[HiredNotif] Failed to send welcome email:", err);
+        }
+      }
+      if (notificationService && changedBy) {
+        let managerMessage = `You have successfully hired ${candidateName} for the ${position} role. A welcome email has been sent to ${recipientEmail}. Their AgencyBoost onboarding checklist will be ready on their start date of ${startDate}.`;
+        if (usedPersonalFallback && preview.recipientEmail) {
+          managerMessage += ` Note: The welcome email was sent to their personal email (${preview.recipientEmail}) because no matching AgencyBoost staff account was found. Please ensure their staff account is created with their work email.`;
+        }
+        void notificationService.notify({
+          userId: changedBy,
+          type: "applicant_hired",
+          title: `${candidateName} has been marked as Hired`,
+          message: managerMessage,
+          entityType: "job_application",
+          entityId: applicationId,
+          actionUrl: `/applicants/${applicationId}`,
+          actionText: "View Application",
+          priority: "normal",
+          metadata: { position, startDate }
+        }).catch(
+          (err) => console.error("[HiredNotif] Failed to send manager notification:", err)
+        );
+      }
+    }
+    void emitTrigger({
+      type: "applicant_hired",
+      data: {
+        applicationId,
+        candidateName,
+        position,
+        startDate,
+        managerId: changedBy
+      },
+      context: { userId: changedBy, timestamp: /* @__PURE__ */ new Date() }
+    }).catch((err) => console.error("[Trigger] applicant_hired failed:", err));
+  } catch (error) {
+    console.error("[HiredNotif] Unhandled error in sendHiredNotifications:", error);
+  }
+}
+async function processScheduledHiredEmails() {
+  try {
+    const now = /* @__PURE__ */ new Date();
+    const claimedEmails = await db.update(scheduledHiredEmails).set({ status: "processing" }).where(
+      and10(
+        eq11(scheduledHiredEmails.status, "pending"),
+        lte2(scheduledHiredEmails.scheduledFor, now)
+      )
+    ).returning();
+    if (claimedEmails.length === 0) return;
+    const notificationService = getNotificationService();
+    if (!notificationService) {
+      console.warn("[ScheduledEmail] No notification service available, reverting to pending");
+      for (const email of claimedEmails) {
+        await db.update(scheduledHiredEmails).set({ status: "pending" }).where(eq11(scheduledHiredEmails.id, email.id));
+      }
+      return;
+    }
+    for (const email of claimedEmails) {
+      try {
+        await notificationService.sendDirectEmail({
+          to: email.toEmail,
+          subject: email.subject,
+          text: email.subject,
+          html: email.htmlContent
+        });
+        await db.update(scheduledHiredEmails).set({ status: "sent", sentAt: /* @__PURE__ */ new Date() }).where(eq11(scheduledHiredEmails.id, email.id));
+        console.log(`[ScheduledEmail] Sent scheduled welcome email to ${email.toEmail} (ID: ${email.id})`);
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        await db.update(scheduledHiredEmails).set({ status: "failed", failureReason: errorMsg }).where(eq11(scheduledHiredEmails.id, email.id));
+        console.error(`[ScheduledEmail] Failed to send email ${email.id}:`, err);
+      }
+    }
+  } catch (error) {
+    console.error("[ScheduledEmail] Error processing scheduled emails:", error);
+  }
+}
+function startScheduledEmailProcessor() {
+  console.log("[ScheduledEmail] Starting scheduled email processor (60s interval)");
+  return setInterval(() => {
+    processScheduledHiredEmails().catch(
+      (err) => console.error("[ScheduledEmail] Processor error:", err)
+    );
+  }, 6e4);
+}
+function renderTemplate(template, name, position, startDate) {
+  return template.replace(/\{\{candidate_name\}\}/gi, name).replace(/\{\{name\}\}/gi, name).replace(/\{\{position\}\}/gi, position).replace(/\{\{start_date\}\}/gi, startDate).replace(/\{\{onboarding_link\}\}/gi, "https://agencyboost.app/onboarding").replace(/\{\{company_name\}\}/gi, "The Media Optimizers");
+}
+function buildFallbackWelcomeEmail(name, position, startDate) {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+      <p>Hi ${name},</p>
+      <p>We are thrilled to welcome you to The Media Optimizers as our new <strong>${position}</strong>!</p>
+      <p>Your start date is <strong>${startDate}</strong>. Before your first day, please take a few minutes to complete your new hire onboarding form \u2014 it only takes a few minutes and helps us get everything set up for you.</p>
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="https://agencyboost.app/onboarding" style="background-color: hsl(179, 100%, 39%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">Complete Your Onboarding Form</a>
+      </div>
+      <p>Once you log into AgencyBoost with your new work email, you will also find your personalized onboarding checklist ready and waiting for you under HR &gt; Onboarding Checklist.</p>
+      <p>We cannot wait to have you on the team. If you have any questions before your start date, do not hesitate to reach out.</p>
+      <p>Welcome aboard!<br/>The Media Optimizers Team</p>
+    </div>
+  `;
+}
+var init_hiredNotificationService = __esm({
+  "server/services/hiredNotificationService.ts"() {
+    "use strict";
+    init_db();
+    init_schema();
+    init_notification_service();
+    init_workflow_engine();
+  }
+});
+
 // shared/permission-templates.ts
 function getModuleTemplate(module) {
   return PERMISSION_TEMPLATES.find((t) => t.module === module);
@@ -21146,7 +21418,7 @@ var proposalReminderService_exports = {};
 __export(proposalReminderService_exports, {
   startProposalReminderService: () => startProposalReminderService
 });
-import { eq as eq27, and as and24, lt as lt5, isNull as isNull5, lte as lte5, isNotNull as isNotNull4 } from "drizzle-orm";
+import { eq as eq27, and as and24, lt as lt5, isNull as isNull5, lte as lte6, isNotNull as isNotNull4 } from "drizzle-orm";
 function startProposalReminderService() {
   console.log("[ProposalReminder] Service started - checking every hour");
   const check = async () => {
@@ -21159,7 +21431,7 @@ function startProposalReminderService() {
           eq27(quotes.status, "sent"),
           isNull5(quotes.signedAt),
           isNotNull4(quotes.publicToken),
-          lte5(quotes.sentAt, threeDaysAgo),
+          lte6(quotes.sentAt, threeDaysAgo),
           lt5(quotes.reminderCount, MAX_REMINDERS)
         )
       );
@@ -21363,7 +21635,7 @@ __export(onboardingNotificationService_exports, {
   startOnboardingNotificationService: () => startOnboardingNotificationService,
   stopOnboardingNotificationService: () => stopOnboardingNotificationService
 });
-import { eq as eq29, and as and26, sql as sql15, lte as lte6 } from "drizzle-orm";
+import { eq as eq29, and as and26, sql as sql15, lte as lte7 } from "drizzle-orm";
 function getBusinessDaysElapsed(startDate, today) {
   let count2 = 0;
   const current = new Date(startDate);
@@ -21512,7 +21784,7 @@ async function _runBehindScheduleAlerts() {
         eq29(onboardingInstanceItems.instanceId, instance.id),
         eq29(onboardingInstanceItems.isRequired, true),
         eq29(onboardingInstanceItems.isCompleted, false),
-        lte6(onboardingInstanceItems.dayNumber, cutoffDay)
+        lte7(onboardingInstanceItems.dayNumber, cutoffDay)
       ));
       if (overdueItems.length === 0) continue;
       const overdueDays = [...new Set(overdueItems.map((i) => i.dayNumber))].sort((a, b) => a - b);
@@ -23108,139 +23380,8 @@ async function spawnOnboardingChecklist(staffId) {
   }
 }
 
-// server/services/hiredNotificationService.ts
-init_db();
-init_schema();
-init_notification_service();
-init_workflow_engine();
-import { eq as eq11, ilike, and as and10 } from "drizzle-orm";
-async function sendHiredNotifications(applicationId, changedBy) {
-  try {
-    const [application] = await db.select().from(jobApplications).where(eq11(jobApplications.id, applicationId)).limit(1);
-    if (!application) {
-      console.warn("[HiredNotif] Application not found:", applicationId);
-      return;
-    }
-    const candidateName = application.applicantName || "New Hire";
-    const candidateEmail = application.applicantEmail || "";
-    const position = application.positionTitle || "Team Member";
-    const [offer] = await db.select().from(jobOffers).where(eq11(jobOffers.applicationId, applicationId)).limit(1);
-    const startDate = offer?.startDate ? new Date(offer.startDate).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric"
-    }) : "TBD";
-    let workEmail = null;
-    let usedPersonalFallback = false;
-    try {
-      const nameParts = candidateName.trim().split(/\s+/);
-      if (nameParts.length >= 2) {
-        const firstName = nameParts[0];
-        const lastName = nameParts[nameParts.length - 1];
-        const matchingStaff = await db.select({ email: staff.email }).from(staff).where(
-          and10(
-            ilike(staff.firstName, firstName),
-            ilike(staff.lastName, lastName),
-            ilike(staff.email, "%@themediaoptimizers.com")
-          )
-        ).limit(1);
-        if (matchingStaff.length > 0) {
-          workEmail = matchingStaff[0].email;
-        }
-      }
-    } catch (err) {
-      console.error("[HiredNotif] Error looking up staff record:", err);
-    }
-    const recipientEmail = workEmail || candidateEmail;
-    if (!workEmail) {
-      usedPersonalFallback = true;
-    }
-    let emailSubject = `Welcome to The Media Optimizers, ${candidateName}! \u{1F389}`;
-    let emailHtml = buildFallbackWelcomeEmail(candidateName, position, startDate);
-    try {
-      const templates = await db.select().from(emailTemplates).where(ilike(emailTemplates.name, "%welcome%")).limit(5);
-      const activeTemplate = templates.find((t) => t.content && t.subject);
-      if (!activeTemplate) {
-        const onboardingTemplates2 = await db.select().from(emailTemplates).where(ilike(emailTemplates.name, "%onboarding%")).limit(5);
-        const fallbackTemplate = onboardingTemplates2.find((t) => t.content && t.subject);
-        if (fallbackTemplate) {
-          emailSubject = renderTemplate(fallbackTemplate.subject, candidateName, position, startDate);
-          emailHtml = renderTemplate(fallbackTemplate.content, candidateName, position, startDate);
-        }
-      } else {
-        emailSubject = renderTemplate(activeTemplate.subject, candidateName, position, startDate);
-        emailHtml = renderTemplate(activeTemplate.content, candidateName, position, startDate);
-      }
-    } catch (err) {
-      console.error("[HiredNotif] Error fetching email template:", err);
-    }
-    const notificationService = getNotificationService();
-    if (notificationService && recipientEmail) {
-      try {
-        await notificationService.sendDirectEmail({
-          to: recipientEmail,
-          subject: emailSubject,
-          text: emailSubject,
-          html: emailHtml
-        });
-        console.log(`[HiredNotif] Welcome email sent to ${recipientEmail}`);
-      } catch (err) {
-        console.error("[HiredNotif] Failed to send welcome email:", err);
-      }
-    }
-    if (notificationService && changedBy) {
-      let managerMessage = `You have successfully hired ${candidateName} for the ${position} role. A welcome email has been sent to ${recipientEmail}. Their AgencyBoost onboarding checklist will be ready on their start date of ${startDate}.`;
-      if (usedPersonalFallback && candidateEmail) {
-        managerMessage += ` Note: The welcome email was sent to their personal email (${candidateEmail}) because no matching AgencyBoost staff account was found. Please ensure their staff account is created with their work email.`;
-      }
-      void notificationService.notify({
-        userId: changedBy,
-        type: "applicant_hired",
-        title: `${candidateName} has been marked as Hired`,
-        message: managerMessage,
-        entityType: "job_application",
-        entityId: applicationId,
-        actionUrl: `/applicants/${applicationId}`,
-        actionText: "View Application",
-        priority: "normal",
-        metadata: { position, startDate }
-      }).catch(
-        (err) => console.error("[HiredNotif] Failed to send manager notification:", err)
-      );
-    }
-    void emitTrigger({
-      type: "applicant_hired",
-      data: {
-        applicationId,
-        candidateName,
-        position,
-        startDate,
-        managerId: changedBy
-      },
-      context: { userId: changedBy, timestamp: /* @__PURE__ */ new Date() }
-    }).catch((err) => console.error("[Trigger] applicant_hired failed:", err));
-  } catch (error) {
-    console.error("[HiredNotif] Unhandled error in sendHiredNotifications:", error);
-  }
-}
-function renderTemplate(template, name, position, startDate) {
-  return template.replace(/\{\{candidate_name\}\}/gi, name).replace(/\{\{name\}\}/gi, name).replace(/\{\{position\}\}/gi, position).replace(/\{\{start_date\}\}/gi, startDate).replace(/\{\{onboarding_link\}\}/gi, "https://agencyboost.app/onboarding").replace(/\{\{company_name\}\}/gi, "The Media Optimizers");
-}
-function buildFallbackWelcomeEmail(name, position, startDate) {
-  return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
-      <p>Hi ${name},</p>
-      <p>We are thrilled to welcome you to The Media Optimizers as our new <strong>${position}</strong>!</p>
-      <p>Your start date is <strong>${startDate}</strong>. Before your first day, please take a few minutes to complete your new hire onboarding form \u2014 it only takes a few minutes and helps us get everything set up for you.</p>
-      <div style="text-align: center; margin: 32px 0;">
-        <a href="https://agencyboost.app/onboarding" style="background-color: hsl(179, 100%, 39%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">Complete Your Onboarding Form</a>
-      </div>
-      <p>Once you log into AgencyBoost with your new work email, you will also find your personalized onboarding checklist ready and waiting for you under HR &gt; Onboarding Checklist.</p>
-      <p>We cannot wait to have you on the team. If you have any questions before your start date, do not hesitate to reach out.</p>
-      <p>Welcome aboard!<br/>The Media Optimizers Team</p>
-    </div>
-  `;
-}
+// server/routes.ts
+init_hiredNotificationService();
 
 // server/services/onboardingLmsSyncService.ts
 init_db();
@@ -23622,7 +23763,7 @@ import { google as google4 } from "googleapis";
 import twilio from "twilio";
 import mailgun2 from "mailgun.js";
 import formData2 from "form-data";
-import { eq as eq20, like as like2, ilike as ilike3, or as or6, and as and18, asc as asc5, desc as desc5, sql as sql11, inArray as inArray7, isNotNull as isNotNull2, isNull as isNull3, gt as gt2, gte as gte2, lt as lt3, lte as lte2 } from "drizzle-orm";
+import { eq as eq20, like as like2, ilike as ilike3, or as or6, and as and18, asc as asc5, desc as desc5, sql as sql11, inArray as inArray7, isNotNull as isNotNull2, isNull as isNull3, gt as gt2, gte as gte2, lt as lt3, lte as lte3 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 // server/permissionAuditService.ts
@@ -25619,7 +25760,7 @@ AgencyBoost CRM`
       const eventTimeEntriesResult = await db.select().from(eventTimeEntries).where(
         and18(
           gte2(eventTimeEntries.startTime, new Date(dateFrom)),
-          lte2(eventTimeEntries.startTime, new Date(dateTo)),
+          lte3(eventTimeEntries.startTime, new Date(dateTo)),
           effectiveUserId ? eq20(eventTimeEntries.userId, effectiveUserId) : sql11`1=1`,
           clientId ? eq20(eventTimeEntries.clientId, clientId) : sql11`1=1`
         )
@@ -26000,7 +26141,7 @@ AgencyBoost CRM`
       const eventEntries = await db.select().from(eventTimeEntries).where(
         and18(
           gte2(eventTimeEntries.startTime, estFromDate),
-          lte2(eventTimeEntries.startTime, estToDate)
+          lte3(eventTimeEntries.startTime, estToDate)
         )
       );
       for (const entry of eventEntries) {
@@ -40693,7 +40834,7 @@ ${appointment.description || ""}
       const appointments2 = await db.select().from(calendarAppointments).where(and18(
         eq20(calendarAppointments.assignedTo, staffId),
         gte2(calendarAppointments.startTime, timeMin),
-        lte2(calendarAppointments.startTime, timeMax)
+        lte3(calendarAppointments.startTime, timeMax)
       ));
       let syncedToGoogle = 0;
       for (const appointment of appointments2) {
@@ -47900,7 +48041,7 @@ ${appointment.description || ""}
         filters.push(gte2(oneOnOneMeetings.meetingDate, dateFrom));
       }
       if (dateTo && typeof dateTo === "string") {
-        filters.push(lte2(oneOnOneMeetings.meetingDate, dateTo));
+        filters.push(lte3(oneOnOneMeetings.meetingDate, dateTo));
       }
       if (feeling && typeof feeling === "string" && feeling !== "all") {
         filters.push(eq20(oneOnOneMeetings.feeling, feeling));
@@ -48850,10 +48991,41 @@ ${appointment.description || ""}
       res.status(500).json({ message: "Failed to fetch application" });
     }
   });
+  app2.get("/api/hr/job-applications/:id/welcome-email-preview", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const preview = await getWelcomeEmailPreview(id);
+      res.json(preview);
+    } catch (error) {
+      console.error("Error generating welcome email preview:", error);
+      res.status(500).json({ message: error.message || "Failed to generate email preview" });
+    }
+  });
+  app2.get("/api/hr/scheduled-hired-emails/:applicationId", requireAuth(), async (req, res) => {
+    try {
+      const { applicationId } = req.params;
+      const emails = await db.select().from(scheduledHiredEmails).where(eq20(scheduledHiredEmails.applicationId, applicationId));
+      res.json(emails);
+    } catch (error) {
+      console.error("Error fetching scheduled hired emails:", error);
+      res.status(500).json({ message: "Failed to fetch scheduled emails" });
+    }
+  });
+  app2.patch("/api/hr/scheduled-hired-emails/:id/cancel", requireAuth(), requirePermission("hr", "manage"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [updated] = await db.update(scheduledHiredEmails).set({ status: "cancelled" }).where(and18(eq20(scheduledHiredEmails.id, id), eq20(scheduledHiredEmails.status, "pending"))).returning();
+      if (!updated) return res.status(404).json({ message: "Scheduled email not found or already processed" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error cancelling scheduled email:", error);
+      res.status(500).json({ message: "Failed to cancel scheduled email" });
+    }
+  });
   app2.patch("/api/hr/job-applications/:id", requireAuth(), async (req, res) => {
     try {
       const { id } = req.params;
-      const { stage, rating } = req.body;
+      const { stage, rating, emailOptions } = req.body;
       const [existingApp] = await db.select({ stage: jobApplications.stage }).from(jobApplications).where(eq20(jobApplications.id, id)).limit(1);
       if (!existingApp) {
         return res.status(404).json({ message: "Application not found" });
@@ -48882,7 +49054,14 @@ ${appointment.description || ""}
         } catch (logErr) {
           console.error("[HiredStatus] Error logging offer status:", logErr);
         }
-        sendHiredNotifications(id, changedBy).catch(
+        const parsedEmailOptions = emailOptions ? {
+          sendOption: emailOptions.sendOption || "now",
+          scheduledFor: emailOptions.scheduledFor,
+          timezone: emailOptions.timezone,
+          customSubject: emailOptions.customSubject,
+          customHtml: emailOptions.customHtml
+        } : void 0;
+        sendHiredNotifications(id, changedBy, parsedEmailOptions).catch(
           (err) => console.error("Hired notification error:", err)
         );
       }
@@ -52169,7 +52348,7 @@ ${appointment.description || ""}
       if (dateTo && typeof dateTo === "string") {
         const endDate = new Date(dateTo);
         endDate.setHours(23, 59, 59, 999);
-        filterConditions.push(lte2(tasks.createdAt, endDate));
+        filterConditions.push(lte3(tasks.createdAt, endDate));
       }
       if (dueDateFrom && typeof dueDateFrom === "string") {
         filterConditions.push(
@@ -52185,7 +52364,7 @@ ${appointment.description || ""}
         filterConditions.push(
           and18(
             isNotNull2(tasks.dueDate),
-            lte2(tasks.dueDate, endDate)
+            lte3(tasks.dueDate, endDate)
           )
         );
       }
@@ -53637,7 +53816,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       if (startDate && endDate) {
         filters.push(
           gte2(leads.createdAt, new Date(startDate)),
-          lte2(leads.createdAt, new Date(new Date(endDate).getTime() + 24 * 60 * 60 * 1e3 - 1))
+          lte3(leads.createdAt, new Date(new Date(endDate).getTime() + 24 * 60 * 60 * 1e3 - 1))
         );
       }
       if (salesRepId && salesRepId !== "all") {
@@ -53658,7 +53837,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       if (startDate && endDate) {
         transitionFilters.push(
           gte2(leadStageTransitions.transitionedAt, new Date(startDate)),
-          lte2(leadStageTransitions.transitionedAt, new Date(endDate))
+          lte3(leadStageTransitions.transitionedAt, new Date(endDate))
         );
       }
       if (salesRepId && salesRepId !== "all") {
@@ -53716,7 +53895,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       if (startDate && endDate) {
         dealFilters.push(
           gte2(deals.wonDate, new Date(startDate)),
-          lte2(deals.wonDate, new Date(endDate))
+          lte3(deals.wonDate, new Date(endDate))
         );
       }
       if (salesRepId && salesRepId !== "all") {
@@ -53727,7 +53906,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       if (startDate && endDate) {
         activityFilters.push(
           gte2(salesActivities.createdAt, new Date(startDate)),
-          lte2(salesActivities.createdAt, new Date(endDate))
+          lte3(salesActivities.createdAt, new Date(endDate))
         );
       }
       if (salesRepId && salesRepId !== "all") {
@@ -53738,7 +53917,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       if (startDate && endDate) {
         leadFilters.push(
           gte2(leads.createdAt, new Date(startDate)),
-          lte2(leads.createdAt, new Date(new Date(endDate).getTime() + 24 * 60 * 60 * 1e3 - 1))
+          lte3(leads.createdAt, new Date(new Date(endDate).getTime() + 24 * 60 * 60 * 1e3 - 1))
         );
       }
       if (salesRepId && salesRepId !== "all") {
@@ -53864,7 +54043,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       if (startDate && endDate) {
         filters.push(
           gte2(leads.createdAt, new Date(startDate)),
-          lte2(leads.createdAt, new Date(new Date(endDate).getTime() + 24 * 60 * 60 * 1e3 - 1))
+          lte3(leads.createdAt, new Date(new Date(endDate).getTime() + 24 * 60 * 60 * 1e3 - 1))
         );
       }
       if (salesRepId && salesRepId !== "all") {
@@ -53883,7 +54062,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
         const prevEnd = new Date(startMs - 1);
         const prevFilters = [
           gte2(leads.createdAt, prevStart),
-          lte2(leads.createdAt, prevEnd)
+          lte3(leads.createdAt, prevEnd)
         ];
         if (salesRepId && salesRepId !== "all") {
           prevFilters.push(eq20(leads.assignedTo, salesRepId));
@@ -53950,7 +54129,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       if (startDate && endDate) {
         filters.push(
           gte2(leads.createdAt, new Date(startDate)),
-          lte2(leads.createdAt, new Date(new Date(endDate).getTime() + 24 * 60 * 60 * 1e3 - 1))
+          lte3(leads.createdAt, new Date(new Date(endDate).getTime() + 24 * 60 * 60 * 1e3 - 1))
         );
       }
       if (salesRepId && salesRepId !== "all") {
@@ -53969,7 +54148,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
         const prevEnd = new Date(startMs - 1);
         const prevFilters = [
           gte2(leads.createdAt, prevStart),
-          lte2(leads.createdAt, prevEnd)
+          lte3(leads.createdAt, prevEnd)
         ];
         if (salesRepId && salesRepId !== "all") {
           prevFilters.push(eq20(leads.assignedTo, salesRepId));
@@ -55134,7 +55313,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       const { startDate, endDate, status, type, priority, assignedTo, search } = req.query;
       const conditions = [];
       if (startDate) conditions.push(gte2(tickets.createdAt, /* @__PURE__ */ new Date(startDate + "T00:00:00")));
-      if (endDate) conditions.push(lte2(tickets.createdAt, /* @__PURE__ */ new Date(endDate + "T23:59:59.999")));
+      if (endDate) conditions.push(lte3(tickets.createdAt, /* @__PURE__ */ new Date(endDate + "T23:59:59.999")));
       if (status) {
         const statusValues = status.split(",").filter(Boolean);
         if (statusValues.length === 1) {
@@ -55233,7 +55412,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       const { startDate, endDate } = req.query;
       const conditions = [];
       if (startDate) conditions.push(gte2(tickets.createdAt, /* @__PURE__ */ new Date(startDate + "T00:00:00")));
-      if (endDate) conditions.push(lte2(tickets.createdAt, /* @__PURE__ */ new Date(endDate + "T23:59:59.999")));
+      if (endDate) conditions.push(lte3(tickets.createdAt, /* @__PURE__ */ new Date(endDate + "T23:59:59.999")));
       const whereClause = conditions.length > 0 ? and18(...conditions) : void 0;
       const responseTimeResult = await db.select({
         avgFirstResponse: sql11`AVG(EXTRACT(EPOCH FROM (${tickets.firstResponseAt} - ${tickets.createdAt})))`,
@@ -55266,7 +55445,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       const { startDate, endDate } = req.query;
       const conditions = [];
       if (startDate) conditions.push(gte2(tickets.createdAt, /* @__PURE__ */ new Date(startDate + "T00:00:00")));
-      if (endDate) conditions.push(lte2(tickets.createdAt, /* @__PURE__ */ new Date(endDate + "T23:59:59.999")));
+      if (endDate) conditions.push(lte3(tickets.createdAt, /* @__PURE__ */ new Date(endDate + "T23:59:59.999")));
       const whereClause = conditions.length > 0 ? and18(...conditions) : void 0;
       const allTickets = await db.select({
         id: tickets.id,
@@ -55976,7 +56155,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       const allRawEntries = await db.select().from(callCenterTimeEntries).where(
         and18(
           gte2(callCenterTimeEntries.startTime, fromDate),
-          lte2(callCenterTimeEntries.startTime, toDate),
+          lte3(callCenterTimeEntries.startTime, toDate),
           eq20(callCenterTimeEntries.isRunning, false)
         )
       ).orderBy(desc5(callCenterTimeEntries.startTime));
@@ -56172,7 +56351,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       const toDate = /* @__PURE__ */ new Date(dateTo + "T23:59:59");
       const conditions = [
         gte2(callCenterTimeEntries.startTime, fromDate),
-        lte2(callCenterTimeEntries.startTime, toDate),
+        lte3(callCenterTimeEntries.startTime, toDate),
         eq20(callCenterTimeEntries.isRunning, false)
       ];
       if (filterUserId && typeof filterUserId === "string") {
@@ -56244,7 +56423,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       const costRawEntries = await db.select().from(callCenterTimeEntries).where(
         and18(
           gte2(callCenterTimeEntries.startTime, fromDate),
-          lte2(callCenterTimeEntries.startTime, toDate),
+          lte3(callCenterTimeEntries.startTime, toDate),
           eq20(callCenterTimeEntries.isRunning, false)
         )
       );
@@ -60912,6 +61091,32 @@ async function ensurePxMeetingsObjectivesColumn() {
     log(`PX meetings objectives migration error: ${error.message}`);
   }
 }
+async function ensureScheduledHiredEmailsTable() {
+  try {
+    log("Running startup migration: ensureScheduledHiredEmailsTable");
+    await db.execute(sql16`
+      CREATE TABLE IF NOT EXISTS scheduled_hired_emails (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        application_id varchar NOT NULL REFERENCES job_applications(id),
+        to_email text NOT NULL,
+        subject text NOT NULL,
+        html_content text NOT NULL,
+        scheduled_for timestamp NOT NULL,
+        timezone text NOT NULL DEFAULT 'America/New_York',
+        status text NOT NULL DEFAULT 'pending',
+        sent_at timestamp,
+        failure_reason text,
+        created_by varchar,
+        candidate_name text,
+        position_title text,
+        created_at timestamp DEFAULT now()
+      );
+    `);
+    log("Scheduled hired emails table ensured");
+  } catch (error) {
+    log(`Scheduled hired emails migration error: ${error.message}`);
+  }
+}
 async function runStartupMigrations() {
   log("Starting background migrations...");
   try {
@@ -60938,6 +61143,7 @@ async function runStartupMigrations() {
     await seedIntakeDescriptionTemplates();
     await ensureTaskCommentsClientPortalColumn();
     await ensurePxMeetingsObjectivesColumn();
+    await ensureScheduledHiredEmailsTable();
     log("\u2705 All startup migrations completed successfully");
   } catch (error) {
     log(`\u26A0\uFE0F Startup migrations encountered an error: ${error}`);
@@ -60961,6 +61167,9 @@ async function setupFullApp(server) {
     } else {
       serveStatic(app);
     }
+    const { startScheduledEmailProcessor: startScheduledEmailProcessor3 } = await Promise.resolve().then(() => (init_hiredNotificationService(), hiredNotificationService_exports));
+    startScheduledEmailProcessor3();
+    log("\u2705 Scheduled email processor started");
     appFullyLoaded = true;
     log("\u2705 All routes and middleware configured");
     runStartupMigrations().then(() => {

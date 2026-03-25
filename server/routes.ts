@@ -91,10 +91,12 @@ import {
   insertCustomFormSchema, insertCustomFormFieldSchema, insertCustomFormSubmissionSchema,
   onboardingTemplates, onboardingTemplateItems, onboardingInstances, onboardingInstanceItems,
   insertOnboardingTemplateSchema, insertOnboardingTemplateItemSchema,
-  icAgreementTemplates, jobOffers, offerSignatures, offerStatusLog
+  icAgreementTemplates, jobOffers, offerSignatures, offerStatusLog,
+  scheduledHiredEmails
 } from "@shared/schema";
 import { spawnOnboardingChecklist } from "./services/onboardingSpawnService";
-import { sendHiredNotifications } from "./services/hiredNotificationService";
+import { sendHiredNotifications, getWelcomeEmailPreview, startScheduledEmailProcessor } from "./services/hiredNotificationService";
+import type { HiredEmailOptions } from "./services/hiredNotificationService";
 import { syncLmsCompletion } from "./services/onboardingLmsSyncService";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { canAccessWidget, isKnownWidgetType } from "@shared/widget-permissions";
@@ -32643,11 +32645,52 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  app.get('/api/hr/job-applications/:id/welcome-email-preview', requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const preview = await getWelcomeEmailPreview(id);
+      res.json(preview);
+    } catch (error: any) {
+      console.error("Error generating welcome email preview:", error);
+      res.status(500).json({ message: error.message || "Failed to generate email preview" });
+    }
+  });
+
+  app.get('/api/hr/scheduled-hired-emails/:applicationId', requireAuth(), async (req, res) => {
+    try {
+      const { applicationId } = req.params;
+      const emails = await db
+        .select()
+        .from(scheduledHiredEmails)
+        .where(eq(scheduledHiredEmails.applicationId, applicationId));
+      res.json(emails);
+    } catch (error) {
+      console.error("Error fetching scheduled hired emails:", error);
+      res.status(500).json({ message: "Failed to fetch scheduled emails" });
+    }
+  });
+
+  app.patch('/api/hr/scheduled-hired-emails/:id/cancel', requireAuth(), requirePermission('hr', 'manage'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [updated] = await db
+        .update(scheduledHiredEmails)
+        .set({ status: "cancelled" })
+        .where(and(eq(scheduledHiredEmails.id, id), eq(scheduledHiredEmails.status, "pending")))
+        .returning();
+      if (!updated) return res.status(404).json({ message: "Scheduled email not found or already processed" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error cancelling scheduled email:", error);
+      res.status(500).json({ message: "Failed to cancel scheduled email" });
+    }
+  });
+
   // Update job application status and rating
   app.patch('/api/hr/job-applications/:id', requireAuth(), async (req, res) => {
     try {
       const { id } = req.params;
-      const { stage, rating } = req.body;
+      const { stage, rating, emailOptions } = req.body;
 
       const [existingApp] = await db
         .select({ stage: jobApplications.stage })
@@ -32697,7 +32740,17 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           console.error("[HiredStatus] Error logging offer status:", logErr);
         }
 
-        sendHiredNotifications(id, changedBy).catch((err) =>
+        const parsedEmailOptions: HiredEmailOptions | undefined = emailOptions
+          ? {
+              sendOption: emailOptions.sendOption || "now",
+              scheduledFor: emailOptions.scheduledFor,
+              timezone: emailOptions.timezone,
+              customSubject: emailOptions.customSubject,
+              customHtml: emailOptions.customHtml,
+            }
+          : undefined;
+
+        sendHiredNotifications(id, changedBy, parsedEmailOptions).catch((err) =>
           console.error("Hired notification error:", err)
         );
       }

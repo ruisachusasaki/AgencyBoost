@@ -1,143 +1,225 @@
 import { db } from "../db";
-import { jobApplications, jobOffers, staff, emailTemplates } from "@shared/schema";
-import { eq, ilike, and } from "drizzle-orm";
+import { jobApplications, jobOffers, staff, emailTemplates, scheduledHiredEmails } from "@shared/schema";
+import { eq, ilike, and, lte } from "drizzle-orm";
 import { getNotificationService } from "../notification-service";
 import { emitTrigger } from "../workflow-engine";
 
-export async function sendHiredNotifications(
-  applicationId: string,
-  changedBy: string
-): Promise<void> {
+export interface HiredEmailOptions {
+  sendOption: "now" | "scheduled";
+  scheduledFor?: string;
+  timezone?: string;
+  customSubject?: string;
+  customHtml?: string;
+}
+
+export async function getWelcomeEmailPreview(applicationId: string): Promise<{
+  recipientEmail: string;
+  subject: string;
+  htmlContent: string;
+  candidateName: string;
+  position: string;
+  startDate: string;
+  usedPersonalFallback: boolean;
+}> {
+  const [application] = await db
+    .select()
+    .from(jobApplications)
+    .where(eq(jobApplications.id, applicationId))
+    .limit(1);
+
+  if (!application) {
+    throw new Error("Application not found");
+  }
+
+  const candidateName = application.applicantName || "New Hire";
+  const candidateEmail = application.applicantEmail || "";
+  const position = application.positionTitle || "Team Member";
+
+  const [offer] = await db
+    .select()
+    .from(jobOffers)
+    .where(eq(jobOffers.applicationId, applicationId))
+    .limit(1);
+
+  const startDate = offer?.startDate
+    ? new Date(offer.startDate).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "TBD";
+
+  let workEmail: string | null = null;
+  let usedPersonalFallback = false;
+
   try {
-    const [application] = await db
-      .select()
-      .from(jobApplications)
-      .where(eq(jobApplications.id, applicationId))
-      .limit(1);
-
-    if (!application) {
-      console.warn("[HiredNotif] Application not found:", applicationId);
-      return;
-    }
-
-    const candidateName = application.applicantName || "New Hire";
-    const candidateEmail = application.applicantEmail || "";
-    const position = application.positionTitle || "Team Member";
-
-    const [offer] = await db
-      .select()
-      .from(jobOffers)
-      .where(eq(jobOffers.applicationId, applicationId))
-      .limit(1);
-
-    const startDate = offer?.startDate
-      ? new Date(offer.startDate).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      : "TBD";
-
-    let workEmail: string | null = null;
-    let usedPersonalFallback = false;
-
-    try {
-      const nameParts = candidateName.trim().split(/\s+/);
-      if (nameParts.length >= 2) {
-        const firstName = nameParts[0];
-        const lastName = nameParts[nameParts.length - 1];
-        const matchingStaff = await db
-          .select({ email: staff.email })
-          .from(staff)
-          .where(
-            and(
-              ilike(staff.firstName, firstName),
-              ilike(staff.lastName, lastName),
-              ilike(staff.email, "%@themediaoptimizers.com")
-            )
+    const nameParts = candidateName.trim().split(/\s+/);
+    if (nameParts.length >= 2) {
+      const firstName = nameParts[0];
+      const lastName = nameParts[nameParts.length - 1];
+      const matchingStaff = await db
+        .select({ email: staff.email })
+        .from(staff)
+        .where(
+          and(
+            ilike(staff.firstName, firstName),
+            ilike(staff.lastName, lastName),
+            ilike(staff.email, "%@themediaoptimizers.com")
           )
-          .limit(1);
+        )
+        .limit(1);
 
-        if (matchingStaff.length > 0) {
-          workEmail = matchingStaff[0].email;
-        }
+      if (matchingStaff.length > 0) {
+        workEmail = matchingStaff[0].email;
       }
-    } catch (err) {
-      console.error("[HiredNotif] Error looking up staff record:", err);
     }
+  } catch (err) {
+    console.error("[HiredNotif] Error looking up staff record:", err);
+  }
 
-    const recipientEmail = workEmail || candidateEmail;
-    if (!workEmail) {
-      usedPersonalFallback = true;
-    }
+  const recipientEmail = workEmail || candidateEmail;
+  if (!workEmail) {
+    usedPersonalFallback = true;
+  }
 
-    let emailSubject = `Welcome to The Media Optimizers, ${candidateName}! 🎉`;
-    let emailHtml = buildFallbackWelcomeEmail(candidateName, position, startDate);
+  let emailSubject = `Welcome to The Media Optimizers, ${candidateName}! 🎉`;
+  let emailHtml = buildFallbackWelcomeEmail(candidateName, position, startDate);
 
-    try {
-      const templates = await db
+  try {
+    const templates = await db
+      .select()
+      .from(emailTemplates)
+      .where(ilike(emailTemplates.name, "%welcome%"))
+      .limit(5);
+
+    const activeTemplate = templates.find((t: any) => t.content && t.subject);
+    if (!activeTemplate) {
+      const onboardingTemplates = await db
         .select()
         .from(emailTemplates)
-        .where(ilike(emailTemplates.name, "%welcome%"))
+        .where(ilike(emailTemplates.name, "%onboarding%"))
         .limit(5);
-
-      const activeTemplate = templates.find((t: any) => t.content && t.subject);
-      if (!activeTemplate) {
-        const onboardingTemplates = await db
-          .select()
-          .from(emailTemplates)
-          .where(ilike(emailTemplates.name, "%onboarding%"))
-          .limit(5);
-        const fallbackTemplate = onboardingTemplates.find((t: any) => t.content && t.subject);
-        if (fallbackTemplate) {
-          emailSubject = renderTemplate(fallbackTemplate.subject, candidateName, position, startDate);
-          emailHtml = renderTemplate(fallbackTemplate.content, candidateName, position, startDate);
-        }
-      } else {
-        emailSubject = renderTemplate(activeTemplate.subject, candidateName, position, startDate);
-        emailHtml = renderTemplate(activeTemplate.content, candidateName, position, startDate);
+      const fallbackTemplate = onboardingTemplates.find((t: any) => t.content && t.subject);
+      if (fallbackTemplate) {
+        emailSubject = renderTemplate(fallbackTemplate.subject, candidateName, position, startDate);
+        emailHtml = renderTemplate(fallbackTemplate.content, candidateName, position, startDate);
       }
-    } catch (err) {
-      console.error("[HiredNotif] Error fetching email template:", err);
+    } else {
+      emailSubject = renderTemplate(activeTemplate.subject, candidateName, position, startDate);
+      emailHtml = renderTemplate(activeTemplate.content, candidateName, position, startDate);
     }
+  } catch (err) {
+    console.error("[HiredNotif] Error fetching email template:", err);
+  }
 
-    const notificationService = getNotificationService();
-    if (notificationService && recipientEmail) {
-      try {
-        await notificationService.sendDirectEmail({
-          to: recipientEmail,
-          subject: emailSubject,
-          text: emailSubject,
-          html: emailHtml,
+  return {
+    recipientEmail,
+    subject: emailSubject,
+    htmlContent: emailHtml,
+    candidateName,
+    position,
+    startDate,
+    usedPersonalFallback,
+  };
+}
+
+export async function sendHiredNotifications(
+  applicationId: string,
+  changedBy: string,
+  emailOptions?: HiredEmailOptions
+): Promise<void> {
+  try {
+    const preview = await getWelcomeEmailPreview(applicationId);
+    const { recipientEmail, candidateName, position, startDate, usedPersonalFallback } = preview;
+
+    const emailSubject = emailOptions?.customSubject || preview.subject;
+    const emailHtml = emailOptions?.customHtml || preview.htmlContent;
+
+    if (emailOptions?.sendOption === "scheduled" && emailOptions.scheduledFor) {
+      if (!recipientEmail) {
+        console.error("[HiredNotif] Cannot schedule email: no recipient email found");
+        return;
+      }
+      const scheduledDate = new Date(emailOptions.scheduledFor);
+      if (isNaN(scheduledDate.getTime()) || scheduledDate <= new Date()) {
+        console.error("[HiredNotif] Cannot schedule email: invalid or past date");
+        return;
+      }
+      await db.insert(scheduledHiredEmails).values({
+        applicationId,
+        toEmail: recipientEmail,
+        subject: emailSubject,
+        htmlContent: emailHtml,
+        scheduledFor: new Date(emailOptions.scheduledFor),
+        timezone: emailOptions.timezone || "America/New_York",
+        status: "pending",
+        createdBy: changedBy,
+        candidateName,
+        positionTitle: position,
+      });
+      console.log(`[HiredNotif] Welcome email scheduled for ${emailOptions.scheduledFor} to ${recipientEmail}`);
+
+      const notificationService = getNotificationService();
+      if (notificationService && changedBy) {
+        const scheduledDate = new Date(emailOptions.scheduledFor).toLocaleDateString("en-US", {
+          year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit",
         });
-        console.log(`[HiredNotif] Welcome email sent to ${recipientEmail}`);
-      } catch (err) {
-        console.error("[HiredNotif] Failed to send welcome email:", err);
+        void notificationService
+          .notify({
+            userId: changedBy,
+            type: "applicant_hired",
+            title: `${candidateName} has been marked as Hired`,
+            message: `You have successfully hired ${candidateName} for the ${position} role. A welcome email has been scheduled to send on ${scheduledDate} to ${recipientEmail}.`,
+            entityType: "job_application",
+            entityId: applicationId,
+            actionUrl: `/applicants/${applicationId}`,
+            actionText: "View Application",
+            priority: "normal",
+            metadata: { position, startDate },
+          })
+          .catch((err) =>
+            console.error("[HiredNotif] Failed to send manager notification:", err)
+          );
       }
-    }
-
-    if (notificationService && changedBy) {
-      let managerMessage = `You have successfully hired ${candidateName} for the ${position} role. A welcome email has been sent to ${recipientEmail}. Their AgencyBoost onboarding checklist will be ready on their start date of ${startDate}.`;
-      if (usedPersonalFallback && candidateEmail) {
-        managerMessage += ` Note: The welcome email was sent to their personal email (${candidateEmail}) because no matching AgencyBoost staff account was found. Please ensure their staff account is created with their work email.`;
+    } else {
+      const notificationService = getNotificationService();
+      if (notificationService && recipientEmail) {
+        try {
+          await notificationService.sendDirectEmail({
+            to: recipientEmail,
+            subject: emailSubject,
+            text: emailSubject,
+            html: emailHtml,
+          });
+          console.log(`[HiredNotif] Welcome email sent to ${recipientEmail}`);
+        } catch (err) {
+          console.error("[HiredNotif] Failed to send welcome email:", err);
+        }
       }
 
-      void notificationService
-        .notify({
-          userId: changedBy,
-          type: "applicant_hired",
-          title: `${candidateName} has been marked as Hired`,
-          message: managerMessage,
-          entityType: "job_application",
-          entityId: applicationId,
-          actionUrl: `/applicants/${applicationId}`,
-          actionText: "View Application",
-          priority: "normal",
-          metadata: { position, startDate },
-        })
-        .catch((err) =>
-          console.error("[HiredNotif] Failed to send manager notification:", err)
-        );
+      if (notificationService && changedBy) {
+        let managerMessage = `You have successfully hired ${candidateName} for the ${position} role. A welcome email has been sent to ${recipientEmail}. Their AgencyBoost onboarding checklist will be ready on their start date of ${startDate}.`;
+        if (usedPersonalFallback && preview.recipientEmail) {
+          managerMessage += ` Note: The welcome email was sent to their personal email (${preview.recipientEmail}) because no matching AgencyBoost staff account was found. Please ensure their staff account is created with their work email.`;
+        }
+
+        void notificationService
+          .notify({
+            userId: changedBy,
+            type: "applicant_hired",
+            title: `${candidateName} has been marked as Hired`,
+            message: managerMessage,
+            entityType: "job_application",
+            entityId: applicationId,
+            actionUrl: `/applicants/${applicationId}`,
+            actionText: "View Application",
+            priority: "normal",
+            metadata: { position, startDate },
+          })
+          .catch((err) =>
+            console.error("[HiredNotif] Failed to send manager notification:", err)
+          );
+      }
     }
 
     void emitTrigger({
@@ -154,6 +236,70 @@ export async function sendHiredNotifications(
   } catch (error) {
     console.error("[HiredNotif] Unhandled error in sendHiredNotifications:", error);
   }
+}
+
+export async function processScheduledHiredEmails(): Promise<void> {
+  try {
+    const now = new Date();
+    const claimedEmails = await db
+      .update(scheduledHiredEmails)
+      .set({ status: "processing" })
+      .where(
+        and(
+          eq(scheduledHiredEmails.status, "pending"),
+          lte(scheduledHiredEmails.scheduledFor, now)
+        )
+      )
+      .returning();
+
+    if (claimedEmails.length === 0) return;
+
+    const notificationService = getNotificationService();
+    if (!notificationService) {
+      console.warn("[ScheduledEmail] No notification service available, reverting to pending");
+      for (const email of claimedEmails) {
+        await db.update(scheduledHiredEmails).set({ status: "pending" }).where(eq(scheduledHiredEmails.id, email.id));
+      }
+      return;
+    }
+
+    for (const email of claimedEmails) {
+      try {
+        await notificationService.sendDirectEmail({
+          to: email.toEmail,
+          subject: email.subject,
+          text: email.subject,
+          html: email.htmlContent,
+        });
+
+        await db
+          .update(scheduledHiredEmails)
+          .set({ status: "sent", sentAt: new Date() })
+          .where(eq(scheduledHiredEmails.id, email.id));
+
+        console.log(`[ScheduledEmail] Sent scheduled welcome email to ${email.toEmail} (ID: ${email.id})`);
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        await db
+          .update(scheduledHiredEmails)
+          .set({ status: "failed", failureReason: errorMsg })
+          .where(eq(scheduledHiredEmails.id, email.id));
+
+        console.error(`[ScheduledEmail] Failed to send email ${email.id}:`, err);
+      }
+    }
+  } catch (error) {
+    console.error("[ScheduledEmail] Error processing scheduled emails:", error);
+  }
+}
+
+export function startScheduledEmailProcessor(): NodeJS.Timeout {
+  console.log("[ScheduledEmail] Starting scheduled email processor (60s interval)");
+  return setInterval(() => {
+    processScheduledHiredEmails().catch((err) =>
+      console.error("[ScheduledEmail] Processor error:", err)
+    );
+  }, 60_000);
 }
 
 function renderTemplate(

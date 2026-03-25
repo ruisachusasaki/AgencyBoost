@@ -2258,6 +2258,33 @@ async function ensurePxMeetingsObjectivesColumn() {
   }
 }
 
+async function ensureScheduledHiredEmailsTable() {
+  try {
+    log("Running startup migration: ensureScheduledHiredEmailsTable");
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS scheduled_hired_emails (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        application_id varchar NOT NULL REFERENCES job_applications(id),
+        to_email text NOT NULL,
+        subject text NOT NULL,
+        html_content text NOT NULL,
+        scheduled_for timestamp NOT NULL,
+        timezone text NOT NULL DEFAULT 'America/New_York',
+        status text NOT NULL DEFAULT 'pending',
+        sent_at timestamp,
+        failure_reason text,
+        created_by varchar,
+        candidate_name text,
+        position_title text,
+        created_at timestamp DEFAULT now()
+      );
+    `);
+    log("Scheduled hired emails table ensured");
+  } catch (error: any) {
+    log(`Scheduled hired emails migration error: ${error.message}`);
+  }
+}
+
 async function runStartupMigrations() {
   log("Starting background migrations...");
   try {
@@ -2284,6 +2311,7 @@ async function runStartupMigrations() {
     await seedIntakeDescriptionTemplates();
     await ensureTaskCommentsClientPortalColumn();
     await ensurePxMeetingsObjectivesColumn();
+    await ensureScheduledHiredEmailsTable();
     log("✅ All startup migrations completed successfully");
   } catch (error) {
     log(`⚠️ Startup migrations encountered an error: ${error}`);
@@ -2314,6 +2342,10 @@ async function setupFullApp(server: any) {
     } else {
       serveStatic(app);
     }
+
+    const { startScheduledEmailProcessor } = await import("./services/hiredNotificationService");
+    startScheduledEmailProcessor();
+    log("✅ Scheduled email processor started");
 
     appFullyLoaded = true;
     log("✅ All routes and middleware configured");

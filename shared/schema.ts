@@ -753,6 +753,24 @@ export const scheduledEmails = pgTable("scheduled_emails", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Scheduled Hired Welcome Emails
+export const scheduledHiredEmails = pgTable("scheduled_hired_emails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  applicationId: varchar("application_id").notNull().references(() => jobApplications.id),
+  toEmail: text("to_email").notNull(),
+  subject: text("subject").notNull(),
+  htmlContent: text("html_content").notNull(),
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  timezone: text("timezone").notNull().default("America/New_York"),
+  status: text("status").notNull().default("pending"),
+  sentAt: timestamp("sent_at"),
+  failureReason: text("failure_reason"),
+  createdBy: varchar("created_by"),
+  candidateName: text("candidate_name"),
+  positionTitle: text("position_title"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Lead Pipeline Stages - Customizable stages for lead management
 export const leadPipelineStages = pgTable("lead_pipeline_stages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
