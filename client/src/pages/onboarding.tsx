@@ -464,14 +464,14 @@ export default function OnboardingPage() {
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {formField.value
-                        ? format(new Date(formField.value), "MMM d, yyyy")
+                        ? format(new Date(formField.value + "T00:00:00"), "MMM d, yyyy")
                         : field.placeholder || "Select a date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
-                      selected={formField.value ? new Date(formField.value) : undefined}
+                      selected={formField.value ? new Date(formField.value + "T00:00:00") : undefined}
                       onSelect={(date) => {
                         formField.onChange(date ? format(date, "yyyy-MM-dd") : "");
                       }}
