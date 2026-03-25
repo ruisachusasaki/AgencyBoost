@@ -367,7 +367,7 @@ export default function StaffDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/staff", id] });
+      queryClient.invalidateQueries({ queryKey: [`/api/staff/${id}`] });
       setIsEditing(false);
       toast({
         title: "Success",
