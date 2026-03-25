@@ -1347,7 +1347,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                       {editFormData.meetingDate ? format(meetingDateValue, "PPP") : "Select date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()} style={{ pointerEvents: "auto" }}>
                     <Calendar
                       mode="single"
                       selected={meetingDateValue}
@@ -2554,7 +2554,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                       {format(formData.meetingDate, "PPP")}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()} style={{ pointerEvents: "auto" }}>
                     <Calendar
                       mode="single"
                       selected={formData.meetingDate}
@@ -2673,7 +2673,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                             {formData.recurringEndDate ? format(formData.recurringEndDate, "MMM d, yyyy") : "Select end date..."}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
+                        <PopoverContent className="w-auto p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()} style={{ pointerEvents: "auto" }}>
                           <Calendar
                             mode="single"
                             selected={formData.recurringEndDate || undefined}

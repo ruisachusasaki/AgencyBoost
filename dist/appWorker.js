@@ -56841,7 +56841,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
           const [article] = await db.select({ title: knowledgeBaseArticles.title, slug: knowledgeBaseArticles.slug }).from(knowledgeBaseArticles).where(eq20(knowledgeBaseArticles.id, String(item.referenceId)));
           if (article) {
             referenceTitle = article.title;
-            referenceUrl = `/knowledge-base/${article.slug}`;
+            referenceUrl = `/resources/articles/${item.referenceId}`;
           }
         } else if (item.itemType === "training_course" && item.referenceId) {
           const [course] = await db.select({ title: trainingCourses.title }).from(trainingCourses).where(eq20(trainingCourses.id, String(item.referenceId)));
@@ -57125,7 +57125,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
             const [article] = await db.select({ title: knowledgeBaseArticles.title, slug: knowledgeBaseArticles.slug }).from(knowledgeBaseArticles).where(eq20(knowledgeBaseArticles.id, String(item.referenceId)));
             if (article) {
               referenceTitle = article.title;
-              referenceUrl = `/knowledge-base/${article.slug}`;
+              referenceUrl = `/resources/articles/${item.referenceId}`;
             }
           } else if (item.itemType === "training_course" && item.referenceId) {
             const [course] = await db.select({ title: trainingCourses.title }).from(trainingCourses).where(eq20(trainingCourses.id, String(item.referenceId)));
@@ -57154,7 +57154,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
           const [article] = await db.select({ title: knowledgeBaseArticles.title, slug: knowledgeBaseArticles.slug }).from(knowledgeBaseArticles).where(eq20(knowledgeBaseArticles.id, String(item.referenceId)));
           if (article) {
             referenceTitle = article.title;
-            referenceUrl = `/knowledge-base/${article.slug}`;
+            referenceUrl = `/resources/articles/${item.referenceId}`;
           }
         } else if (item.itemType === "training_course" && item.referenceId) {
           const [course] = await db.select({ title: trainingCourses.title }).from(trainingCourses).where(eq20(trainingCourses.id, String(item.referenceId)));

@@ -43322,7 +43322,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             .where(eq(knowledgeBaseArticles.id, String(item.referenceId)));
           if (article) {
             referenceTitle = article.title;
-            referenceUrl = `/knowledge-base/${article.slug}`;
+            referenceUrl = `/resources/articles/${item.referenceId}`;
           }
         } else if (item.itemType === "training_course" && item.referenceId) {
           const [course] = await db.select({ title: trainingCourses.title })
@@ -43727,7 +43727,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
               .where(eq(knowledgeBaseArticles.id, String(item.referenceId)));
             if (article) {
               referenceTitle = article.title;
-              referenceUrl = `/knowledge-base/${article.slug}`;
+              referenceUrl = `/resources/articles/${item.referenceId}`;
             }
           } else if (item.itemType === "training_course" && item.referenceId) {
             const [course] = await db.select({ title: trainingCourses.title })
@@ -43766,7 +43766,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             .where(eq(knowledgeBaseArticles.id, String(item.referenceId)));
           if (article) {
             referenceTitle = article.title;
-            referenceUrl = `/knowledge-base/${article.slug}`;
+            referenceUrl = `/resources/articles/${item.referenceId}`;
           }
         } else if (item.itemType === "training_course" && item.referenceId) {
           const [course] = await db.select({ title: trainingCourses.title })
