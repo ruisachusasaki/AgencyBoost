@@ -3735,7 +3735,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
       )}
 
       {activeTab === "one-on-one" && canViewOneOnOne && (
-        <OneOnOneMeetings />
+        <OneOnOneMeetings meetingId={activeMeetingId} />
       )}
 
       {activeTab === "px-meetings" && canViewPxMeetings && (

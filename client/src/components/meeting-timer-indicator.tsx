@@ -23,7 +23,7 @@ export default function MeetingTimerIndicator() {
     if (activeMeeting.type === 'px') {
       setLocation(`/hr/px-meetings/${activeMeeting.id}`);
     } else {
-      setLocation(`/hr?tab=one-on-one&meetingId=${activeMeeting.id}`);
+      setLocation(`/hr/one-on-one?meetingId=${activeMeeting.id}`);
     }
   };
 

@@ -189,12 +189,13 @@ const GOAL_STATUS_OPTIONS = [
   { value: "complete", label: "Complete", color: "bg-green-700 text-white" },
 ];
 
-export default function OneOnOneMeetings() {
+export default function OneOnOneMeetings({ meetingId }: { meetingId?: string } = {}) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"my-direct-reports" | "my-meetings">("my-direct-reports");
   const [selectedReport, setSelectedReport] = useState<DirectReport | null>(null);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [deepLinkProcessed, setDeepLinkProcessed] = useState(false);
   const [isCreatingMeeting, setIsCreatingMeeting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const meetingsPerPage = 10;
@@ -258,6 +259,20 @@ export default function OneOnOneMeetings() {
     },
     enabled: !!selectedMeeting,
   });
+
+  useEffect(() => {
+    if (meetingId && !deepLinkProcessed) {
+      fetch(`/api/hr/one-on-one/meetings/${meetingId}/details`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data?.meeting) {
+            setSelectedMeeting(data.meeting);
+            setDeepLinkProcessed(true);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [meetingId, deepLinkProcessed]);
 
   // Mutation to create a new meeting with mandatory date/time
   const createMeetingMutation = useMutation({
