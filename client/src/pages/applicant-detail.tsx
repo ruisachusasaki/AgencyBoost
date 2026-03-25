@@ -12,6 +12,9 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
@@ -1016,12 +1019,34 @@ export default function ApplicantDetailPage() {
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div className="space-y-1">
                       <Label className="text-xs">Date</Label>
-                      <Input
-                        type="date"
-                        value={hiredScheduleDate}
-                        onChange={(e) => setHiredScheduleDate(e.target.value)}
-                        min={new Date().toISOString().split("T")[0]}
-                      />
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={cn(
+                              "w-full h-9 px-3 text-left font-normal justify-start",
+                              !hiredScheduleDate && "text-muted-foreground"
+                            )}
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {hiredScheduleDate
+                              ? format(new Date(hiredScheduleDate + "T00:00:00"), "MMM d, yyyy")
+                              : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 z-[9999]" onOpenAutoFocus={(e) => e.preventDefault()} style={{ pointerEvents: "auto" }}>
+                          <CalendarPicker
+                            mode="single"
+                            selected={hiredScheduleDate ? new Date(hiredScheduleDate + "T00:00:00") : undefined}
+                            onSelect={(date) => {
+                              setHiredScheduleDate(date ? format(date, "yyyy-MM-dd") : "");
+                            }}
+                            disabled={(date) => date < new Date(new Date().toDateString())}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Time</Label>
