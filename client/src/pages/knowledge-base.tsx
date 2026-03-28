@@ -1101,11 +1101,9 @@ export default function KnowledgeBase() {
                 {category.icon ? renderIcon(category.icon, "w-4 h-4") : <Folder className="w-4 h-4" />}
                 {category.name}
               </span>
-              {category.articleCount && (
-                <Badge variant="secondary" className="text-xs">
-                  {category.articleCount}
-                </Badge>
-              )}
+              <Badge variant="secondary" className="text-xs">
+                {category.articleCount ?? 0}
+              </Badge>
             </div>
           </button>
           
