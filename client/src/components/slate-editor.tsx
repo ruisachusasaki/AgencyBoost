@@ -1740,16 +1740,42 @@ const TableBlock = ({ attributes, children, element }: any) => {
     });
   };
   
+  const removeRow = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rowCount = element.children?.length || 0;
+    if (rowCount <= 1) return;
+    const path = ReactEditor.findPath(editor, element);
+    Transforms.removeNodes(editor, { at: [...path, rowCount - 1] });
+  };
+
+  const removeColumn = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const columnCount = element.children[0]?.children?.length || 0;
+    if (columnCount <= 1) return;
+    const path = ReactEditor.findPath(editor, element);
+    for (let rowIndex = element.children.length - 1; rowIndex >= 0; rowIndex--) {
+      const cellCount = element.children[rowIndex]?.children?.length || 0;
+      if (cellCount > 1) {
+        Transforms.removeNodes(editor, { at: [...path, rowIndex, cellCount - 1] });
+      }
+    }
+  };
+
   const deleteTable = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const path = ReactEditor.findPath(editor, element);
     Transforms.removeNodes(editor, { at: path });
   };
+
+  const rowCount = element.children?.length || 0;
+  const columnCount = element.children[0]?.children?.length || 0;
   
   return (
     <div {...attributes} className="table-block my-4">
-      <div contentEditable={false} className="flex items-center gap-2 mb-2">
+      <div contentEditable={false} className="flex items-center gap-2 mb-2 flex-wrap">
         <button
           onMouseDown={addRow}
           className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
@@ -1757,10 +1783,24 @@ const TableBlock = ({ attributes, children, element }: any) => {
           <Plus className="h-3 w-3" /> Row
         </button>
         <button
+          onMouseDown={removeRow}
+          disabled={rowCount <= 1}
+          className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <Minus className="h-3 w-3" /> Row
+        </button>
+        <button
           onMouseDown={addColumn}
           className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
         >
           <Plus className="h-3 w-3" /> Column
+        </button>
+        <button
+          onMouseDown={removeColumn}
+          disabled={columnCount <= 1}
+          className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <Minus className="h-3 w-3" /> Column
         </button>
         <button
           onMouseDown={deleteTable}
