@@ -1001,7 +1001,6 @@ export default function ArticleView() {
                         style={{ paddingLeft: `${(cat.level * 16) + 32}px` }}
                       >
                         {cat.level > 0 && <span className="text-muted-foreground mr-1">└</span>}
-                        {cat.icon && <span className="mr-1">{cat.icon}</span>}
                         {cat.name}
                       </DropdownMenuItem>
                     ))}
