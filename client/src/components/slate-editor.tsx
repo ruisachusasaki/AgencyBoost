@@ -601,6 +601,19 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
             }
           }
           
+          // Handle Enter inside code-block — insert a newline character within the same block
+          if (node.text !== undefined) {
+            const codeAncestors = Array.from(Editor.nodes(editor, {
+              at: selection,
+              match: n => SlateElement.isElement(n) && n.type === 'code-block',
+            }));
+            if (codeAncestors.length > 0) {
+              event.preventDefault();
+              Editor.insertText(editor, '\n');
+              return;
+            }
+          }
+
           // Handle Enter inside banner/callout containers — insert new paragraph within the container
           if (node.text !== undefined) {
             const ancestors = Array.from(Editor.nodes(editor, {
