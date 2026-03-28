@@ -601,6 +601,19 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
             }
           }
           
+          // Handle Enter inside banner/callout containers — insert new paragraph within the container
+          if (node.text !== undefined) {
+            const ancestors = Array.from(Editor.nodes(editor, {
+              at: selection,
+              match: n => SlateElement.isElement(n) && (n.type === 'banner' || n.type === 'callout'),
+            }));
+            if (ancestors.length > 0) {
+              event.preventDefault();
+              Transforms.splitNodes(editor, { always: true });
+              return;
+            }
+          }
+
           // Handle void elements (embeds, images, dividers)
           if (SlateElement.isElement(node) && ['embed', 'image', 'divider'].includes(node.type)) {
             event.preventDefault();
