@@ -132,9 +132,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                   Solutions
                   <ChevronDown className={`w-4 h-4 transition-transform ${megaMenuOpen ? "rotate-180" : ""}`} />
                 </button>
-                <Link href="/careers">
+                <Link href="/pricing">
                   <span className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 rounded-md hover:bg-gray-50 transition-colors cursor-pointer">
-                    Careers
+                    Pricing
                   </span>
                 </Link>
               </div>
@@ -180,8 +180,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 </div>
               ))}
               <div className="border-t border-gray-100 pt-4">
-                <Link href="/careers">
-                  <span className="block px-2 py-2 text-sm font-medium text-gray-700 cursor-pointer">Careers</span>
+                <Link href="/pricing">
+                  <span className="block px-2 py-2 text-sm font-medium text-gray-700 cursor-pointer">Pricing</span>
                 </Link>
                 <Link href="/login">
                   <Button size="sm" className="w-full mt-2 text-white font-semibold" style={{ backgroundColor: "hsl(179, 100%, 39%)" }}>

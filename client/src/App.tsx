@@ -96,6 +96,13 @@ import LeadsSolutionPage from "@/pages/solutions/leads";
 import TasksSolutionPage from "@/pages/solutions/tasks";
 import TicketsSolutionPage from "@/pages/solutions/tickets";
 import HrSolutionPage from "@/pages/solutions/hr";
+import {
+  ClientPortalSolution, OnboardingSolution, InvoicingSolution,
+  ProposalsSolution, CampaignsSolution, SocialMediaSolution,
+  WorkflowsSolution, CalendarSolution, HiringSolution,
+  TrainingSolution, KnowledgeBaseSolution, CallCenterSolution,
+} from "@/pages/solutions/index";
+import PricingPage from "@/pages/pricing";
 import { AIAssistantWidget } from "@/components/ai-assistant-widget";
 import { VoipProvider } from "@/hooks/use-voip";
 import { ActiveCallPanel } from "@/components/voip";
@@ -130,11 +137,24 @@ function Router() {
       <Route path="/proposal/:token" component={PublicProposal} />
       <Route path="/sign-offer/:token" component={SignOfferPage} />
       <Route path="/careers" component={CareersPage} />
+      <Route path="/pricing" component={PricingPage} />
       <Route path="/solutions/crm" component={CrmSolutionPage} />
       <Route path="/solutions/leads" component={LeadsSolutionPage} />
       <Route path="/solutions/tasks" component={TasksSolutionPage} />
       <Route path="/solutions/tickets" component={TicketsSolutionPage} />
       <Route path="/solutions/hr" component={HrSolutionPage} />
+      <Route path="/solutions/client-portal" component={ClientPortalSolution} />
+      <Route path="/solutions/onboarding" component={OnboardingSolution} />
+      <Route path="/solutions/invoicing" component={InvoicingSolution} />
+      <Route path="/solutions/proposals" component={ProposalsSolution} />
+      <Route path="/solutions/campaigns" component={CampaignsSolution} />
+      <Route path="/solutions/social-media" component={SocialMediaSolution} />
+      <Route path="/solutions/workflows" component={WorkflowsSolution} />
+      <Route path="/solutions/calendar" component={CalendarSolution} />
+      <Route path="/solutions/hiring" component={HiringSolution} />
+      <Route path="/solutions/training" component={TrainingSolution} />
+      <Route path="/solutions/knowledge-base" component={KnowledgeBaseSolution} />
+      <Route path="/solutions/call-center" component={CallCenterSolution} />
       <Route path="/onboarding" component={OnboardingPage} />
       <Route path="/client-onboarding/:token" component={ClientOnboarding} />
       <Route path="/s/:shortCode">
