@@ -203,8 +203,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
 
       <footer className="py-12 px-4 sm:px-6 lg:px-8 bg-gray-900 text-gray-400">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-12">
-            <div className="col-span-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-8 mb-12">
+            <div className="col-span-2 sm:col-span-3 lg:col-span-2">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-7 h-7 rounded-md flex items-center justify-center" style={{ backgroundColor: "hsl(179, 100%, 39%)" }}>
                   <Rocket className="w-4 h-4 text-white" />
@@ -215,7 +215,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 The all-in-one CRM and operations platform built specifically for marketing agencies.
               </p>
             </div>
-            {solutionCategories.slice(0, 4).map((category) => (
+            {solutionCategories.map((category) => (
               <div key={category.title}>
                 <h4 className="text-xs font-semibold text-gray-300 uppercase tracking-wider mb-3">{category.title}</h4>
                 <ul className="space-y-2">
