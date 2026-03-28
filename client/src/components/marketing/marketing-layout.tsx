@@ -62,14 +62,23 @@ function MegaMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void })
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     }
-    if (isOpen) document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClick);
+      document.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   return (
-    <div ref={ref} className="absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-xl z-50">
+    <div ref={ref} role="menu" aria-label="Solutions menu" className="absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-xl z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {solutionCategories.map((category) => (
@@ -124,6 +133,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               <div className="hidden md:flex items-center gap-1">
                 <button
                   onClick={() => setMegaMenuOpen(!megaMenuOpen)}
+                  aria-expanded={megaMenuOpen}
+                  aria-haspopup="true"
                   className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 rounded-md hover:bg-gray-50 transition-colors"
                 >
                   Solutions
