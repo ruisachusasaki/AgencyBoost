@@ -948,7 +948,7 @@ export default function ArticleView() {
                     <MoreHorizontal className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent align="end" className="w-72 max-h-[80vh] overflow-y-auto">
                   {/* Change Status Sub-menu */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
