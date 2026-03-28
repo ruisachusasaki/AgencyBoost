@@ -991,7 +991,7 @@ export default function ArticleView() {
                     <ArrowRight className="w-4 h-4 mr-2" />
                     Move To Folder
                   </DropdownMenuItem>
-                  <ScrollArea className="max-h-[300px]">
+                  <div className="max-h-[250px] overflow-y-auto">
                     {categoryTree.map((cat: any) => (
                       <DropdownMenuItem 
                         key={cat.id}
@@ -1005,7 +1005,7 @@ export default function ArticleView() {
                         {cat.name}
                       </DropdownMenuItem>
                     ))}
-                  </ScrollArea>
+                  </div>
                   
                   <DropdownMenuSeparator />
                   
@@ -1021,7 +1021,7 @@ export default function ArticleView() {
                   >
                     Top Level (No Parent)
                   </DropdownMenuItem>
-                  <ScrollArea className="max-h-[200px]">
+                  <div className="max-h-[200px] overflow-y-auto">
                     {(allArticles as any[])
                       .filter((a: any) => a.id !== id && a.categoryId === (article as any)?.categoryId)
                       .map((potentialParent: any) => (
@@ -1035,7 +1035,7 @@ export default function ArticleView() {
                         </DropdownMenuItem>
                       ))
                     }
-                  </ScrollArea>
+                  </div>
                   
                   <DropdownMenuSeparator />
                   
