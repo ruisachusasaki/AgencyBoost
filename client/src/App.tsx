@@ -91,6 +91,11 @@ import SignOfferPage from "@/pages/sign-offer";
 import TicketsPage from "@/pages/tickets";
 import TicketDetailPage from "@/pages/ticket-detail";
 import CallCenter from "@/pages/call-center";
+import CrmSolutionPage from "@/pages/solutions/crm";
+import LeadsSolutionPage from "@/pages/solutions/leads";
+import TasksSolutionPage from "@/pages/solutions/tasks";
+import TicketsSolutionPage from "@/pages/solutions/tickets";
+import HrSolutionPage from "@/pages/solutions/hr";
 import { AIAssistantWidget } from "@/components/ai-assistant-widget";
 import { VoipProvider } from "@/hooks/use-voip";
 import { ActiveCallPanel } from "@/components/voip";
@@ -125,6 +130,11 @@ function Router() {
       <Route path="/proposal/:token" component={PublicProposal} />
       <Route path="/sign-offer/:token" component={SignOfferPage} />
       <Route path="/careers" component={CareersPage} />
+      <Route path="/solutions/crm" component={CrmSolutionPage} />
+      <Route path="/solutions/leads" component={LeadsSolutionPage} />
+      <Route path="/solutions/tasks" component={TasksSolutionPage} />
+      <Route path="/solutions/tickets" component={TicketsSolutionPage} />
+      <Route path="/solutions/hr" component={HrSolutionPage} />
       <Route path="/onboarding" component={OnboardingPage} />
       <Route path="/client-onboarding/:token" component={ClientOnboarding} />
       <Route path="/s/:shortCode">

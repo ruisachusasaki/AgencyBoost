@@ -8,52 +8,62 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import MarketingLayout from "@/components/marketing/marketing-layout";
 
 const features = [
   {
     icon: Users,
     title: "Client Management",
-    description: "Centralize client data, track interactions, and manage relationships from one dashboard."
+    description: "Centralize client data, track interactions, and manage relationships from one dashboard.",
+    href: "/solutions/crm"
   },
   {
     icon: Target,
     title: "Lead Tracking & Conversion",
-    description: "Capture leads, nurture them through your pipeline, and convert them into paying clients seamlessly."
+    description: "Capture leads, nurture them through your pipeline, and convert them into paying clients seamlessly.",
+    href: "/solutions/leads"
   },
   {
     icon: ListChecks,
     title: "Task Automation",
-    description: "Auto-generate onboarding and recurring tasks when clients sign up. Never miss a deliverable."
+    description: "Auto-generate onboarding and recurring tasks when clients sign up. Never miss a deliverable.",
+    href: "/solutions/tasks"
   },
   {
     icon: BarChart3,
     title: "Sales & Quoting",
-    description: "Build quotes with products, bundles, and packages. Track your pipeline from proposal to close."
+    description: "Build quotes with products, bundles, and packages. Track your pipeline from proposal to close.",
+    href: "/solutions/proposals"
   },
   {
     icon: CalendarDays,
     title: "Calendar & Scheduling",
-    description: "Manage team calendars, book client meetings, and share public booking links."
+    description: "Manage team calendars, book client meetings, and share public booking links.",
+    href: "/solutions/calendar"
   },
   {
     icon: Clock,
     title: "Time Tracking",
-    description: "Track billable hours per task and client. Manual entry and live timers built in."
+    description: "Track billable hours per task and client. Manual entry and live timers built in.",
+    href: "/solutions/tasks"
   },
   {
     icon: Layers,
     title: "Workflow Builder",
-    description: "Create custom automation workflows to streamline your agency operations."
+    description: "Create custom automation workflows to streamline your agency operations.",
+    href: "/solutions/workflows"
   },
   {
     icon: TrendingUp,
     title: "Reports & Analytics",
-    description: "Real-time dashboards and reports to measure performance across every department."
+    description: "Real-time dashboards and reports to measure performance across every department.",
+    href: "/solutions/crm"
   },
   {
     icon: Shield,
     title: "Roles & Permissions",
-    description: "Granular access control so every team member sees only what they need."
+    description: "Granular access control so every team member sees only what they need.",
+    href: "/solutions/hr"
   }
 ];
 
@@ -193,28 +203,7 @@ function ContactSection() {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "hsl(179, 100%, 39%)" }}>
-                <Rocket className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900">AgencyBoost</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Link href="/login">
-                <Button size="sm" className="text-white font-semibold" style={{ backgroundColor: "#00C7C4" }}>
-                  Login
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
+    <MarketingLayout>
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
@@ -254,13 +243,15 @@ export default function LandingPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature) => (
-              <div key={feature.title} className="bg-white rounded-xl p-6 border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all duration-300">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: "hsla(179, 100%, 39%, 0.1)" }}>
-                  <feature.icon className="w-6 h-6" style={{ color: "hsl(179, 100%, 39%)" }} />
+              <Link key={feature.title} href={feature.href}>
+                <div className="bg-white rounded-xl p-6 border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all duration-300 cursor-pointer group h-full">
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: "hsla(179, 100%, 39%, 0.1)" }}>
+                    <feature.icon className="w-6 h-6" style={{ color: "hsl(179, 100%, 39%)" }} />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-[hsl(179,100%,39%)] transition-colors">{feature.title}</h3>
+                  <p className="text-gray-600 leading-relaxed">{feature.description}</p>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -300,35 +291,6 @@ export default function LandingPage() {
 
       {/* CTA Section with Contact Form */}
       <ContactSection />
-
-      {/* Footer */}
-      <footer className="py-12 px-4 sm:px-6 lg:px-8 bg-gray-900 text-gray-400">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-md flex items-center justify-center" style={{ backgroundColor: "hsl(179, 100%, 39%)" }}>
-                <Rocket className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-lg font-semibold text-white">AgencyBoost</span>
-            </div>
-            <div className="flex items-center gap-6 text-sm">
-              <Link href="/privacy">
-                <span className="hover:text-white cursor-pointer transition-colors">Privacy Policy</span>
-              </Link>
-              <Link href="/terms">
-                <span className="hover:text-white cursor-pointer transition-colors">Terms of Use</span>
-              </Link>
-              <Link href="/login">
-                <span className="hover:text-white cursor-pointer transition-colors">Login</span>
-              </Link>
-            </div>
-          </div>
-          <div className="mt-8 pt-8 border-t border-gray-800 text-center text-sm">
-            <p>&copy; {new Date().getFullYear()} Media Optimizers, LLC. All rights reserved.</p>
-            <p className="mt-1 text-gray-500">AgencyBoost is a product of Media Optimizers, LLC.</p>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </MarketingLayout>
   );
 }
