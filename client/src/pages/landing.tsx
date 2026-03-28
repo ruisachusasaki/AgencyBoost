@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { 
   ArrowRight, BarChart3, Users, Target, CheckCircle2, Zap, Shield, 
-  Clock, TrendingUp, Layers, CalendarDays, ListChecks, Rocket,
-  ChevronRight, Star, Send, Loader2
+  Clock, TrendingUp, Layers, CalendarDays, ListChecks,
+  ChevronRight, Send, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Rocket, ChevronDown, Users, Target, ListChecks, BarChart3,
-  CalendarDays, Layers, Headphones, BookOpen, GraduationCap,
+  CalendarDays, Layers, BookOpen, GraduationCap,
   UserPlus, Briefcase, ClipboardList, FileText, Globe, Mail,
-  Ticket, Phone, ArrowRight, Menu, X
+  Ticket, Phone, Menu, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -77,17 +77,14 @@ function MegaMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void })
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">{category.title}</h3>
               <div className="space-y-1">
                 {category.items.map((item) => (
-                  <Link key={item.href} href={item.href}>
-                    <button
-                      onClick={onClose}
-                      className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors w-full text-left group"
-                    >
+                  <Link key={item.href} href={item.href} onClick={onClose}>
+                    <span className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors w-full text-left group cursor-pointer">
                       <item.icon className="w-5 h-5 mt-0.5 text-gray-400 group-hover:text-[hsl(179,100%,39%)] transition-colors flex-shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900 group-hover:text-[hsl(179,100%,39%)] transition-colors">{item.title}</p>
-                        <p className="text-xs text-gray-500 leading-relaxed">{item.description}</p>
-                      </div>
-                    </button>
+                      <span>
+                        <span className="block text-sm font-medium text-gray-900 group-hover:text-[hsl(179,100%,39%)] transition-colors">{item.title}</span>
+                        <span className="block text-xs text-gray-500 leading-relaxed">{item.description}</span>
+                      </span>
+                    </span>
                   </Link>
                 ))}
               </div>
@@ -167,14 +164,11 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 <div key={category.title} className="space-y-1">
                   <p className="text-xs font-medium text-gray-500 pl-2">{category.title}</p>
                   {category.items.map((item) => (
-                    <Link key={item.href} href={item.href}>
-                      <button
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center gap-3 w-full px-2 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md"
-                      >
+                    <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}>
+                      <span className="flex items-center gap-3 w-full px-2 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md cursor-pointer">
                         <item.icon className="w-4 h-4 text-gray-400" />
                         {item.title}
-                      </button>
+                      </span>
                     </Link>
                   ))}
                 </div>
