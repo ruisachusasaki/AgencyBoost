@@ -26978,6 +26978,8 @@ AgencyBoost CRM`
                 syncUpdates.email = cfv[field.id];
               } else if (fieldNameLower === "phone" || fieldNameLower === "mobile") {
                 syncUpdates.phone = cfv[field.id];
+              } else if (fieldNameLower === "business name" || fieldNameLower === "company name" || fieldNameLower === "company") {
+                syncUpdates.company = cfv[field.id];
               } else if (fieldNameLower === "first name" || fieldNameLower === "firstname") {
                 const lastNameField = allCustomFields.find((f) => {
                   const n = f.name.toLowerCase();
