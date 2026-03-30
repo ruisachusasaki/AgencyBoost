@@ -65,6 +65,7 @@ export default function ArticleView() {
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [currentContent, setCurrentContent] = useState<Descendant[]>(createEmptyDocument());
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const articleIdRef = useRef<string | undefined>(id);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
 
@@ -500,12 +501,14 @@ export default function ArticleView() {
     },
   });
 
-  // Auto-save mutation
+  // Auto-save mutation — accepts articleId to prevent saving to the wrong article
   const autoSaveMutation = useMutation({
-    mutationFn: async ({ title, content }: { title: string; content: Descendant[] }) => {
-      // Strip leading empty elements before saving
+    mutationFn: async ({ articleId, title, content }: { articleId: string; title: string; content: Descendant[] }) => {
+      if (articleId !== articleIdRef.current) {
+        return null;
+      }
       const cleanedContent = stripLeadingEmptyElements(content);
-      const response = await apiRequest("PUT", `/api/knowledge-base/articles/${id}`, {
+      const response = await apiRequest("PUT", `/api/knowledge-base/articles/${articleId}`, {
         title,
         content: cleanedContent,
       });
@@ -514,12 +517,11 @@ export default function ArticleView() {
     onMutate: () => {
       setIsAutoSaving(true);
     },
-    onSuccess: (data) => {
-      // Don't update the editor content on auto-save success to avoid disrupting the user
-      // The content is already correct in the editor - just mark as saved
+    onSuccess: (data, variables) => {
       setIsAutoSaving(false);
-      // Invalidate queries in the background to keep other parts of the app in sync
-      queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${id}`] });
+      if (data) {
+        queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${variables.articleId}`] });
+      }
     },
     onError: (error: any) => {
       console.error("Auto-save error:", error);
@@ -718,23 +720,28 @@ export default function ArticleView() {
     reorderSubpagesMutation.mutate({ articleOrders, optimisticData: reorderedItems });
   }, [id, getChildArticles, reorderSubpagesMutation]);
 
-  // Debounced auto-save function
+  // Debounced auto-save function — captures articleId at trigger time
   const debouncedAutoSave = useCallback(
     (content: Descendant[], title?: string) => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
       }
 
+      const capturedArticleId = articleIdRef.current;
       autoSaveTimeoutRef.current = setTimeout(() => {
+        if (!capturedArticleId || capturedArticleId !== articleIdRef.current) {
+          return;
+        }
         const articleTitle = title || (article?.title as string) || "";
         const cleanedContent = normalizeContent(content);
         if (typeof articleTitle === 'string' && articleTitle.trim() && hasContent(cleanedContent)) {
           autoSaveMutation.mutate({
+            articleId: capturedArticleId,
             title: articleTitle,
             content: cleanedContent,
           });
         }
-      }, 1000); // 1 second delay
+      }, 1000);
     },
     [article?.title, autoSaveMutation]
   );
@@ -769,6 +776,17 @@ export default function ArticleView() {
       setEditTitle((article.title as string) || "");
     }
   }, [article]);
+
+  // Cancel pending auto-save and reset editing state when navigating between articles
+  useEffect(() => {
+    articleIdRef.current = id;
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+      autoSaveTimeoutRef.current = null;
+    }
+    setIsEditing(false);
+    setIsAutoSaving(false);
+  }, [id]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
