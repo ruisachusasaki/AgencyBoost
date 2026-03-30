@@ -50999,10 +50999,11 @@ ${appointment.description || ""}
   app2.post("/api/training/courses/:courseId/lessons", requireAuth(), requirePermission("training", "canCreate"), async (req, res) => {
     try {
       const { courseId } = req.params;
-      const { duration, ...lessonBody } = req.body;
+      const { duration, contentUrl, ...lessonBody } = req.body;
       const newLesson = insertTrainingLessonSchema.parse({
         ...lessonBody,
         courseId,
+        videoUrl: contentUrl || null,
         videoDuration: duration ? duration * 60 : null,
         // Convert minutes to seconds
         createdBy: getAuthenticatedUserIdOrFail(req, res) || userId
