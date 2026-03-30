@@ -35570,8 +35570,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   app.get("/api/training/analytics", requireAuth(), requireGranularPermission('training.view_analytics'), async (req, res) => {
     try {
       const { courseId, userId } = req.query;
-      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
       
       // Total courses and categories
       const [totalCourses] = await db.select({ count: sql<number>`count(*)` }).from(trainingCourses);

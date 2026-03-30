@@ -51226,8 +51226,8 @@ ${appointment.description || ""}
   app2.get("/api/training/analytics", requireAuth(), requireGranularPermission("training.view_analytics"), async (req, res) => {
     try {
       const { courseId, userId: userId2 } = req.query;
-      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      const currentUserId2 = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId2) return;
       const [totalCourses] = await db.select({ count: sql11`count(*)` }).from(trainingCourses);
       const [totalCategories] = await db.select({ count: sql11`count(*)` }).from(trainingCategories);
       const [totalEnrollments] = await db.select({ count: sql11`count(*)` }).from(trainingEnrollments);
@@ -51242,7 +51242,7 @@ ${appointment.description || ""}
         courseStatsQuery = courseStatsQuery.where(and18(
           or6(
             eq20(trainingCourses.isPublished, true),
-            eq20(trainingCourses.createdBy, currentUserId)
+            eq20(trainingCourses.createdBy, currentUserId2)
             // Show own unpublished courses
           ),
           eq20(trainingCourses.id, courseId)
@@ -51250,7 +51250,7 @@ ${appointment.description || ""}
       } else {
         courseStatsQuery = courseStatsQuery.where(or6(
           eq20(trainingCourses.isPublished, true),
-          eq20(trainingCourses.createdBy, currentUserId)
+          eq20(trainingCourses.createdBy, currentUserId2)
           // Show own unpublished courses
         ));
       }
