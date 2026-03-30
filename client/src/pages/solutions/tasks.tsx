@@ -2,6 +2,7 @@ import {
   ListChecks, Clock, Users, Layers, Tags, GitBranch,
 } from "lucide-react";
 import FeaturePageTemplate from "@/components/marketing/feature-page-template";
+import { TasksMockup } from "@/components/marketing/solution-mockups";
 
 export default function TasksSolutionPage() {
   return (
@@ -11,6 +12,7 @@ export default function TasksSolutionPage() {
       headline="Deliver every project"
       headlineAccent="on time, every time."
       subheadline="Organize, assign, and track every task across your agency. From client deliverables to internal projects, never miss a deadline again."
+      mockup={<TasksMockup />}
       highlights={[
         {
           icon: ListChecks,

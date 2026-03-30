@@ -2,6 +2,7 @@ import {
   ClipboardList, Zap, FileText, Users, CheckCircle2, CalendarDays,
 } from "lucide-react";
 import FeaturePageTemplate from "@/components/marketing/feature-page-template";
+import { ClientOnboardingMockup } from "@/components/marketing/solution-mockups";
 
 export default function ClientOnboardingSolutionPage() {
   return (
@@ -11,6 +12,7 @@ export default function ClientOnboardingSolutionPage() {
       headline="Onboard new clients"
       headlineAccent="in minutes, not days."
       subheadline="Automated onboarding workflows that collect client information, assign tasks, and kick off projects — so your team can start delivering immediately."
+      mockup={<ClientOnboardingMockup />}
       highlights={[
         {
           icon: ClipboardList,

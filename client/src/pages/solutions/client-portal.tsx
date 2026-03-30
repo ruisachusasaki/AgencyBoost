@@ -2,6 +2,7 @@ import {
   Globe, Shield, FileText, MessageSquare, BarChart3, Bell,
 } from "lucide-react";
 import FeaturePageTemplate from "@/components/marketing/feature-page-template";
+import { ClientPortalMockup } from "@/components/marketing/solution-mockups";
 
 export default function ClientPortalSolutionPage() {
   return (
@@ -11,6 +12,7 @@ export default function ClientPortalSolutionPage() {
       headline="Give clients their own"
       headlineAccent="self-service portal."
       subheadline="A branded client portal where your clients can view project status, approve deliverables, submit requests, and stay in the loop — without endless email threads."
+      mockup={<ClientPortalMockup />}
       highlights={[
         {
           icon: BarChart3,

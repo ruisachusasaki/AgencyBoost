@@ -2,6 +2,7 @@ import {
   UserPlus, FileText, Filter, MessageSquare, CheckCircle2, BarChart3,
 } from "lucide-react";
 import FeaturePageTemplate from "@/components/marketing/feature-page-template";
+import { HiringMockup } from "@/components/marketing/solution-mockups";
 
 export default function HiringSolutionPage() {
   return (
@@ -11,6 +12,7 @@ export default function HiringSolutionPage() {
       headline="Hire the best talent"
       headlineAccent="for your agency."
       subheadline="Post job openings, receive applications, track candidates through your hiring pipeline, and send offer letters — all within AgencyBoost."
+      mockup={<HiringMockup />}
       highlights={[
         {
           icon: FileText,

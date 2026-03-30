@@ -2,6 +2,7 @@ import {
   Target, Filter, TrendingUp, Users, CalendarDays, Zap,
 } from "lucide-react";
 import FeaturePageTemplate from "@/components/marketing/feature-page-template";
+import { LeadsMockup } from "@/components/marketing/solution-mockups";
 
 export default function LeadsSolutionPage() {
   return (
@@ -11,6 +12,7 @@ export default function LeadsSolutionPage() {
       headline="Turn prospects into"
       headlineAccent="paying clients."
       subheadline="Capture, score, and nurture leads through a visual pipeline. Know exactly where every deal stands and what to do next to close it."
+      mockup={<LeadsMockup />}
       highlights={[
         {
           icon: Filter,

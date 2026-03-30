@@ -2,6 +2,7 @@ import {
   GraduationCap, BookOpen, Video, BarChart3, CheckCircle2, Award,
 } from "lucide-react";
 import FeaturePageTemplate from "@/components/marketing/feature-page-template";
+import { TrainingMockup } from "@/components/marketing/solution-mockups";
 
 export default function TrainingSolutionPage() {
   return (
@@ -11,6 +12,7 @@ export default function TrainingSolutionPage() {
       headline="Train and develop"
       headlineAccent="your team."
       subheadline="Build courses, assign lessons, track completion, and ensure your team is always learning and growing with a built-in learning management system."
+      mockup={<TrainingMockup />}
       highlights={[
         {
           icon: BookOpen,

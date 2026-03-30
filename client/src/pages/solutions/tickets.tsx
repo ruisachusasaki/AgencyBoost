@@ -2,6 +2,7 @@ import {
   Ticket, Clock, Users, BarChart3, MessageSquare, Filter,
 } from "lucide-react";
 import FeaturePageTemplate from "@/components/marketing/feature-page-template";
+import { TicketsMockup } from "@/components/marketing/solution-mockups";
 
 export default function TicketsSolutionPage() {
   return (
@@ -11,6 +12,7 @@ export default function TicketsSolutionPage() {
       headline="Support that scales"
       headlineAccent="with your agency."
       subheadline="A full-featured ticketing system built right into your CRM. Track issues, measure response times, and keep clients happy — without another tool."
+      mockup={<TicketsMockup />}
       highlights={[
         {
           icon: Ticket,

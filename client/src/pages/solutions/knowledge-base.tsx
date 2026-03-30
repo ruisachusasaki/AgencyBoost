@@ -2,6 +2,7 @@ import {
   BookOpen, Search, FolderOpen, FileText, Users, Lock,
 } from "lucide-react";
 import FeaturePageTemplate from "@/components/marketing/feature-page-template";
+import { KnowledgeBaseMockup } from "@/components/marketing/solution-mockups";
 
 export default function KnowledgeBaseSolutionPage() {
   return (
@@ -11,6 +12,7 @@ export default function KnowledgeBaseSolutionPage() {
       headline="Your agency's knowledge,"
       headlineAccent="organized and searchable."
       subheadline="Build an internal knowledge base with articles, guides, and documentation. Keep your team aligned and informed with a single source of truth."
+      mockup={<KnowledgeBaseMockup />}
       highlights={[
         {
           icon: FileText,

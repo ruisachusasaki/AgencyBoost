@@ -2,6 +2,7 @@ import {
   Briefcase, UserPlus, CalendarDays, GraduationCap, ClipboardList, Users,
 } from "lucide-react";
 import FeaturePageTemplate from "@/components/marketing/feature-page-template";
+import { HRMockup } from "@/components/marketing/solution-mockups";
 
 export default function HrSolutionPage() {
   return (
@@ -11,6 +12,7 @@ export default function HrSolutionPage() {
       headline="Manage your team"
       headlineAccent="not just your clients."
       subheadline="A complete HR suite built for agencies. Hire, onboard, train, and manage your team — all within the same platform you use to run your business."
+      mockup={<HRMockup />}
       highlights={[
         {
           icon: Users,

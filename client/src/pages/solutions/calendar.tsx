@@ -2,6 +2,7 @@ import {
   CalendarDays, Users, Globe, Clock, Video, Bell,
 } from "lucide-react";
 import FeaturePageTemplate from "@/components/marketing/feature-page-template";
+import { CalendarMockup } from "@/components/marketing/solution-mockups";
 
 export default function CalendarSolutionPage() {
   return (
@@ -11,6 +12,7 @@ export default function CalendarSolutionPage() {
       headline="Your team's schedule,"
       headlineAccent="all in one place."
       subheadline="Manage team calendars, book client meetings, and share public booking links. Integrates with Google Calendar for seamless scheduling."
+      mockup={<CalendarMockup />}
       highlights={[
         {
           icon: CalendarDays,

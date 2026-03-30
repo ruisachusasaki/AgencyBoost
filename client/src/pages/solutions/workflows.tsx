@@ -2,6 +2,7 @@ import {
   Layers, Zap, GitBranch, Bell, Clock, Settings,
 } from "lucide-react";
 import FeaturePageTemplate from "@/components/marketing/feature-page-template";
+import { WorkflowsMockup } from "@/components/marketing/solution-mockups";
 
 export default function WorkflowsSolutionPage() {
   return (
@@ -11,6 +12,7 @@ export default function WorkflowsSolutionPage() {
       headline="Automate repetitive"
       headlineAccent="processes."
       subheadline="Build custom automation workflows that trigger actions, send notifications, and keep your agency running on autopilot."
+      mockup={<WorkflowsMockup />}
       highlights={[
         {
           icon: GitBranch,

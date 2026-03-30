@@ -2,6 +2,7 @@ import {
   Users, Database, MessageSquare, BarChart3, Globe, FileText,
 } from "lucide-react";
 import FeaturePageTemplate from "@/components/marketing/feature-page-template";
+import { CRMMockup } from "@/components/marketing/solution-mockups";
 
 export default function CrmSolutionPage() {
   return (
@@ -11,6 +12,7 @@ export default function CrmSolutionPage() {
       headline="Your clients deserve"
       headlineAccent="a better experience."
       subheadline="Centralize every client relationship in one place. Track communications, manage subscriptions, monitor health scores, and deliver results — all from a single dashboard."
+      mockup={<CRMMockup />}
       highlights={[
         {
           icon: Database,

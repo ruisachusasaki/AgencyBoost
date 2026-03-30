@@ -2,6 +2,7 @@ import {
   FileText, DollarSign, Clock, BarChart3, Send, CreditCard,
 } from "lucide-react";
 import FeaturePageTemplate from "@/components/marketing/feature-page-template";
+import { InvoicingMockup } from "@/components/marketing/solution-mockups";
 
 export default function InvoicingSolutionPage() {
   return (
@@ -11,6 +12,7 @@ export default function InvoicingSolutionPage() {
       headline="Get paid faster with"
       headlineAccent="professional invoicing."
       subheadline="Create, send, and track invoices directly from your CRM. Automatic reminders, payment tracking, and seamless integration with your client records."
+      mockup={<InvoicingMockup />}
       highlights={[
         {
           icon: FileText,

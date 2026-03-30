@@ -15,6 +15,7 @@ interface FeaturePageProps {
   headline: string;
   headlineAccent: string;
   subheadline: string;
+  mockup?: React.ReactNode;
   highlights: FeatureHighlight[];
   benefitsTitle: string;
   benefitsAccent: string;
@@ -30,6 +31,7 @@ export default function FeaturePageTemplate({
   headline,
   headlineAccent,
   subheadline,
+  mockup,
   highlights,
   benefitsTitle,
   benefitsAccent,
@@ -63,6 +65,14 @@ export default function FeaturePageTemplate({
           </div>
         </div>
       </section>
+
+      {mockup && (
+        <section className="pb-16 px-4 sm:px-6 lg:px-8 -mt-4">
+          <div className="max-w-6xl mx-auto">
+            {mockup}
+          </div>
+        </section>
+      )}
 
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
         <div className="max-w-7xl mx-auto">

@@ -2,6 +2,7 @@ import {
   Phone, Headphones, BarChart3, Users, Clock, Voicemail,
 } from "lucide-react";
 import FeaturePageTemplate from "@/components/marketing/feature-page-template";
+import { CallCenterMockup } from "@/components/marketing/solution-mockups";
 
 export default function CallCenterSolutionPage() {
   return (
@@ -11,6 +12,7 @@ export default function CallCenterSolutionPage() {
       headline="Built-in VoIP and"
       headlineAccent="call tracking."
       subheadline="Make and receive calls directly from your CRM. Track call history, log conversations, and never miss a client call again."
+      mockup={<CallCenterMockup />}
       highlights={[
         {
           icon: Phone,

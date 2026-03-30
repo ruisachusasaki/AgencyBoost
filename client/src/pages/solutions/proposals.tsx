@@ -2,6 +2,7 @@ import {
   BarChart3, FileText, DollarSign, Send, Eye, CheckCircle2,
 } from "lucide-react";
 import FeaturePageTemplate from "@/components/marketing/feature-page-template";
+import { ProposalsMockup } from "@/components/marketing/solution-mockups";
 
 export default function ProposalsSolutionPage() {
   return (
@@ -11,6 +12,7 @@ export default function ProposalsSolutionPage() {
       headline="Win more deals with"
       headlineAccent="polished proposals."
       subheadline="Build beautiful proposals and quotes with your products and packages. Send, track, and close deals — all from one platform."
+      mockup={<ProposalsMockup />}
       highlights={[
         {
           icon: FileText,

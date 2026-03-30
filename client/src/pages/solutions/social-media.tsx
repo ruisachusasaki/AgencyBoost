@@ -2,6 +2,7 @@ import {
   Globe, CalendarDays, BarChart3, Image, Users, MessageSquare,
 } from "lucide-react";
 import FeaturePageTemplate from "@/components/marketing/feature-page-template";
+import { SocialMediaMockup } from "@/components/marketing/solution-mockups";
 
 export default function SocialMediaSolutionPage() {
   return (
@@ -11,6 +12,7 @@ export default function SocialMediaSolutionPage() {
       headline="Manage all your"
       headlineAccent="social channels."
       subheadline="Schedule posts, track engagement, and manage multiple social media accounts for your agency and your clients — all from one place."
+      mockup={<SocialMediaMockup />}
       highlights={[
         {
           icon: CalendarDays,

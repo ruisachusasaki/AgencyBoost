@@ -2,6 +2,7 @@ import {
   Mail, BarChart3, CalendarDays, Target, Users, Layers,
 } from "lucide-react";
 import FeaturePageTemplate from "@/components/marketing/feature-page-template";
+import { CampaignsMockup } from "@/components/marketing/solution-mockups";
 
 export default function CampaignsSolutionPage() {
   return (
@@ -11,6 +12,7 @@ export default function CampaignsSolutionPage() {
       headline="Plan and execute"
       headlineAccent="marketing campaigns."
       subheadline="Organize campaigns, track performance, and coordinate your team's marketing efforts from a single dashboard."
+      mockup={<CampaignsMockup />}
       highlights={[
         {
           icon: CalendarDays,
