@@ -1146,6 +1146,31 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
+  const [editingScore, setEditingScore] = useState<any>(null);
+  const [deletingScoreId, setDeletingScoreId] = useState<string | null>(null);
+
+  const deleteHealthScoreMutation = useMutation({
+    mutationFn: async (scoreId: string) => {
+      return await apiRequest("DELETE", `/api/health-scores/${scoreId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients", clientId, "health-scores"] });
+      toast({
+        title: "Health Score Deleted",
+        variant: "default",
+        description: "The health score has been removed.",
+      });
+      setDeletingScoreId(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to delete health score.",
+        variant: "destructive",
+      });
+      setDeletingScoreId(null);
+    },
+  });
 
   // Filter state management
   const [dateRangeFilter, setDateRangeFilter] = useState<string>("all");
@@ -1394,7 +1419,10 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium text-gray-900">Client Health Scores</h3>
         <Button 
-          onClick={() => setIsHealthModalOpen(true)}
+          onClick={() => {
+            setEditingScore(null);
+            setIsHealthModalOpen(true);
+          }}
           data-testid="button-add-health-score"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -1532,6 +1560,28 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
                     <span className={`px-2 py-1 rounded-full text-xs font-medium border ${styling.badge}`}>
                       {score.healthIndicator}
                     </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingScore(score);
+                        setIsHealthModalOpen(true);
+                      }}
+                    >
+                      <Pencil className="h-3.5 w-3.5 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                      onClick={() => setDeletingScoreId(score.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-1" />
+                      Delete
+                    </Button>
                   </div>
                 </div>
                 
@@ -1675,12 +1725,44 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
         </div>
       )}
 
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deletingScoreId} onOpenChange={(open) => !open && setDeletingScoreId(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Health Score</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">
+            Are you sure you want to delete this health score? This action cannot be undone.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeletingScoreId(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteHealthScoreMutation.isPending}
+              onClick={() => {
+                if (deletingScoreId) {
+                  deleteHealthScoreMutation.mutate(deletingScoreId);
+                }
+              }}
+            >
+              {deleteHealthScoreMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Health Score Modal */}
       <ClientHealthModal
         clientId={clientId}
         isOpen={isHealthModalOpen}
-        onClose={() => setIsHealthModalOpen(false)}
+        onClose={() => {
+          setIsHealthModalOpen(false);
+          setEditingScore(null);
+        }}
         onSuccess={handleHealthScoreSuccess}
+        existingScore={editingScore}
       />
     </div>
   );

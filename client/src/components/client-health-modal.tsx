@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, TrendingUp } from "lucide-react";
+import { CalendarIcon, TrendingUp, Pencil } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentWeekRange } from "@/lib/utils";
@@ -22,13 +22,27 @@ interface ClientHealthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  existingScore?: {
+    id: string;
+    weekStartDate: string;
+    weekEndDate: string;
+    weeklyRecap?: string | null;
+    opportunities?: string | null;
+    solutions?: string | null;
+    goals: string;
+    fulfillment: string;
+    relationship: string;
+    clientActions: string;
+    paymentStatus?: string;
+  } | null;
 }
 
 export default function ClientHealthModal({ 
   clientId, 
   isOpen, 
   onClose, 
-  onSuccess 
+  onSuccess,
+  existingScore = null
 }: ClientHealthModalProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -36,46 +50,70 @@ export default function ClientHealthModal({
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
 
-  // Get current week range for auto-population
-  const { weekStart, weekEnd, displayRange } = getCurrentWeekRange();
+  const isEditing = !!existingScore;
+
+  const { weekStart, weekEnd } = getCurrentWeekRange();
 
   const form = useForm<InputClientHealthScore>({
     resolver: zodResolver(inputClientHealthScoreSchema),
     defaultValues: {
       clientId,
-      weekStartDate: weekStart.toISOString().split('T')[0], // Format as YYYY-MM-DD
-      weekEndDate: weekEnd.toISOString().split('T')[0],
-      weeklyRecap: "",
-      opportunities: "",
-      solutions: "",
-      goals: "On Track",
-      fulfillment: "On Time", 
-      relationship: "Engaged",
-      clientActions: "Up to Date",
-      paymentStatus: "Current",
+      weekStartDate: existingScore?.weekStartDate || weekStart.toISOString().split('T')[0],
+      weekEndDate: existingScore?.weekEndDate || weekEnd.toISOString().split('T')[0],
+      weeklyRecap: existingScore?.weeklyRecap || "",
+      opportunities: existingScore?.opportunities || "",
+      solutions: existingScore?.solutions || "",
+      goals: existingScore?.goals || "On Track",
+      fulfillment: existingScore?.fulfillment || "On Time", 
+      relationship: existingScore?.relationship || "Engaged",
+      clientActions: existingScore?.clientActions || "Up to Date",
+      paymentStatus: existingScore?.paymentStatus || "Current",
     },
   });
 
-  const createHealthScoreMutation = useMutation({
+  useEffect(() => {
+    if (isOpen) {
+      form.reset({
+        clientId,
+        weekStartDate: existingScore?.weekStartDate || weekStart.toISOString().split('T')[0],
+        weekEndDate: existingScore?.weekEndDate || weekEnd.toISOString().split('T')[0],
+        weeklyRecap: existingScore?.weeklyRecap || "",
+        opportunities: existingScore?.opportunities || "",
+        solutions: existingScore?.solutions || "",
+        goals: existingScore?.goals || "On Track",
+        fulfillment: existingScore?.fulfillment || "On Time",
+        relationship: existingScore?.relationship || "Engaged",
+        clientActions: existingScore?.clientActions || "Up to Date",
+        paymentStatus: existingScore?.paymentStatus || "Current",
+      });
+    }
+  }, [isOpen, existingScore, clientId]);
+
+  const saveMutation = useMutation({
     mutationFn: async (data: InputClientHealthScore) => {
+      if (isEditing && existingScore) {
+        return await apiRequest("PUT", `/api/health-scores/${existingScore.id}`, data);
+      }
       return await apiRequest("POST", `/api/clients/${clientId}/health-scores`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients", clientId, "health-scores"] });
       toast({
-        title: "Health Score Saved",
+        title: isEditing ? "Health Score Updated" : "Health Score Saved",
         variant: "default",
-        description: "Client health score has been successfully recorded.",
+        description: isEditing 
+          ? "Client health score has been updated successfully."
+          : "Client health score has been successfully recorded.",
       });
       form.reset();
       onSuccess?.();
       onClose();
     },
     onError: (error: any) => {
-      console.error("Health score creation error:", error);
+      console.error("Health score save error:", error);
       toast({
         title: "Error",
-        description: error?.message || "Failed to save health score. Please try again.",
+        description: error?.message || `Failed to ${isEditing ? 'update' : 'save'} health score. Please try again.`,
         variant: "destructive",
       });
     },
@@ -86,7 +124,7 @@ export default function ClientHealthModal({
 
   const onSubmit = async (data: InputClientHealthScore) => {
     setIsSubmitting(true);
-    createHealthScoreMutation.mutate(data);
+    saveMutation.mutate(data);
   };
 
   const handleClose = () => {
@@ -96,7 +134,6 @@ export default function ClientHealthModal({
     }
   };
 
-  // Scoring options
   const goalOptions = [
     { value: "Above", label: "Above" },
     { value: "On Track", label: "On Track" },
@@ -134,10 +171,13 @@ export default function ClientHealthModal({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <DialogHeader className="pb-4 border-b">
           <DialogTitle className="flex items-center gap-3 text-xl font-semibold">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <div className={`p-2 rounded-lg ${isEditing ? 'bg-amber-100 dark:bg-amber-900' : 'bg-blue-100 dark:bg-blue-900'}`}>
+              {isEditing 
+                ? <Pencil className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                : <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              }
             </div>
-            Client Health Scoring
+            {isEditing ? 'Edit Health Score' : 'Client Health Scoring'}
           </DialogTitle>
           <div className="flex items-center gap-2 mt-3">
             <div className="flex items-center gap-3 flex-wrap">
@@ -218,7 +258,6 @@ export default function ClientHealthModal({
           </div>
         </DialogHeader>
             <div className="grid gap-6">
-              {/* Text Area Fields */}
               <div className="space-y-6">
                 <div className="grid gap-4">
                   <h3 className="text-lg font-medium text-foreground border-b pb-2">
@@ -290,7 +329,6 @@ export default function ClientHealthModal({
                 </div>
               </div>
 
-              {/* Scoring Fields */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium text-foreground border-b pb-2">
                   Health Metrics
@@ -307,7 +345,7 @@ export default function ClientHealthModal({
                         </FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value}
                           data-testid="select-goals"
                         >
                           <FormControl>
@@ -338,7 +376,7 @@ export default function ClientHealthModal({
                         </FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value}
                           data-testid="select-fulfillment"
                         >
                           <FormControl>
@@ -369,7 +407,7 @@ export default function ClientHealthModal({
                         </FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value}
                           data-testid="select-relationship"
                         >
                           <FormControl>
@@ -400,7 +438,7 @@ export default function ClientHealthModal({
                         </FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value}
                           data-testid="select-client-actions"
                         >
                           <FormControl>
@@ -431,7 +469,7 @@ export default function ClientHealthModal({
                         </FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value}
                           data-testid="select-payment-status"
                         >
                           <FormControl>
@@ -471,7 +509,7 @@ export default function ClientHealthModal({
                 data-testid="button-save-health-score"
                 className="min-w-[120px]"
               >
-                {isSubmitting ? "Saving..." : "Save Health Score"}
+                {isSubmitting ? "Saving..." : (isEditing ? "Update Health Score" : "Save Health Score")}
               </Button>
             </DialogFooter>
           </form>
