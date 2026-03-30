@@ -921,12 +921,41 @@ export default function Reports() {
   );
 
   // Health scores data fetching
+  const getHealthDateRange = () => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    if (dateRange === "this_week") {
+      const day = now.getDay();
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+      monday.setHours(0, 0, 0, 0);
+      return { from: monday.toISOString().split('T')[0], to: today };
+    }
+    if (dateRange === "last_week") {
+      const day = now.getDay();
+      const thisMonday = new Date(now);
+      thisMonday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+      const lastMonday = new Date(thisMonday);
+      lastMonday.setDate(thisMonday.getDate() - 7);
+      const lastSunday = new Date(thisMonday);
+      lastSunday.setDate(thisMonday.getDate() - 1);
+      return { from: lastMonday.toISOString().split('T')[0], to: lastSunday.toISOString().split('T')[0] };
+    }
+    if (dateRange === "this_month") {
+      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { from: firstOfMonth.toISOString().split('T')[0], to: today };
+    }
+    const daysMap: Record<string, number> = { "7": 7, "30": 30, "90": 90, "365": 365 };
+    const days = daysMap[dateRange];
+    if (days) {
+      return { from: new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0], to: today };
+    }
+    return { from: undefined, to: today };
+  };
+  const healthDateRange = getHealthDateRange();
   const healthFilters = {
-    from: dateRange === "7" ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] :
-          dateRange === "30" ? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] :
-          dateRange === "90" ? new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] :
-          dateRange === "365" ? new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : undefined,
-    to: new Date().toISOString().split('T')[0],
+    from: healthDateRange.from,
+    to: healthDateRange.to,
     statuses: healthStatusFilter.length > 0 ? healthStatusFilter : [],
     search: healthSearchTerm || undefined,
     clientId: clientFilter !== "all" ? clientFilter : undefined,
@@ -2465,10 +2494,13 @@ export default function Reports() {
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-slate-600">Date Range:</label>
                     <Select value={dateRange} onValueChange={setDateRange}>
-                      <SelectTrigger className="w-32" data-testid="select-health-date-range">
+                      <SelectTrigger className="w-40" data-testid="select-health-date-range">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="this_week">This Week</SelectItem>
+                        <SelectItem value="last_week">Last Week</SelectItem>
+                        <SelectItem value="this_month">This Month</SelectItem>
                         <SelectItem value="7">Last 7 days</SelectItem>
                         <SelectItem value="30">Last 30 days</SelectItem>
                         <SelectItem value="90">Last 90 days</SelectItem>
