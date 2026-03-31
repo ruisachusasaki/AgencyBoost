@@ -40750,8 +40750,7 @@ ${appointment.description || ""}
         "https://www.googleapis.com/auth/calendar.events"
       ];
       const host = req.get("host") || req.headers.host;
-      const redirectUri = `https://${host}/api/integrations/google-calendar/callback`;
-      console.log(`[Google Calendar Connect] Staff ${staffId} - redirect URI: ${redirectUri}`);
+      console.log(`[Google Calendar Connect] Staff ${staffId} - host: ${host}`);
       const authUrl = oauth2Client.generateAuthUrl({
         access_type: "offline",
         scope: scopes,

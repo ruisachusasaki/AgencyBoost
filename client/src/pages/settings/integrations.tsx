@@ -122,8 +122,6 @@ export default function Integrations() {
 
   const [connectionSettings, setConnectionSettings] = useState({
     apiKey: "",
-    clientId: "",
-    clientSecret: "",
     webhookUrl: "",
     syncFrequency: "hourly",
     twoWaySync: true,
