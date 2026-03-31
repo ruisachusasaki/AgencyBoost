@@ -21231,19 +21231,6 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   // Check Google Calendar connection status
   app.get("/api/integrations/google-calendar/status", requireAuth(), async (req, res) => {
     try {
-      // Import the new Google Calendar service
-      const { isGoogleCalendarConnected } = await import('./googleCalendar');
-      
-      const connected = await isGoogleCalendarConnected();
-      
-      return res.json({ 
-        connected,
-        status: connected ? "connected" : "disconnected",
-        lastSync: connected ? new Date().toISOString() : null
-      });
-      
-      // Legacy code - kept for reference but using new integration
-      /*
       const staffId = getAuthenticatedUserIdOrFail(req, res);
       if (!staffId) return;
       
@@ -21275,6 +21262,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
         await calendar.calendarList.list();
         
+        console.log(`[Google Calendar Status] Staff ${staffId} - connected, calendar: ${integration.externalCalendarId}`);
         res.json({
           connected: true,
           status: "connected",
@@ -21282,9 +21270,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           externalCalendarId: integration.externalCalendarId
         });
       } catch (apiError) {
-        console.error('Google Calendar API error:', apiError);
+        console.error('[Google Calendar Status] API error:', apiError);
         
-        // Update integration to show error
         await db
           .update(calendarIntegrations)
           .set({
@@ -21300,7 +21287,6 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           error: "Authentication failed. Please reconnect."
         });
       }
-      */
     } catch (error) {
       console.error('Error checking Google Calendar status:', error);
       res.status(500).json({ message: "Failed to check connection status" });
@@ -21313,64 +21299,6 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const staffId = getAuthenticatedUserIdOrFail(req, res);
       if (!staffId) return;
       
-      // Import the new Google Calendar service
-      const { getGoogleCalendarEvents, syncAppointmentToGoogleCalendar } = await import('./googleCalendar');
-      
-      // Get events from the last 30 days to 30 days in the future
-      const timeMin = new Date();
-      timeMin.setDate(timeMin.getDate() - 30);
-      const timeMax = new Date();
-      timeMax.setDate(timeMax.getDate() + 30);
-      
-      const result = await getGoogleCalendarEvents(timeMin, timeMax);
-      
-      if (!result.success) {
-        return res.status(500).json({ message: result.error || "Failed to sync Google Calendar" });
-      }
-      
-      // Also sync CRM appointments to Google Calendar
-      const appointments = await db
-        .select()
-        .from(calendarAppointments)
-        .where(and(
-          eq(calendarAppointments.assignedTo, staffId),
-          gte(calendarAppointments.startTime, timeMin),
-          lte(calendarAppointments.startTime, timeMax)
-        ));
-      
-      let syncedToGoogle = 0;
-      for (const appointment of appointments) {
-        if (!appointment.externalEventId) {
-          const syncResult = await syncAppointmentToGoogleCalendar({
-            id: appointment.id,
-            title: appointment.title,
-            description: appointment.description || undefined,
-            startTime: appointment.startTime,
-            endTime: appointment.endTime,
-            location: appointment.location || undefined,
-          });
-          
-          if (syncResult.success && syncResult.googleEventId) {
-            await db
-              .update(calendarAppointments)
-              .set({
-                externalEventId: syncResult.googleEventId,
-                updatedAt: new Date()
-              })
-              .where(eq(calendarAppointments.id, appointment.id));
-            syncedToGoogle++;
-          }
-        }
-      }
-      
-      res.json({
-        message: "Sync completed successfully",
-        eventsFromGoogle: result.events.length,
-        syncedToGoogle,
-        totalEvents: result.events.length + syncedToGoogle
-      });
-      
-      /* Legacy implementation - kept for reference
       const [integration] = await db
         .select()
         .from(calendarIntegrations)
@@ -21381,7 +21309,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         ));
       
       if (!integration) {
-        return res.status(404).json({ message: "Google Calendar integration not found" });
+        return res.status(404).json({ message: "Google Calendar integration not found. Please connect your Google Calendar first." });
       }
       
       const oauth2Client = createGoogleOAuth2Client(req);
@@ -21398,6 +21326,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const timeMax = new Date();
       timeMax.setDate(timeMax.getDate() + 30);
       
+      console.log(`[Google Calendar Sync] Staff ${staffId} - fetching events from ${timeMin.toISOString()} to ${timeMax.toISOString()}`);
+      
       const events = await calendar.events.list({
         calendarId: integration.externalCalendarId,
         timeMin: timeMin.toISOString(),
@@ -21411,7 +21341,6 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       for (const event of events.data.items || []) {
         if (!event.start?.dateTime || !event.end?.dateTime) continue;
         
-        // Check if event already exists
         const [existingAppointment] = await db
           .select()
           .from(calendarAppointments)
@@ -21430,7 +21359,6 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         };
         
         if (existingAppointment) {
-          // Update existing appointment
           await db
             .update(calendarAppointments)
             .set({
@@ -21439,14 +21367,12 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             })
             .where(eq(calendarAppointments.id, existingAppointment.id));
         } else {
-          // Find a default calendar to assign to
           const [defaultCalendar] = await db
             .select()
             .from(calendars)
             .limit(1);
           
           if (defaultCalendar) {
-            // Create new appointment
             await db.insert(calendarAppointments).values({
               ...appointmentData,
               calendarId: defaultCalendar.id,
@@ -21466,38 +21392,15 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         })
         .where(eq(calendarIntegrations.id, integration.id));
       
+      console.log(`[Google Calendar Sync] Staff ${staffId} - synced ${syncedCount} new events, ${events.data.items?.length || 0} total from Google`);
+      
       res.json({
         message: "Sync completed successfully",
         syncedEvents: syncedCount,
         totalEvents: events.data.items?.length || 0
       });
     } catch (error) {
-      console.error('Error syncing Google Calendar:', error);
-      
-      // Log sync error
-      const staffId = getAuthenticatedUserIdOrFail(req, res);
-      if (!staffId) return; // getAuthenticatedUserIdOrFail already sent 401 response
-      const [integration] = await db
-        .select()
-        .from(calendarIntegrations)
-        .where(and(
-          eq(calendarIntegrations.staffId, staffId),
-          eq(calendarIntegrations.provider, 'google')
-        ));
-      
-      if (integration) {
-        await db
-          .update(calendarIntegrations)
-          .set({
-            syncErrors: `Sync Error: ${(error as Error).message}`,
-            updatedAt: new Date()
-          })
-          .where(eq(calendarIntegrations.id, integration.id));
-      }
-      */
-      
-    } catch (error) {
-      console.error('Error syncing Google Calendar:', error);
+      console.error('[Google Calendar Sync] Error:', error);
       res.status(500).json({ message: "Failed to sync Google Calendar" });
     }
   });
