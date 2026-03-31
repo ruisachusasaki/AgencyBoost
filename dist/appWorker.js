@@ -40696,10 +40696,22 @@ ${appointment.description || ""}
       res.status(500).json({ message: "Failed to create booking" });
     }
   });
-  function createGoogleOAuth2Client() {
+  function createGoogleOAuth2Client(req) {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = `${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : "http://localhost:5000"}/api/integrations/google-calendar/callback`;
+    let baseUrl;
+    if (req) {
+      const host = req.get("host") || req.headers.host;
+      const protocol = req.protocol === "https" || req.headers["x-forwarded-proto"] === "https" ? "https" : req.protocol;
+      baseUrl = `${protocol}://${host}`;
+    } else if (process.env.BASE_URL) {
+      baseUrl = process.env.BASE_URL;
+    } else if (process.env.REPLIT_DOMAINS) {
+      baseUrl = `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`;
+    } else {
+      baseUrl = "http://localhost:5000";
+    }
+    const redirectUri = `${baseUrl}/api/integrations/google-calendar/callback`;
     if (!clientId || !clientSecret) {
       throw new Error("Google OAuth credentials not configured");
     }
@@ -40707,7 +40719,7 @@ ${appointment.description || ""}
   }
   app2.get("/api/integrations/google-calendar/authorize", requireAuth(), async (req, res) => {
     try {
-      const oauth2Client = createGoogleOAuth2Client();
+      const oauth2Client = createGoogleOAuth2Client(req);
       const scopes = [
         "https://www.googleapis.com/auth/calendar",
         "https://www.googleapis.com/auth/calendar.events"
@@ -40730,13 +40742,16 @@ ${appointment.description || ""}
       if (!code) {
         return res.status(400).json({ message: "Authorization code not provided" });
       }
-      const oauth2Client = createGoogleOAuth2Client();
+      const oauth2Client = createGoogleOAuth2Client(req);
+      console.log(`[Google Calendar Callback] Exchanging code for tokens...`);
       const { tokens } = await oauth2Client.getToken(code);
+      console.log(`[Google Calendar Callback] Token exchange successful - hasAccessToken: ${!!tokens.access_token}, hasRefreshToken: ${!!tokens.refresh_token}, scopes: ${tokens.scope || "unknown"}`);
       oauth2Client.setCredentials(tokens);
       const calendar = google4.calendar({ version: "v3", auth: oauth2Client });
       const calendarList = await calendar.calendarList.list();
       const primaryCalendar = calendarList.data.items?.find((cal) => cal.primary);
       if (!primaryCalendar) {
+        console.error("[Google Calendar Callback] No primary calendar found");
         return res.status(400).json({ message: "No primary calendar found" });
       }
       const staffId = getAuthenticatedUserIdOrFail(req, res);
@@ -40759,12 +40774,14 @@ ${appointment.description || ""}
           ...integrationData,
           updatedAt: /* @__PURE__ */ new Date()
         }).where(eq20(calendarIntegrations.id, existingIntegration.id));
+        console.log(`[Google Calendar Callback] Updated existing integration for staff ${staffId}, calendar: ${primaryCalendar.id}`);
       } else {
         await db.insert(calendarIntegrations).values(integrationData);
+        console.log(`[Google Calendar Callback] Created new integration for staff ${staffId}, calendar: ${primaryCalendar.id}`);
       }
       res.redirect("/settings/integrations?connected=google-calendar");
     } catch (error) {
-      console.error("Error handling OAuth callback:", error);
+      console.error("[Google Calendar Callback] Error handling OAuth callback:", error);
       res.redirect("/settings/integrations?error=connection-failed");
     }
   });
@@ -40772,17 +40789,21 @@ ${appointment.description || ""}
     try {
       const staffId = getAuthenticatedUserIdOrFail(req, res);
       if (!staffId) return;
-      const oauth2Client = createGoogleOAuth2Client();
+      const oauth2Client = createGoogleOAuth2Client(req);
       const scopes = [
         "https://www.googleapis.com/auth/calendar",
         "https://www.googleapis.com/auth/calendar.events"
       ];
+      const host = req.get("host") || req.headers.host;
+      const redirectUri = `https://${host}/api/integrations/google-calendar/callback`;
+      console.log(`[Google Calendar Connect] Staff ${staffId} - redirect URI: ${redirectUri}`);
       const authUrl = oauth2Client.generateAuthUrl({
         access_type: "offline",
         scope: scopes,
         prompt: "consent",
         state: staffId
       });
+      console.log(`[Google Calendar Connect] Auth URL generated with calendar scopes for staff ${staffId}`);
       res.json({ authUrl, redirectRequired: true });
     } catch (error) {
       console.error("Error connecting Google Calendar:", error);

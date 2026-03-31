@@ -1754,24 +1754,10 @@ export default function Integrations() {
             <div className="space-y-4">
               {selectedIntegration?.id === "google-calendar" && (
                 <>
-                  <div>
-                    <Label htmlFor="clientId">Google Client ID</Label>
-                    <Input
-                      id="clientId"
-                      value={connectionSettings.clientId}
-                      onChange={(e) => setConnectionSettings({...connectionSettings, clientId: e.target.value})}
-                      placeholder="Your Google OAuth Client ID"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="clientSecret">Google Client Secret</Label>
-                    <Input
-                      id="clientSecret"
-                      type="password"
-                      value={connectionSettings.clientSecret}
-                      onChange={(e) => setConnectionSettings({...connectionSettings, clientSecret: e.target.value})}
-                      placeholder="Your Google OAuth Client Secret"
-                    />
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p className="text-sm text-green-800">
+                      Google Calendar credentials are configured on the server. Simply click <strong>Connect</strong> on the integration card to link your Google account.
+                    </p>
                   </div>
                   
                   <div className="border-t pt-4 mt-4">
