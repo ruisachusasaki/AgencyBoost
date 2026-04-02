@@ -91,10 +91,7 @@ export default function RoadmapComments({ clientId, roadmapEntryId }: RoadmapCom
         }
       });
       
-      const response = await apiRequest(apiEndpoint, {
-        method: 'POST',
-        body: JSON.stringify({ content, mentions }),
-      });
+      const response = await apiRequest('POST', apiEndpoint, { content, mentions });
       return response;
     },
     onSuccess: () => {
@@ -114,9 +111,7 @@ export default function RoadmapComments({ clientId, roadmapEntryId }: RoadmapCom
       const deleteEndpoint = roadmapEntryId
         ? `/api/roadmap-entries/${roadmapEntryId}/comments/${commentId}`
         : `/api/clients/${clientId}/roadmap-comments/${commentId}`;
-      await apiRequest(deleteEndpoint, {
-        method: 'DELETE',
-      });
+      await apiRequest('DELETE', deleteEndpoint);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });

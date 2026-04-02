@@ -838,6 +838,7 @@ function ClientWorkflowsSection({ clientId, actionsExpanded, setActionsExpanded 
 // RoadmapTabContent Component - Monthly roadmap entries for clients
 function RoadmapTabContent({ client, queryClient, currentUser }: { client: Client; queryClient: any; currentUser: any }) {
   const { toast } = useToast();
+  const { canDeleteRoadmapEntries } = useRolePermissions();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
