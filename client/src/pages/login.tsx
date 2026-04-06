@@ -33,9 +33,7 @@ export default function LoginPage() {
     const details = params.get("details");
     
     if (error) {
-      const message = details 
-        ? `${ERROR_MESSAGES[error] || error}: ${details}` 
-        : (ERROR_MESSAGES[error] || "An error occurred during sign-in.");
+      const message = ERROR_MESSAGES[error] || details || "An error occurred during sign-in.";
       setAuthError(message);
       window.history.replaceState({}, document.title, "/login");
     }
