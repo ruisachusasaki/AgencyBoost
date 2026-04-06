@@ -1451,7 +1451,7 @@ export default function Tasks() {
     
     const ResizeHandle = () => (
       <div
-        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/50 group-hover:bg-slate-300 z-10"
+        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/50 group-hover:bg-slate-300 dark:group-hover:bg-slate-600 z-10"
         onMouseDown={(e) => handleResizeStart(e, column.id)}
         onClick={(e) => e.stopPropagation()}
       />
@@ -1471,7 +1471,7 @@ export default function Tasks() {
     
     return (
       <TableHead 
-        className="relative group cursor-pointer hover:bg-slate-50 select-none"
+        className="relative group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 select-none"
         style={{ width: `${columnWidth}px`, minWidth: `${column.minWidth || 60}px` }}
         onClick={() => handleSort(columnSortField)}
       >
@@ -3021,7 +3021,7 @@ export default function Tasks() {
                                 >
                                   <div
                                     {...provided.dragHandleProps}
-                                    className="flex items-center gap-1 cursor-pointer hover:bg-slate-50 select-none p-1 rounded"
+                                    className="flex items-center gap-1 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 select-none p-1 rounded"
                                     onClick={() => {
                                       const sortField = sortFieldMap[column.id];
                                       if (sortField) handleSort(sortField);
@@ -3049,7 +3049,7 @@ export default function Tasks() {
                                     )}
                                   </div>
                                   <div
-                                    className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/50 group-hover:bg-slate-300 z-10"
+                                    className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/50 group-hover:bg-slate-300 dark:group-hover:bg-slate-600 z-10"
                                     onMouseDown={(e) => handleResizeStart(e, column.id)}
                                     onClick={(e) => e.stopPropagation()}
                                   />
@@ -3067,7 +3067,7 @@ export default function Tasks() {
                 </TableHeader>
               <TableBody>
                   {getHierarchicalTasks().map((task) => (
-                    <TableRow key={task.id} className="hover:bg-slate-50/50">
+                    <TableRow key={task.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
                       {/* Bulk selection checkbox column */}
                       <TableCell className="py-3">
                         <div className="flex items-center justify-center">
