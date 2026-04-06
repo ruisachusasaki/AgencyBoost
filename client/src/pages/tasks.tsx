@@ -16,6 +16,7 @@ import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, CheckSquare, GripVer
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarWidget } from "@/components/ui/calendar";
 import { TaskIntakeDialog } from "@/components/task-intake-dialog";
 import { TaskDependencyIcons, TaskDependency } from "@/components/task-dependency-icons";
 import { apiRequest } from "@/lib/queryClient";
@@ -507,6 +508,22 @@ export default function Tasks() {
           variant: "destructive",
         });
       }
+    },
+  });
+
+  const updateTaskFieldMutation = useMutation({
+    mutationFn: async ({ id, ...fields }: { id: string; [key: string]: any }) => {
+      await apiRequest("PUT", `/api/tasks/${id}`, fields);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update task. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -1705,12 +1722,49 @@ export default function Tasks() {
         );
       
       case "startDate":
-        return task.startDate ? (
-          <span className="text-sm text-slate-600">
-            {format(new Date(task.startDate), "MMM d, yyyy")}
-          </span>
-        ) : (
-          <span className="text-slate-400 text-sm">No start date</span>
+        return (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                className="text-sm hover:bg-slate-100 dark:hover:bg-slate-700 rounded px-1.5 py-0.5 -mx-1.5 transition-colors text-left"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {task.startDate ? (
+                  <span className="text-slate-600 dark:text-slate-300">{format(new Date(task.startDate), "MMM d, yyyy")}</span>
+                ) : (
+                  <span className="text-slate-400 text-sm">No start date</span>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start" onClick={(e) => e.stopPropagation()}>
+              <CalendarWidget
+                mode="single"
+                selected={task.startDate ? new Date(task.startDate) : undefined}
+                onSelect={(date) => {
+                  updateTaskFieldMutation.mutate({
+                    id: task.id,
+                    startDate: date ? format(date, "yyyy-MM-dd") : null,
+                  });
+                }}
+                initialFocus
+              />
+              {task.startDate && (
+                <div className="border-t px-3 py-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-destructive hover:text-destructive"
+                    onClick={() => {
+                      updateTaskFieldMutation.mutate({ id: task.id, startDate: null });
+                    }}
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Clear start date
+                  </Button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
         );
       
       case "timeEstimate":
