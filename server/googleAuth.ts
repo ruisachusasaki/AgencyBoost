@@ -100,12 +100,16 @@ async function upsertStaffFromGoogleProfile(profile: {
   const profileImageUrl = profile.picture;
   const normalizedEmail = email.toLowerCase().trim();
 
+  console.log(`🔍 [AUTH DEBUG] Looking up user: email=${normalizedEmail}, googleSub=${googleSub}`);
+
   // STEP 1: Check if this Google account (by sub) OR email exists in staff_linked_emails
   const linkedEmail = await db
     .select()
     .from(staffLinkedEmails)
     .where(sql`${staffLinkedEmails.googleSub} = ${googleSub} OR LOWER(${staffLinkedEmails.email}) = ${normalizedEmail}`)
     .limit(1);
+
+  console.log(`🔍 [AUTH DEBUG] Step 1 linked_email result: ${JSON.stringify(linkedEmail.map(e => ({ id: e.id, staffId: e.staffId, email: e.email, googleSub: e.googleSub })))}`);
 
   if (linkedEmail.length > 0) {
     // Found in linked emails - get the associated staff member
@@ -115,8 +119,11 @@ async function upsertStaffFromGoogleProfile(profile: {
       .where(eq(staff.id, linkedEmail[0].staffId))
       .limit(1);
 
+    console.log(`🔍 [AUTH DEBUG] Step 1 staff lookup: staffId=${linkedEmail[0].staffId}, found=${staffMember.length > 0}, isActive=${staffMember[0]?.isActive}, staffEmail=${staffMember[0]?.email}`);
+
     if (staffMember.length > 0) {
       if (!staffMember[0].isActive) {
+        console.error(`🔍 [AUTH DEBUG] DEACTIVATED at Step 1! linkedEmail.id=${linkedEmail[0].id}, linkedEmail.email=${linkedEmail[0].email}, linkedEmail.googleSub=${linkedEmail[0].googleSub}, staffId=${staffMember[0].id}, staffEmail=${staffMember[0].email}`);
         throw new Error("Your account has been deactivated. Please contact your administrator.");
       }
 
@@ -150,14 +157,18 @@ async function upsertStaffFromGoogleProfile(profile: {
   }
 
   // STEP 2: Legacy fallback - Check if staff member already exists by Google sub in staff table
+  console.log(`🔍 [AUTH DEBUG] Step 1 did not match. Trying Step 2: staff.replitAuthSub = ${googleSub}`);
   let existingStaff = await db
     .select()
     .from(staff)
     .where(eq(staff.replitAuthSub, googleSub))
     .limit(1);
 
+  console.log(`🔍 [AUTH DEBUG] Step 2 result: found=${existingStaff.length > 0}, staffId=${existingStaff[0]?.id}, staffEmail=${existingStaff[0]?.email}, isActive=${existingStaff[0]?.isActive}`);
+
   if (existingStaff.length > 0) {
     if (!existingStaff[0].isActive) {
+      console.error(`🔍 [AUTH DEBUG] DEACTIVATED at Step 2! staffId=${existingStaff[0].id}, staffEmail=${existingStaff[0].email}, replitAuthSub=${existingStaff[0].replitAuthSub}`);
       throw new Error("Your account has been deactivated. Please contact your administrator.");
     }
     
@@ -184,16 +195,20 @@ async function upsertStaffFromGoogleProfile(profile: {
   }
 
   // STEP 3: Legacy fallback - Check by staff.email
+  console.log(`🔍 [AUTH DEBUG] Step 2 did not match. Trying Step 3: staff.email = ${normalizedEmail}`);
   let existingByEmail = await db
     .select()
     .from(staff)
     .where(sql`LOWER(${staff.email}) = ${normalizedEmail}`)
     .limit(1);
 
+  console.log(`🔍 [AUTH DEBUG] Step 3 result: found=${existingByEmail.length > 0}, staffId=${existingByEmail[0]?.id}, staffEmail=${existingByEmail[0]?.email}, isActive=${existingByEmail[0]?.isActive}`);
+
   if (existingByEmail.length > 0) {
     const existingStaffMember = existingByEmail[0];
     
     if (!existingStaffMember.isActive) {
+      console.error(`🔍 [AUTH DEBUG] DEACTIVATED at Step 3! staffId=${existingStaffMember.id}, staffEmail=${existingStaffMember.email}`);
       throw new Error("Your account has been deactivated. Please contact your administrator.");
     }
 
