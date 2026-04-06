@@ -3067,7 +3067,7 @@ export default function Tasks() {
                 </TableHeader>
               <TableBody>
                   {getHierarchicalTasks().map((task) => (
-                    <TableRow key={task.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+                    <TableRow key={task.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/40">
                       {/* Bulk selection checkbox column */}
                       <TableCell className="py-3">
                         <div className="flex items-center justify-center">
