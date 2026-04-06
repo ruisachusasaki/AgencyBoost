@@ -14807,7 +14807,7 @@ var init_notification_service = __esm({
        * Generate HTML email template
        */
       generateEmailHtml(options) {
-        const appUrl = process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "https://agencyflow.app";
+        const appUrl = process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}` : process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN.trim()}` : "https://agencyflow.app";
         return `
 <!DOCTYPE html>
 <html>
@@ -14930,7 +14930,7 @@ var init_notification_service = __esm({
        * Generate a branded HTML email for reports
        */
       generateReportEmailHtml(options) {
-        const appUrl = process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "https://agencyflow.app";
+        const appUrl = process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}` : process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN.trim()}` : "https://agencyflow.app";
         return `
 <!DOCTYPE html>
 <html>

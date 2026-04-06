@@ -404,9 +404,9 @@ export class NotificationService {
    */
   private generateEmailHtml(options: NotificationOptions): string {
     const appUrl = process.env.REPLIT_DOMAINS
-      ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
+      ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}`
       : process.env.REPLIT_DEV_DOMAIN
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        ? `https://${process.env.REPLIT_DEV_DOMAIN.trim()}`
         : 'https://agencyflow.app';
 
     return `
@@ -536,9 +536,9 @@ export class NotificationService {
    */
   generateReportEmailHtml(options: { title: string; bodyHtml: string; actionUrl?: string; actionText?: string }): string {
     const appUrl = process.env.REPLIT_DOMAINS
-      ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
+      ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}`
       : process.env.REPLIT_DEV_DOMAIN
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        ? `https://${process.env.REPLIT_DEV_DOMAIN.trim()}`
         : 'https://agencyflow.app';
 
     return `
