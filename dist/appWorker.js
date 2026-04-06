@@ -61213,9 +61213,32 @@ async function ensureScheduledHiredEmailsTable() {
     log(`Scheduled hired emails migration error: ${error.message}`);
   }
 }
+async function fixJoeEmailInProduction() {
+  try {
+    const joeActiveId = "030e554b-c0bc-446e-9538-e351f3d17b10";
+    const joeOldDevId = "ed828201-ad6c-4445-8205-548c9ac8e2fe";
+    const correctEmail = "joe@themediaoptimizers.com";
+    const activeAccount = await db.select({ id: staff.id, email: staff.email }).from(staff).where(eq30(staff.id, joeActiveId)).limit(1);
+    if (activeAccount.length === 0) return;
+    if (activeAccount[0].email === correctEmail) {
+      log("Joe's email already correct, skipping migration");
+      return;
+    }
+    log("Running startup migration: fixJoeEmailInProduction");
+    await db.update(staff).set({ email: "dev-old-joe@themediaoptimizers.com" }).where(eq30(staff.id, joeOldDevId));
+    await db.update(staff).set({ email: correctEmail }).where(eq30(staff.id, joeActiveId));
+    await db.update(staffLinkedEmails).set({ email: correctEmail }).where(eq30(staffLinkedEmails.staffId, joeActiveId));
+    await db.delete(staffLinkedEmails).where(eq30(staffLinkedEmails.staffId, joeOldDevId));
+    await db.update(staff).set({ replitAuthSub: null }).where(eq30(staff.id, joeOldDevId));
+    log("\u2705 Joe's email fixed: joe@boostmode.com \u2192 joe@themediaoptimizers.com");
+  } catch (error) {
+    log(`\u26A0\uFE0F fixJoeEmailInProduction error: ${error}`);
+  }
+}
 async function runStartupMigrations() {
   log("Starting background migrations...");
   try {
+    await fixJoeEmailInProduction();
     await ensureClientBriefColumns();
     await ensureQuotesProposalColumns();
     await ensureQuotesCostBreakdownColumns();

@@ -5,7 +5,7 @@ import { setupAuth } from "./googleAuth";
 import { setupGoogleCalendar } from "./googleCalendarSetup";
 import { db } from "./db";
 import { sql, eq, and } from "drizzle-orm";
-import { clientBriefSections, automationTriggers, automationActions, calendars, staff, calendarAppointments, teamPositions, expenseReportFormConfig, users, dashboardWidgets, oneOnOneProgressionStatuses, timeOffPolicies, timeOffTypes, userRoles, tags, tasks } from "@shared/schema";
+import { clientBriefSections, automationTriggers, automationActions, calendars, staff, staffLinkedEmails, calendarAppointments, teamPositions, expenseReportFormConfig, users, dashboardWidgets, oneOnOneProgressionStatuses, timeOffPolicies, timeOffTypes, userRoles, tags, tasks } from "@shared/schema";
 
 /**
  * Startup migration to ensure client brief columns exist
@@ -2285,9 +2285,41 @@ async function ensureScheduledHiredEmailsTable() {
   }
 }
 
+async function fixJoeEmailInProduction() {
+  try {
+    const joeActiveId = '030e554b-c0bc-446e-9538-e351f3d17b10';
+    const joeOldDevId = 'ed828201-ad6c-4445-8205-548c9ac8e2fe';
+    const correctEmail = 'joe@themediaoptimizers.com';
+
+    const activeAccount = await db.select({ id: staff.id, email: staff.email }).from(staff).where(eq(staff.id, joeActiveId)).limit(1);
+    if (activeAccount.length === 0) return;
+    if (activeAccount[0].email === correctEmail) {
+      log("Joe's email already correct, skipping migration");
+      return;
+    }
+
+    log("Running startup migration: fixJoeEmailInProduction");
+
+    await db.update(staff).set({ email: 'dev-old-joe@themediaoptimizers.com' }).where(eq(staff.id, joeOldDevId));
+
+    await db.update(staff).set({ email: correctEmail }).where(eq(staff.id, joeActiveId));
+
+    await db.update(staffLinkedEmails).set({ email: correctEmail }).where(eq(staffLinkedEmails.staffId, joeActiveId));
+
+    await db.delete(staffLinkedEmails).where(eq(staffLinkedEmails.staffId, joeOldDevId));
+
+    await db.update(staff).set({ replitAuthSub: null }).where(eq(staff.id, joeOldDevId));
+
+    log("✅ Joe's email fixed: joe@boostmode.com → joe@themediaoptimizers.com");
+  } catch (error) {
+    log(`⚠️ fixJoeEmailInProduction error: ${error}`);
+  }
+}
+
 async function runStartupMigrations() {
   log("Starting background migrations...");
   try {
+    await fixJoeEmailInProduction();
     await ensureClientBriefColumns();
     await ensureQuotesProposalColumns();
     await ensureQuotesCostBreakdownColumns();
