@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { useLocation } from "wouter";
 
 type Theme = "light" | "dark";
 
@@ -8,6 +9,31 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+const PUBLIC_ROUTE_PREFIXES = [
+  "/login",
+  "/forgot-password",
+  "/reset-password",
+  "/privacy",
+  "/terms",
+  "/careers",
+  "/pricing",
+  "/solutions",
+  "/onboarding",
+  "/client-onboarding",
+  "/client-portal",
+  "/book",
+  "/embed",
+  "/proposal",
+  "/sign-offer",
+  "/s/",
+  "/public",
+];
+
+function isPublicRoute(path: string): boolean {
+  if (path === "/") return true;
+  return PUBLIC_ROUTE_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
 
 function getInitialTheme(): Theme {
   if (typeof window === "undefined") return "light";
@@ -26,16 +52,17 @@ function getInitialTheme(): Theme {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const [location] = useLocation();
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === "dark") {
+    if (theme === "dark" && !isPublicRoute(location)) {
       root.classList.add("dark");
     } else {
       root.classList.remove("dark");
     }
     localStorage.setItem("theme", theme);
-  }, [theme]);
+  }, [theme, location]);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
