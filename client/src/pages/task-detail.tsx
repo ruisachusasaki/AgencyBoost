@@ -1178,7 +1178,11 @@ export default function TaskDetail() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">No client</SelectItem>
-                        {clients.map((client: Client) => (
+                        {[...clients].sort((a: Client, b: Client) => {
+                          const nameA = (a.company || `${a.firstName} ${a.lastName}`).toLowerCase();
+                          const nameB = (b.company || `${b.firstName} ${b.lastName}`).toLowerCase();
+                          return nameA.localeCompare(nameB);
+                        }).map((client: Client) => (
                           <SelectItem key={client.id} value={client.id}>
                             {client.company || `${client.firstName} ${client.lastName}`}
                           </SelectItem>
