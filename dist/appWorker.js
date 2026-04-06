@@ -58548,38 +58548,52 @@ async function upsertStaffFromGoogleProfile(profile) {
   const profileImageUrl = profile.picture;
   const normalizedEmail = email.toLowerCase().trim();
   console.log(`\u{1F50D} [AUTH DEBUG] Looking up user: email=${normalizedEmail}, googleSub=${googleSub}`);
-  const linkedEmail = await db.select().from(staffLinkedEmails).where(sql12`${staffLinkedEmails.googleSub} = ${googleSub} OR LOWER(${staffLinkedEmails.email}) = ${normalizedEmail}`).limit(1);
-  console.log(`\u{1F50D} [AUTH DEBUG] Step 1 linked_email result: ${JSON.stringify(linkedEmail.map((e) => ({ id: e.id, staffId: e.staffId, email: e.email, googleSub: e.googleSub })))}`);
-  if (linkedEmail.length > 0) {
-    const staffMember = await db.select().from(staff).where(eq21(staff.id, linkedEmail[0].staffId)).limit(1);
-    console.log(`\u{1F50D} [AUTH DEBUG] Step 1 staff lookup: staffId=${linkedEmail[0].staffId}, found=${staffMember.length > 0}, isActive=${staffMember[0]?.isActive}, staffEmail=${staffMember[0]?.email}`);
-    if (staffMember.length > 0) {
-      if (!staffMember[0].isActive) {
-        console.error(`\u{1F50D} [AUTH DEBUG] DEACTIVATED at Step 1! linkedEmail.id=${linkedEmail[0].id}, linkedEmail.email=${linkedEmail[0].email}, linkedEmail.googleSub=${linkedEmail[0].googleSub}, staffId=${staffMember[0].id}, staffEmail=${staffMember[0].email}`);
-        throw new Error("Your account has been deactivated. Please contact your administrator.");
-      }
-      if (!linkedEmail[0].googleSub || linkedEmail[0].googleSub !== googleSub) {
-        await db.update(staffLinkedEmails).set({ googleSub }).where(eq21(staffLinkedEmails.id, linkedEmail[0].id));
-      }
-      const existingProfileImage = staffMember[0].profileImagePath;
-      const hasCustomProfileImage = existingProfileImage && !existingProfileImage.includes("googleusercontent.com") && !existingProfileImage.includes("lh3.google");
-      const [updated] = await db.update(staff).set({
-        replitAuthSub: googleSub,
-        profileImagePath: hasCustomProfileImage ? existingProfileImage : profileImageUrl,
-        updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq21(staff.id, staffMember[0].id)).returning();
-      console.log(`\u2705 Login via linked email: ${normalizedEmail} -> Staff: ${updated.firstName} ${updated.lastName}`);
-      return updated;
+  const linkedEmailResults = await db.select({
+    linkedId: staffLinkedEmails.id,
+    linkedEmail: staffLinkedEmails.email,
+    linkedGoogleSub: staffLinkedEmails.googleSub,
+    linkedStaffId: staffLinkedEmails.staffId,
+    staffId: staff.id,
+    staffEmail: staff.email,
+    staffIsActive: staff.isActive,
+    staffFirstName: staff.firstName,
+    staffLastName: staff.lastName,
+    staffProfileImage: staff.profileImagePath,
+    staffReplitAuthSub: staff.replitAuthSub
+  }).from(staffLinkedEmails).innerJoin(staff, eq21(staffLinkedEmails.staffId, staff.id)).where(sql12`${staffLinkedEmails.googleSub} = ${googleSub} OR LOWER(${staffLinkedEmails.email}) = ${normalizedEmail}`).orderBy(sql12`${staff.isActive} DESC`).limit(5);
+  console.log(`\u{1F50D} [AUTH DEBUG] Step 1 results (${linkedEmailResults.length}): ${JSON.stringify(linkedEmailResults.map((r) => ({ linkedId: r.linkedId, linkedEmail: r.linkedEmail, staffId: r.staffId, staffEmail: r.staffEmail, isActive: r.staffIsActive })))}`);
+  const activeMatch = linkedEmailResults.find((r) => r.staffIsActive);
+  const anyMatch = linkedEmailResults.length > 0;
+  if (activeMatch) {
+    console.log(`\u{1F50D} [AUTH DEBUG] Step 1 matched active staff: ${activeMatch.staffId} (${activeMatch.staffEmail})`);
+    if (!activeMatch.linkedGoogleSub || activeMatch.linkedGoogleSub !== googleSub) {
+      await db.update(staffLinkedEmails).set({ googleSub }).where(eq21(staffLinkedEmails.id, activeMatch.linkedId));
     }
+    const existingProfileImage = activeMatch.staffProfileImage;
+    const hasCustomProfileImage = existingProfileImage && !existingProfileImage.includes("googleusercontent.com") && !existingProfileImage.includes("lh3.google");
+    const [updated] = await db.update(staff).set({
+      replitAuthSub: googleSub,
+      profileImagePath: hasCustomProfileImage ? existingProfileImage : profileImageUrl,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq21(staff.id, activeMatch.staffId)).returning();
+    console.log(`\u2705 Login via linked email: ${normalizedEmail} -> Staff: ${updated.firstName} ${updated.lastName}`);
+    return updated;
+  } else if (anyMatch) {
+    const first = linkedEmailResults[0];
+    console.error(`\u{1F50D} [AUTH DEBUG] ALL Step 1 matches are deactivated. First: staffId=${first.staffId}, staffEmail=${first.staffEmail}`);
+    throw new Error("Your account has been deactivated. Please contact your administrator.");
   }
   console.log(`\u{1F50D} [AUTH DEBUG] Step 1 did not match. Trying Step 2: staff.replitAuthSub = ${googleSub}`);
-  let existingStaff = await db.select().from(staff).where(eq21(staff.replitAuthSub, googleSub)).limit(1);
-  console.log(`\u{1F50D} [AUTH DEBUG] Step 2 result: found=${existingStaff.length > 0}, staffId=${existingStaff[0]?.id}, staffEmail=${existingStaff[0]?.email}, isActive=${existingStaff[0]?.isActive}`);
+  let existingStaff = await db.select().from(staff).where(eq21(staff.replitAuthSub, googleSub)).orderBy(sql12`${staff.isActive} DESC`).limit(5);
+  console.log(`\u{1F50D} [AUTH DEBUG] Step 2 results (${existingStaff.length}): ${JSON.stringify(existingStaff.map((s) => ({ id: s.id, email: s.email, isActive: s.isActive })))}`);
+  const step2Active = existingStaff.find((s) => s.isActive);
+  if (step2Active) {
+    existingStaff = [step2Active];
+  } else if (existingStaff.length > 0) {
+    console.error(`\u{1F50D} [AUTH DEBUG] DEACTIVATED at Step 2! All matches deactivated. First: staffId=${existingStaff[0].id}, staffEmail=${existingStaff[0].email}`);
+    throw new Error("Your account has been deactivated. Please contact your administrator.");
+  }
   if (existingStaff.length > 0) {
-    if (!existingStaff[0].isActive) {
-      console.error(`\u{1F50D} [AUTH DEBUG] DEACTIVATED at Step 2! staffId=${existingStaff[0].id}, staffEmail=${existingStaff[0].email}, replitAuthSub=${existingStaff[0].replitAuthSub}`);
-      throw new Error("Your account has been deactivated. Please contact your administrator.");
-    }
     const existingProfileImage = existingStaff[0].profileImagePath;
     const hasCustomProfileImage = existingProfileImage && !existingProfileImage.includes("googleusercontent.com") && !existingProfileImage.includes("lh3.google");
     const [updated] = await db.update(staff).set({
@@ -58593,14 +58607,17 @@ async function upsertStaffFromGoogleProfile(profile) {
     return updated;
   }
   console.log(`\u{1F50D} [AUTH DEBUG] Step 2 did not match. Trying Step 3: staff.email = ${normalizedEmail}`);
-  let existingByEmail = await db.select().from(staff).where(sql12`LOWER(${staff.email}) = ${normalizedEmail}`).limit(1);
-  console.log(`\u{1F50D} [AUTH DEBUG] Step 3 result: found=${existingByEmail.length > 0}, staffId=${existingByEmail[0]?.id}, staffEmail=${existingByEmail[0]?.email}, isActive=${existingByEmail[0]?.isActive}`);
+  let existingByEmail = await db.select().from(staff).where(sql12`LOWER(${staff.email}) = ${normalizedEmail}`).orderBy(sql12`${staff.isActive} DESC`).limit(5);
+  console.log(`\u{1F50D} [AUTH DEBUG] Step 3 results (${existingByEmail.length}): ${JSON.stringify(existingByEmail.map((s) => ({ id: s.id, email: s.email, isActive: s.isActive })))}`);
+  const step3Active = existingByEmail.find((s) => s.isActive);
+  if (step3Active) {
+    existingByEmail = [step3Active];
+  } else if (existingByEmail.length > 0) {
+    console.error(`\u{1F50D} [AUTH DEBUG] DEACTIVATED at Step 3! All matches deactivated. First: staffId=${existingByEmail[0].id}, staffEmail=${existingByEmail[0].email}`);
+    throw new Error("Your account has been deactivated. Please contact your administrator.");
+  }
   if (existingByEmail.length > 0) {
     const existingStaffMember = existingByEmail[0];
-    if (!existingStaffMember.isActive) {
-      console.error(`\u{1F50D} [AUTH DEBUG] DEACTIVATED at Step 3! staffId=${existingStaffMember.id}, staffEmail=${existingStaffMember.email}`);
-      throw new Error("Your account has been deactivated. Please contact your administrator.");
-    }
     const existingSub = existingStaffMember.replitAuthSub;
     const isReplitAuthSub = existingSub && existingSub.length < 15 && /^\d+$/.test(existingSub);
     const isGoogleSub = googleSub && googleSub.length >= 15 && /^\d+$/.test(googleSub);
