@@ -58581,7 +58581,7 @@ async function upsertStaffFromGoogleProfile(profile) {
   } else if (anyMatch) {
     const first = linkedEmailResults[0];
     console.error(`\u{1F50D} [AUTH DEBUG] ALL Step 1 matches are deactivated. First: staffId=${first.staffId}, staffEmail=${first.staffEmail}`);
-    throw new Error("Your account has been deactivated. Please contact your administrator.");
+    throw new Error(`STEP1_DEACTIVATED: staffId=${first.staffId}, staffEmail=${first.staffEmail}`);
   }
   console.log(`\u{1F50D} [AUTH DEBUG] Step 1 did not match. Trying Step 2: staff.replitAuthSub = ${googleSub}`);
   let existingStaff = await db.select().from(staff).where(eq21(staff.replitAuthSub, googleSub)).orderBy(sql12`${staff.isActive} DESC`).limit(5);
@@ -58591,7 +58591,7 @@ async function upsertStaffFromGoogleProfile(profile) {
     existingStaff = [step2Active];
   } else if (existingStaff.length > 0) {
     console.error(`\u{1F50D} [AUTH DEBUG] DEACTIVATED at Step 2! All matches deactivated. First: staffId=${existingStaff[0].id}, staffEmail=${existingStaff[0].email}`);
-    throw new Error("Your account has been deactivated. Please contact your administrator.");
+    throw new Error(`STEP2_DEACTIVATED: staffId=${existingStaff[0].id}, staffEmail=${existingStaff[0].email}`);
   }
   if (existingStaff.length > 0) {
     const existingProfileImage = existingStaff[0].profileImagePath;
@@ -58614,7 +58614,7 @@ async function upsertStaffFromGoogleProfile(profile) {
     existingByEmail = [step3Active];
   } else if (existingByEmail.length > 0) {
     console.error(`\u{1F50D} [AUTH DEBUG] DEACTIVATED at Step 3! All matches deactivated. First: staffId=${existingByEmail[0].id}, staffEmail=${existingByEmail[0].email}`);
-    throw new Error("Your account has been deactivated. Please contact your administrator.");
+    throw new Error(`STEP3_DEACTIVATED: staffId=${existingByEmail[0].id}, staffEmail=${existingByEmail[0].email}`);
   }
   if (existingByEmail.length > 0) {
     const existingStaffMember = existingByEmail[0];
@@ -58672,6 +58672,36 @@ async function setupAuth(app2) {
   app2.set("trust proxy", 1);
   app2.use(getSession());
   console.log("\u2705 Google OAuth initialized");
+  app2.get("/api/auth-debug-lookup", async (req, res) => {
+    try {
+      const testEmail = "joe@themediaoptimizers.com";
+      const linkedResults = await db.select({
+        linkedId: staffLinkedEmails.id,
+        linkedEmail: staffLinkedEmails.email,
+        linkedGoogleSub: staffLinkedEmails.googleSub,
+        staffId: staff.id,
+        staffEmail: staff.email,
+        staffIsActive: staff.isActive
+      }).from(staffLinkedEmails).innerJoin(staff, eq21(staffLinkedEmails.staffId, staff.id)).where(sql12`LOWER(${staffLinkedEmails.email}) = ${testEmail}`).limit(5);
+      const step2Results = await db.select({ id: staff.id, email: staff.email, isActive: staff.isActive, replitAuthSub: staff.replitAuthSub }).from(staff).where(sql12`LOWER(${staff.email}) = ${testEmail}`).limit(5);
+      const deactivatedWithLinks = await db.select({
+        linkedEmail: staffLinkedEmails.email,
+        linkedGoogleSub: staffLinkedEmails.googleSub,
+        staffId: staff.id,
+        staffEmail: staff.email,
+        staffIsActive: staff.isActive
+      }).from(staffLinkedEmails).innerJoin(staff, eq21(staffLinkedEmails.staffId, staff.id)).where(eq21(staff.isActive, false)).limit(20);
+      res.json({
+        testEmail,
+        step1_linkedEmails: linkedResults,
+        step2_staffByEmail: step2Results,
+        deactivatedWithLinks: deactivatedWithLinks.length,
+        deactivatedDetails: deactivatedWithLinks
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
   app2.get("/api/login", (req, res) => {
     try {
       if (req.session) {
