@@ -660,10 +660,19 @@ The PX section provides comprehensive human resources management. Tabs appear in
 - Searchable catalog
 - Quick access links
 
+### Form Builder
+- Visual form builder at `/form-builder` and `/form-builder/:id`
+- Custom form creation with configurable fields and layout
+- Schema backed by `custom_forms`, `custom_form_fields`, and `custom_form_submissions` tables
+- Public form submission and data collection
+- Used for ticket intake forms, task intake forms, and other custom data collection
+
 ### What Users Can Do
 - Browse the directory of tools and resources used by the agency
 - Search for specific tools by name or keyword
 - Click through to access tool links
+- Create and edit custom forms using the visual form builder
+- View form submissions and collected data
 
 ---
 
@@ -930,6 +939,7 @@ AgencyBoost connects with the following external services:
 - Dedicated client login at `/client-portal/login` separate from staff authentication
 - `client_portal_users` table for portal-specific credentials
 - Token-based authentication for client sessions
+- API routes: `/api/client-portal/login`, `/api/client-portal/tasks`, `/api/client-portal/tasks/:id/approve`
 
 ### Client Dashboard
 - Personalized dashboard showing client-specific data
@@ -967,7 +977,7 @@ AgencyBoost connects with the following external services:
 ## 24. Solutions Pages
 
 ### Marketing & Sales Pages
-- 16 dedicated solution pages showcasing AgencyBoost capabilities
+- 17 dedicated solution pages showcasing AgencyBoost capabilities
 - Mega-menu navigation for easy browsing
 - Pages covering: CRM, Leads, Tasks, Tickets, HR, Client Portal, Client Onboarding, Invoicing, Proposals, Campaigns, Social Media, Workflows, Calendar, Hiring, Training, Knowledge Base, Call Center
 

@@ -99,7 +99,7 @@ The following features have been implemented and are working:
 | Stripe DB-backed Integration | **DONE** | Async DB-backed functions (`getStripeAsync`, etc.), dual webhook URLs, fully async webhook handler |
 | Task Generation from Bundles/Packages | **DONE** | Engine expands bundles and packages to find product-level task mapping templates |
 | Google Calendar OAuth Fix | **DONE** | Streamlined OAuth flow, removed Client Secret fields from settings UI |
-| Solutions Mega-Menu & Feature Pages | **DONE** | 16 dedicated solution pages with mega-menu navigation |
+| Solutions Mega-Menu & Feature Pages | **DONE** | 17 dedicated solution pages with mega-menu navigation |
 | Client Portal | **DONE** | Dedicated login, dashboard, task viewing and approval for clients |
 | Notification Email Links Fix | **DONE** | Production URLs now used correctly in notification emails |
 | HR Meetings Date Picker Fix | **DONE** | Fixed date picker interactions in HR meeting dialogs |
