@@ -501,6 +501,7 @@ The PX section provides comprehensive human resources management. Tabs appear in
 ### Hired Welcome Email
 - Automated welcome email sent when an applicant is marked as "Hired"
 - Configurable email scheduling for delayed delivery
+- Powered by `hiredNotificationService.ts` background service
 - Tracked via `scheduled_hired_emails` table
 
 ### Offboarding
