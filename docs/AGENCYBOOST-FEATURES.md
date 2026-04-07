@@ -1,6 +1,6 @@
 # AgencyBoost CRM - Complete Feature Documentation
 
-*Last updated: February 10, 2026*
+*Last updated: April 7, 2026*
 
 AgencyBoost is a comprehensive CRM platform built specifically for marketing agencies. It brings together client management, sales, project tracking, HR operations, automation, and communication tools into a single, modern interface. This document covers every feature, integration, and functionality available in the platform.
 
@@ -29,6 +29,10 @@ AgencyBoost is a comprehensive CRM platform built specifically for marketing age
 19. [Settings & Administration](#19-settings--administration)
 20. [Integrations](#20-integrations)
 21. [User Roles & Permissions](#21-user-roles--permissions)
+22. [Client Portal](#22-client-portal)
+23. [Survey Builder](#23-survey-builder)
+24. [Solutions Pages](#24-solutions-pages)
+25. [Help & Support](#25-help--support)
 
 ---
 
@@ -484,6 +488,20 @@ The PX section provides comprehensive human resources management. Tabs appear in
 ### Onboarding
 - Onboarding form submissions from new hires
 - Track onboarding progress
+- New Hire Onboarding Checklists with template builder, drag-and-drop day/item management
+- KB article and training course linking within checklist items
+- Auto-creation of checklists on staff creation via spawn service
+- New hire view under HR > Onboarding Checklist tab with day-by-day checklist and progress tracking
+- Day unlock logic for calendar/completion modes
+- Manager dashboard under HR > Onboarding with stats cards, filterable table, and detail drawer
+- LMS auto-sync: auto-completes training_course checklist items when the linked course is completed
+- Background notification service with daily day-unlock alerts and behind-schedule manager alerts
+- Completed checklist archive on staff profile page with read-only detail dialog
+
+### Hired Welcome Email
+- Automated welcome email sent when an applicant is marked as "Hired"
+- Configurable email scheduling for delayed delivery
+- Tracked via `scheduled_hired_emails` table
 
 ### Offboarding
 - Offboarding form builder and submission tracking
@@ -746,9 +764,10 @@ The Settings section contains 18 configuration areas, each with its own dedicate
 - Booking page configuration
 
 ### 19.11 Integrations
-Four integration categories, each with connect/disconnect, configure, and test capabilities:
+Five integration categories, each with connect/disconnect, configure, and test capabilities:
 
-- **Google Calendar**: OAuth 2.0 connection for two-way calendar sync. Per-user setup with sync preferences.
+- **Stripe**: Admins can enter/update Stripe API keys from Settings > Integrations. Keys are encrypted and stored in `stripe_integrations` table. Supports connect, disconnect, test connection, and key update flows.
+- **Google Calendar**: OAuth 2.0 connection for two-way calendar sync. Per-user setup with sync preferences. Client Secret no longer required in settings UI.
 - **Twilio SMS & VoIP**: Configure Twilio credentials for SMS messaging and browser-based phone calls. Manage multiple phone numbers. Test connection.
 - **Slack**: Connect to Slack workspace for automation triggers and actions. Configure bot permissions and channel access.
 - **Mailgun**: Set up Mailgun for transactional email delivery. Configure sending domain and API credentials. Test email delivery.
@@ -823,17 +842,20 @@ Six configuration tabs:
 
 AgencyBoost connects with the following external services:
 
-### Google OAuth 2.0
-- Primary authentication method
-- Secure login with Google accounts
-- Multi-user support with automatic migration from previous auth systems
+### Authentication
+- Email/password login with session management
+- Replit OIDC Auth as secondary authentication method
+- Multi-user support with role-based access control
+- Auth lookup uses `ORDER BY is_active DESC` with up to 5 results, preferring active accounts
+- Only throws "deactivated" if ALL matches for an email are inactive
 
 ### Google Calendar
-- Per-user OAuth 2.0 connection
+- Per-user OAuth 2.0 connection (Client Secret no longer required in settings UI)
 - Two-way event sync with incremental updates
 - Background sync every 2 minutes
 - Contact creation from calendar attendees
 - Event caching for performance
+- Streamlined OAuth flow with simplified connection setup
 
 ### Twilio
 - **SMS**: Send and receive text messages from client/lead profiles
@@ -859,7 +881,7 @@ AgencyBoost connects with the following external services:
 - Conversation history and source citations
 
 ### What Users Can Do
-- Sign in securely using your Google account
+- Sign in using email/password or Replit OIDC authentication
 - Connect your Google Calendar for two-way event sync
 - Configure Twilio for SMS messaging and browser-based phone calls
 - Connect your Slack workspace for automation triggers and actions
@@ -902,6 +924,72 @@ AgencyBoost connects with the following external services:
 
 ---
 
+## 22. Client Portal
+
+### Portal Access
+- Dedicated client login at `/client-portal/login` separate from staff authentication
+- `client_portal_users` table for portal-specific credentials
+- Token-based authentication for client sessions
+
+### Client Dashboard
+- Personalized dashboard showing client-specific data
+- Task viewing with status tracking
+- Task approval workflow — clients can approve deliverables directly
+
+### What Users Can Do
+- Log in to the client portal with dedicated credentials
+- View tasks assigned to their account
+- Approve or provide feedback on completed deliverables
+- Access their personalized dashboard
+
+---
+
+## 23. Survey Builder
+
+### Survey Creation
+- Visual survey builder at `/survey-builder/new` and `/survey-builder/:id`
+- Drag-and-drop question ordering
+- Multiple question types and customizable fields
+
+### Public Surveys
+- Public survey access at `/s/:shortCode` for direct links
+- Embeddable surveys at `/embed/survey/:shortCode` for website integration
+- Response collection and submission tracking
+
+### What Users Can Do
+- Create surveys with the visual builder
+- Share surveys via short-code public links
+- Embed surveys on external websites
+- View survey responses and submission data
+
+---
+
+## 24. Solutions Pages
+
+### Marketing & Sales Pages
+- 16 dedicated solution pages showcasing AgencyBoost capabilities
+- Mega-menu navigation for easy browsing
+- Pages covering: CRM, Leads, Tasks, Tickets, HR, Client Portal, Client Onboarding, Invoicing, Proposals, Campaigns, Social Media, Workflows, Calendar, Hiring, Training, Knowledge Base, Call Center
+
+### What Users Can Do
+- Browse solution pages to learn about platform features
+- Navigate between solutions using the mega-menu
+- Access detailed information about each module's capabilities
+
+---
+
+## 25. Help & Support
+
+### Internal Help Center
+- Built-in help and support page at `/help-support`
+- Quick access to platform documentation and resources
+
+### What Users Can Do
+- Access the help center from the navigation
+- Browse available support resources
+
+---
+
 ## Appendix: Technology Stack
 
 | Layer | Technology |
@@ -911,12 +999,13 @@ AgencyBoost connects with the following external services:
 | Forms | React Hook Form, Zod validation |
 | Backend | Node.js, Express.js, TypeScript |
 | Database | PostgreSQL (Neon), Drizzle ORM |
-| Authentication | Google OAuth 2.0 |
+| Authentication | Email/Password + Replit OIDC Auth |
 | File Storage | Object Storage (cloud-based) |
 | Email | Mailgun |
 | SMS/Voice | Twilio |
 | Chat/Automation | Slack API |
 | AI | OpenAI API |
+| Payments | Stripe (DB-backed async integration) |
 | Calendar | Google Calendar API |
 | Rich Text | TipTap Editor |
 | Org Chart | ReactFlow with Dagre layout |

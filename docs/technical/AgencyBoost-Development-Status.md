@@ -98,6 +98,17 @@ The following features have been implemented and are working:
 | Client Onboarding Form | **DONE** | Multi-step configurable form, custom fields, token-based public access |
 | Stripe DB-backed Integration | **DONE** | Async DB-backed functions (`getStripeAsync`, etc.), dual webhook URLs, fully async webhook handler |
 | Task Generation from Bundles/Packages | **DONE** | Engine expands bundles and packages to find product-level task mapping templates |
+| Google Calendar OAuth Fix | **DONE** | Streamlined OAuth flow, removed Client Secret fields from settings UI |
+| Solutions Mega-Menu & Feature Pages | **DONE** | 16 dedicated solution pages with mega-menu navigation |
+| Client Portal | **DONE** | Dedicated login, dashboard, task viewing and approval for clients |
+| Notification Email Links Fix | **DONE** | Production URLs now used correctly in notification emails |
+| HR Meetings Date Picker Fix | **DONE** | Fixed date picker interactions in HR meeting dialogs |
+| Onboarding KB Article Links Fix | **DONE** | Fixed Knowledge Base article links in onboarding checklists |
+| Tickets Resolved Count Fix | **DONE** | Fixed resolved ticket count always showing zero |
+| Health Score Date Picker Fix | **DONE** | Fixed date picker click handling in health score forms |
+| Task Dialog Date Pickers Fix | **DONE** | Fixed date pickers and dropdowns inside task creation dialog |
+| Auth Lookup Hardening | **DONE** | ORDER BY is_active DESC, prefers active accounts, only "deactivated" if ALL matches inactive |
+| Joe Email Production Fix | **DONE** | Startup migration to fix Joe's email to joe@themediaoptimizers.com in both environments |
 
 ---
 
@@ -135,6 +146,14 @@ The following features have been implemented and are working:
 | Client custom field sync to core columns | Client Management — email/phone/name out of sync | **Fixed** |
 | Business Profile stale data after save | Settings — query cache not invalidated | **Fixed** |
 | Subscription using wrong cost field | Proposals — was using `monthlyCost` instead of `clientBudget` | **Fixed** |
+| Notification emails pointing to dev URL | Deployment — production emails had wrong domain | **Fixed** |
+| Tickets resolved count always zero | Tickets — resolved count query incorrect | **Fixed** |
+| Health score date picker clicks | Health Scores — date picker not responding to clicks | **Fixed** |
+| Task dialog date pickers/dropdowns | Tasks — date pickers and dropdowns broken inside dialog | **Fixed** |
+| HR Meetings date picker | HR — date picker broken in meeting dialogs | **Fixed** |
+| Onboarding KB article links | HR — KB article links broken in onboarding checklists | **Fixed** |
+| Google Calendar OAuth flow | Calendar — OAuth flow failing, unnecessary Client Secret field | **Fixed** |
+| Joe's production email mismatch | Auth — production DB had wrong email for super admin | **Fixed** |
 
 ---
 
@@ -158,7 +177,11 @@ The following features have been implemented and are working:
 - **Architecture Decision:** Mailgun API key uses EncryptionService for secure storage and decryption at initialization
 - **Architecture Decision:** Customer ID resolution prioritizes payment intent's customer over stored quote customer to handle edge cases
 - **Architecture Decision:** Task generation engine recursively expands bundles and packages to resolve product-level task mappings
+- **Architecture Decision:** Auth lookup uses ORDER BY is_active DESC with up to 5 results, preferring active accounts over inactive ones
+- **Environment Note:** Joe's super admin email is `joe@themediaoptimizers.com` in both dev and production environments (startup migration ensures consistency)
+- **Feature Addition:** Client Portal with dedicated login, dashboard, and task approval for external clients
+- **Feature Addition:** 16 Solutions feature pages with mega-menu navigation for marketing/sales
 
 ---
 
-*Last Updated: March 2026*
+*Last Updated: April 2026*

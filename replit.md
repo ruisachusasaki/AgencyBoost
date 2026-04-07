@@ -11,7 +11,7 @@ Checkbox Design: Bulk action checkboxes should be square, task completion checkb
 Filter Preferences: Simplified filtering with only essential filters (search and department, not position) for time off reports.
 Settings Organization: Removed Settings > Support section (old ticketing system feature no longer needed).
 Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179, 100%, 39%)` / `#00C9C6`) throughout ALL features. Replace any blue buttons, accents, or styling with the primary theme color to ensure visual consistency across the entire application.
-Super Admin: Joe Hupp is the super admin with full access to all features including all staff compensation data. In dev environment: joe@themediaoptimizers.com. In production/live environment: joe@boostmode.com.
+Super Admin: Joe Hupp is the super admin with full access to all features including all staff compensation data. Email: joe@themediaoptimizers.com (both dev and production environments).
 Salary/Compensation: All admins can view and edit salary data for any staff member (no hierarchy restriction). Salary data is hidden from non-admin users across all API endpoints.
 
 ## System Architecture
