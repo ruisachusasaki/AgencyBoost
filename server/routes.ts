@@ -29748,6 +29748,68 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  app.post("/api/new-hire-onboarding-submissions/:id/push-to-staff", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { staffId } = req.body;
+      if (!staffId) {
+        return res.status(400).json({ error: "staffId is required" });
+      }
+
+      const [submission] = await db.select().from(newHireOnboardingSubmissions)
+        .where(eq(newHireOnboardingSubmissions.id, Number(id)));
+      if (!submission) {
+        return res.status(404).json({ error: "Submission not found" });
+      }
+
+      const [staffRecord] = await db.select().from(staff).where(eq(staff.id, staffId));
+      if (!staffRecord) {
+        return res.status(404).json({ error: "Staff member not found" });
+      }
+
+      const updateData: Record<string, any> = {};
+
+      if (submission.address) updateData.address = submission.address;
+      if (submission.phoneNumber) updateData.phone = submission.phoneNumber;
+      if (submission.dateOfBirth) updateData.birthdate = submission.dateOfBirth;
+      if (submission.startDate) updateData.startDate = submission.startDate;
+      if (submission.emergencyContactName) updateData.emergencyContactName = submission.emergencyContactName;
+      if (submission.emergencyContactNumber) updateData.emergencyContactPhone = submission.emergencyContactNumber;
+      if (submission.emergencyContactRelationship) updateData.emergencyContactRelationship = submission.emergencyContactRelationship;
+      if (submission.tshirtSize) updateData.shirtSize = submission.tshirtSize;
+
+      if (submission.name) {
+        const nameParts = submission.name.trim().split(/\s+/);
+        if (nameParts.length >= 2) {
+          updateData.firstName = nameParts[0];
+          updateData.lastName = nameParts.slice(1).join(' ');
+        } else if (nameParts.length === 1) {
+          updateData.firstName = nameParts[0];
+        }
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: "No fields to push" });
+      }
+
+      updateData.updatedAt = new Date();
+
+      await db.update(staff).set(updateData).where(eq(staff.id, staffId));
+
+      const [updatedStaff] = await db.select().from(staff).where(eq(staff.id, staffId));
+
+      const fieldsUpdated = Object.keys(updateData).filter(k => k !== 'updatedAt');
+      res.json({
+        success: true,
+        message: `Pushed ${fieldsUpdated.length} field(s) to ${updatedStaff?.firstName} ${updatedStaff?.lastName}`,
+        fieldsUpdated,
+      });
+    } catch (error) {
+      console.error("Error pushing onboarding data to staff:", error);
+      res.status(500).json({ error: "Failed to push data to staff record" });
+    }
+  });
+
   // Expense Report Form Configuration Routes
   app.get("/api/expense-report-form-config", async (req, res) => {
     try {

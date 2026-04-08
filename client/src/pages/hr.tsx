@@ -50,7 +50,8 @@ import {
   Plus,
   List,
   LayoutGrid,
-  ClipboardCheck
+  ClipboardCheck,
+  ArrowUpFromLine
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -351,6 +352,8 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
   const [onboardingSortDirection, setOnboardingSortDirection] = useState<'asc' | 'desc'>('asc');
   const [onboardingPage, setOnboardingPage] = useState(1);
   const [onboardingPageSize, setOnboardingPageSize] = useState(20);
+  const [pushToStaffSelections, setPushToStaffSelections] = useState<Record<number, string>>({});
+  const [pushingToStaff, setPushingToStaff] = useState<number | null>(null);
 
   // Fetch staff data
   const { data: staffData = [] } = useQuery<Staff[]>({
@@ -2657,6 +2660,70 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                                   );
                                 })()}
                                 <div className="border-t pt-4">
+                                  <h4 className="text-sm font-medium text-slate-600 mb-3">Push to Staff Record</h4>
+                                  <p className="text-xs text-slate-500 mb-3">
+                                    Select a staff member to push this onboarding data (birthday, address, emergency contact, etc.) to their record.
+                                  </p>
+                                  <div className="flex items-center gap-3">
+                                    <Select
+                                      value={pushToStaffSelections[submission.id] || ''}
+                                      onValueChange={(value) => {
+                                        setPushToStaffSelections(prev => ({ ...prev, [submission.id]: value }));
+                                      }}
+                                    >
+                                      <SelectTrigger className="w-64" data-testid={`select-push-staff-${submission.id}`}>
+                                        <SelectValue placeholder="Select staff member..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {staffData
+                                          .filter((s: Staff) => s.isActive)
+                                          .sort((a: Staff, b: Staff) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))
+                                          .map((s: Staff) => (
+                                            <SelectItem key={s.id} value={s.id}>
+                                              {s.firstName} {s.lastName}
+                                            </SelectItem>
+                                          ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <Button
+                                      disabled={pushingToStaff === submission.id}
+                                      onClick={() => {
+                                        const staffId = pushToStaffSelections[submission.id];
+                                        if (!staffId) {
+                                          toast({
+                                            title: "Error",
+                                            description: "Please select a staff member first",
+                                            variant: "destructive",
+                                          });
+                                          return;
+                                        }
+                                        setPushingToStaff(submission.id);
+                                        apiRequest('POST', `/api/new-hire-onboarding-submissions/${submission.id}/push-to-staff`, { staffId }).then(async (res) => {
+                                          const data = await res.json();
+                                          queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+                                          toast({
+                                            title: "Success",
+                                            description: data.message || "Data pushed to staff record",
+                                          });
+                                        }).catch(() => {
+                                          toast({
+                                            title: "Error",
+                                            description: "Failed to push data to staff record",
+                                            variant: "destructive",
+                                          });
+                                        }).finally(() => {
+                                          setPushingToStaff(null);
+                                        });
+                                      }}
+                                      className="bg-[hsl(179,100%,39%)] hover:bg-[hsl(179,100%,33%)] text-white"
+                                      data-testid={`button-push-to-staff-${submission.id}`}
+                                    >
+                                      <ArrowUpFromLine className="h-4 w-4 mr-2" />
+                                      {pushingToStaff === submission.id ? 'Pushing...' : 'Push to Staff'}
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div className="border-t pt-4">
                                   <div className="flex justify-between items-center">
                                     <div>
                                       <label className="text-sm font-medium text-slate-600">Status</label>
@@ -2667,7 +2734,6 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                                     {submission.status !== 'reviewed' && (
                                       <Button
                                         onClick={() => {
-                                          // Mark as reviewed
                                           apiRequest('PUT', `/api/new-hire-onboarding-submissions/${submission.id}`, { status: 'reviewed' }).then(() => {
                                             queryClient.invalidateQueries({ queryKey: ["/api/new-hire-onboarding-submissions"] });
                                             toast({
