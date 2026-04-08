@@ -2062,14 +2062,37 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           department: staff.department,
         }).from(staff).where(inArray(staff.id, allUserIds));
 
+        const reportFromDate = new Date(dateFrom + "T00:00:00");
+        const reportToDate = new Date(dateTo + "T00:00:00");
+        const reportDays = Math.max(1, Math.round((reportToDate.getTime() - reportFromDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+
         for (const s of staffRows) {
           userNames[s.id] = `${s.firstName} ${s.lastName}`;
           if (s.department) userDepartments[s.id] = s.department;
           if (s.annualSalary) {
-            const hourlyRate = parseFloat(s.annualSalary) / 2080;
+            const annualSalary = parseFloat(s.annualSalary);
+            const hourlyRate = annualSalary / 2080;
+            const dailyRate = annualSalary / 365;
+            const periodCap = dailyRate * reportDays;
+
+            let totalUncappedCost = 0;
+            const clientCosts: Record<string, number> = {};
             for (const clientId of Object.keys(minutesMap[s.id] || {})) {
               const minutes = minutesMap[s.id][clientId];
-              minutesMap[s.id][clientId + "__cost"] = parseFloat(((minutes / 60) * hourlyRate).toFixed(2));
+              const uncappedCost = (minutes / 60) * hourlyRate;
+              clientCosts[clientId] = uncappedCost;
+              totalUncappedCost += uncappedCost;
+            }
+
+            if (totalUncappedCost > periodCap && totalUncappedCost > 0) {
+              for (const clientId of Object.keys(clientCosts)) {
+                const proportion = clientCosts[clientId] / totalUncappedCost;
+                minutesMap[s.id][clientId + "__cost"] = parseFloat((periodCap * proportion).toFixed(2));
+              }
+            } else {
+              for (const clientId of Object.keys(clientCosts)) {
+                minutesMap[s.id][clientId + "__cost"] = parseFloat(clientCosts[clientId].toFixed(2));
+              }
             }
           }
         }
