@@ -18361,6 +18361,24 @@ async function loadBranding() {
   return branding;
 }
 function registerProposalRoutes(app2, requireAuth2, requirePermission2, notificationService) {
+  app2.post("/api/quotes/:id/retry-fulfillment", requireAuth2(), requirePermission2("quotes", "canManage"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [quote] = await db.select().from(quotes).where(eq14(quotes.id, id));
+      if (!quote) return res.status(404).json({ message: "Quote not found" });
+      console.log(`[Quote Fulfillment] Manual retry triggered for quote ${id}, current status: ${quote.status}, paymentStatus: ${quote.paymentStatus}, leadId: ${quote.leadId}, clientId: ${quote.clientId}`);
+      await triggerQuoteFulfillment(quote, notificationService);
+      const [updatedQuote] = await db.select().from(quotes).where(eq14(quotes.id, id));
+      res.json({
+        success: true,
+        message: `Fulfillment triggered for quote "${quote.name}"`,
+        clientId: updatedQuote?.clientId || null
+      });
+    } catch (error) {
+      console.error("[Quote Fulfillment] Manual retry error:", error);
+      res.status(500).json({ error: "Failed to retry fulfillment" });
+    }
+  });
   app2.post("/api/quotes/:id/send-proposal", requireAuth2(), async (req, res) => {
     try {
       const { id } = req.params;
@@ -19253,13 +19271,27 @@ async function handleStripeWebhook(req, res, notificationService) {
     console.error("Webhook signature verification failed:", err.message);
     return res.status(400).json({ message: `Webhook Error: ${err.message}` });
   }
+  console.log(`[Stripe Webhook] Received event: ${event.type}`);
+  if (event.type === "payment_intent.processing") {
+    const paymentIntent = event.data.object;
+    const quoteId = paymentIntent.metadata?.quoteId;
+    console.log(`[Stripe Webhook] payment_intent.processing for quote ${quoteId}, payment method: ${paymentIntent.payment_method_types?.join(",")}`);
+    if (quoteId) {
+      await db.update(quotes).set({
+        paymentStatus: "processing",
+        updatedAt: /* @__PURE__ */ new Date()
+      }).where(eq14(quotes.id, quoteId));
+    }
+  }
   if (event.type === "payment_intent.succeeded") {
     const paymentIntent = event.data.object;
     const quoteId = paymentIntent.metadata?.quoteId;
+    console.log(`[Stripe Webhook] payment_intent.succeeded for quote ${quoteId}, amount: ${paymentIntent.amount}, payment method: ${paymentIntent.payment_method_types?.join(",")}`);
     if (quoteId) {
       try {
         const [quote] = await db.select().from(quotes).where(eq14(quotes.id, quoteId));
         if (quote) {
+          const alreadyFulfilled = quote.paymentStatus === "paid" && (quote.clientId || quote.status === "completed");
           await db.update(quotes).set({
             status: "completed",
             paymentStatus: "paid",
@@ -19267,7 +19299,12 @@ async function handleStripeWebhook(req, res, notificationService) {
             paidAmount: (paymentIntent.amount / 100).toFixed(2),
             updatedAt: /* @__PURE__ */ new Date()
           }).where(eq14(quotes.id, quoteId));
-          await triggerQuoteFulfillment(quote, notificationService);
+          if (!alreadyFulfilled) {
+            console.log(`[Stripe Webhook] Triggering fulfillment for quote ${quoteId}`);
+            await triggerQuoteFulfillment(quote, notificationService);
+          } else {
+            console.log(`[Stripe Webhook] Quote ${quoteId} already fulfilled, skipping duplicate fulfillment`);
+          }
           const monthlyFee = parseFloat(paymentIntent.metadata?.monthlyFee || quote.clientBudget || "0");
           const billingMode = paymentIntent.metadata?.billingMode || quote.billingMode || "trial";
           const customerId = paymentIntent.customer || quote.stripeCustomerId;
@@ -19304,6 +19341,29 @@ async function handleStripeWebhook(req, res, notificationService) {
         }
       } catch (error) {
         console.error("Error processing payment success:", error);
+      }
+    }
+  }
+  if (event.type === "charge.succeeded") {
+    const charge = event.data.object;
+    const paymentIntentId = charge.payment_intent;
+    console.log(`[Stripe Webhook] charge.succeeded for PI ${paymentIntentId}, amount: ${charge.amount}`);
+    if (paymentIntentId) {
+      try {
+        const [quote] = await db.select().from(quotes).where(eq14(quotes.paymentIntentId, paymentIntentId));
+        if (quote && quote.paymentStatus !== "paid") {
+          console.log(`[Stripe Webhook] charge.succeeded triggering fulfillment for quote ${quote.id} (payment was ${quote.paymentStatus})`);
+          await db.update(quotes).set({
+            status: "completed",
+            paymentStatus: "paid",
+            paidAt: /* @__PURE__ */ new Date(),
+            paidAmount: (charge.amount / 100).toFixed(2),
+            updatedAt: /* @__PURE__ */ new Date()
+          }).where(eq14(quotes.id, quote.id));
+          await triggerQuoteFulfillment(quote, notificationService);
+        }
+      } catch (error) {
+        console.error("[Stripe Webhook] Error processing charge.succeeded:", error);
       }
     }
   }
@@ -47015,6 +47075,56 @@ ${appointment.description || ""}
     } catch (error) {
       console.error("Error deleting new hire onboarding submission:", error);
       res.status(500).json({ error: "Failed to delete submission" });
+    }
+  });
+  app2.post("/api/new-hire-onboarding-submissions/:id/push-to-staff", requireAuth(), requirePermission("hr", "canManage"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { staffId } = req.body;
+      if (!staffId) {
+        return res.status(400).json({ error: "staffId is required" });
+      }
+      const [submission] = await db.select().from(newHireOnboardingSubmissions).where(eq20(newHireOnboardingSubmissions.id, Number(id)));
+      if (!submission) {
+        return res.status(404).json({ error: "Submission not found" });
+      }
+      const [staffRecord] = await db.select().from(staff).where(eq20(staff.id, staffId));
+      if (!staffRecord) {
+        return res.status(404).json({ error: "Staff member not found" });
+      }
+      const updateData = {};
+      if (submission.address) updateData.address = submission.address;
+      if (submission.phoneNumber) updateData.phone = submission.phoneNumber;
+      if (submission.dateOfBirth) updateData.birthdate = submission.dateOfBirth;
+      if (submission.startDate) updateData.startDate = submission.startDate;
+      if (submission.emergencyContactName) updateData.emergencyContactName = submission.emergencyContactName;
+      if (submission.emergencyContactNumber) updateData.emergencyContactPhone = submission.emergencyContactNumber;
+      if (submission.emergencyContactRelationship) updateData.emergencyContactRelationship = submission.emergencyContactRelationship;
+      if (submission.tshirtSize) updateData.shirtSize = submission.tshirtSize;
+      if (submission.name) {
+        const nameParts = submission.name.trim().split(/\s+/);
+        if (nameParts.length >= 2) {
+          updateData.firstName = nameParts[0];
+          updateData.lastName = nameParts.slice(1).join(" ");
+        } else if (nameParts.length === 1) {
+          updateData.firstName = nameParts[0];
+        }
+      }
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: "No fields to push" });
+      }
+      updateData.updatedAt = /* @__PURE__ */ new Date();
+      await db.update(staff).set(updateData).where(eq20(staff.id, staffId));
+      const [updatedStaff] = await db.select().from(staff).where(eq20(staff.id, staffId));
+      const fieldsUpdated = Object.keys(updateData).filter((k) => k !== "updatedAt");
+      res.json({
+        success: true,
+        message: `Pushed ${fieldsUpdated.length} field(s) to ${updatedStaff?.firstName} ${updatedStaff?.lastName}`,
+        fieldsUpdated
+      });
+    } catch (error) {
+      console.error("Error pushing onboarding data to staff:", error);
+      res.status(500).json({ error: "Failed to push data to staff record" });
     }
   });
   app2.get("/api/expense-report-form-config", async (req, res) => {
