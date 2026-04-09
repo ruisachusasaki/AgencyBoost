@@ -42,6 +42,7 @@ import DOMPurify from "dompurify";
 import RoadmapComments from "@/components/roadmap-comments";
 import { convertTextToHtml } from "@/components/rich-text-editor";
 import { Map } from "lucide-react";
+import ClientBillingTab from "@/components/client-billing-tab";
 
 // MergeTagSelector Component for Email and SMS
 function MergeTagSelector({ searchValue, onSearchChange, onSelectTag, customFields }: {
@@ -3576,7 +3577,7 @@ export default function EnhancedClientDetail() {
   }, [scheduledDate, scheduledTime, scheduledTimezone]);
 
   // Tab navigation state
-  const [activeTab, setActiveTab] = useState<'contact' | 'hub' | 'health' | 'products' | 'communication' | 'activity'>('contact');
+  const [activeTab, setActiveTab] = useState<'contact' | 'hub' | 'health' | 'products' | 'billing' | 'communication' | 'activity'>('contact');
 
 
 
@@ -5951,7 +5952,7 @@ export default function EnhancedClientDetail() {
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="border-b border-gray-200">
-            <TabsList className="grid w-full grid-cols-7 bg-transparent border-0 rounded-none h-auto p-0">
+            <TabsList className="grid w-full grid-cols-8 bg-transparent border-0 rounded-none h-auto p-0">
               <TabsTrigger 
                 value="contact" 
                 className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 -mb-0.5"
@@ -5987,6 +5988,13 @@ export default function EnhancedClientDetail() {
               >
                 <ShoppingCart className="h-4 w-4" />
                 Products
+              </TabsTrigger>
+              <TabsTrigger 
+                value="billing" 
+                className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 -mb-0.5"
+              >
+                <CreditCard className="h-4 w-4" />
+                Billing
               </TabsTrigger>
               <TabsTrigger 
                 value="communication" 
@@ -6832,6 +6840,10 @@ export default function EnhancedClientDetail() {
 
             {isAdminOrManager && <RecurringTasksSection clientId={clientId} />}
             {isAdminOrManager && <TaskGenerationHistory clientId={clientId} />}
+        </TabsContent>
+
+        <TabsContent value="billing" className="space-y-6 mt-6">
+          <ClientBillingTab clientId={clientId} />
         </TabsContent>
 
         <TabsContent value="activity" className="space-y-6 mt-6">
