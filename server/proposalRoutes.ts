@@ -184,6 +184,28 @@ export function registerProposalRoutes(
   notificationService: NotificationService
 ) {
 
+  app.post("/api/quotes/:id/retry-fulfillment", requireAuth(), requirePermission('quotes', 'canManage'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
+      if (!quote) return res.status(404).json({ message: "Quote not found" });
+
+      console.log(`[Quote Fulfillment] Manual retry triggered for quote ${id}, current status: ${quote.status}, paymentStatus: ${quote.paymentStatus}, leadId: ${quote.leadId}, clientId: ${quote.clientId}`);
+
+      await triggerQuoteFulfillment(quote, notificationService);
+
+      const [updatedQuote] = await db.select().from(quotes).where(eq(quotes.id, id));
+      res.json({
+        success: true,
+        message: `Fulfillment triggered for quote "${quote.name}"`,
+        clientId: updatedQuote?.clientId || null,
+      });
+    } catch (error) {
+      console.error("[Quote Fulfillment] Manual retry error:", error);
+      res.status(500).json({ error: "Failed to retry fulfillment" });
+    }
+  });
+
   app.post("/api/quotes/:id/send-proposal", requireAuth(), async (req, res) => {
     try {
       const { id } = req.params;
@@ -1252,9 +1274,28 @@ export async function handleStripeWebhook(req: any, res: any, notificationServic
     return res.status(400).json({ message: `Webhook Error: ${err.message}` });
   }
 
+  console.log(`[Stripe Webhook] Received event: ${event.type}`);
+
+  if (event.type === "payment_intent.processing") {
+    const paymentIntent = event.data.object as any;
+    const quoteId = paymentIntent.metadata?.quoteId;
+    console.log(`[Stripe Webhook] payment_intent.processing for quote ${quoteId}, payment method: ${paymentIntent.payment_method_types?.join(',')}`);
+
+    if (quoteId) {
+      await db
+        .update(quotes)
+        .set({
+          paymentStatus: "processing",
+          updatedAt: new Date(),
+        })
+        .where(eq(quotes.id, quoteId));
+    }
+  }
+
   if (event.type === "payment_intent.succeeded") {
     const paymentIntent = event.data.object as any;
     const quoteId = paymentIntent.metadata?.quoteId;
+    console.log(`[Stripe Webhook] payment_intent.succeeded for quote ${quoteId}, amount: ${paymentIntent.amount}, payment method: ${paymentIntent.payment_method_types?.join(',')}`);
 
     if (quoteId) {
       try {
@@ -1264,6 +1305,8 @@ export async function handleStripeWebhook(req: any, res: any, notificationServic
           .where(eq(quotes.id, quoteId));
 
         if (quote) {
+          const alreadyFulfilled = quote.paymentStatus === 'paid' && (quote.clientId || quote.status === 'completed');
+          
           await db
             .update(quotes)
             .set({
@@ -1275,7 +1318,12 @@ export async function handleStripeWebhook(req: any, res: any, notificationServic
             })
             .where(eq(quotes.id, quoteId));
 
-          await triggerQuoteFulfillment(quote, notificationService);
+          if (!alreadyFulfilled) {
+            console.log(`[Stripe Webhook] Triggering fulfillment for quote ${quoteId}`);
+            await triggerQuoteFulfillment(quote, notificationService);
+          } else {
+            console.log(`[Stripe Webhook] Quote ${quoteId} already fulfilled, skipping duplicate fulfillment`);
+          }
 
           const monthlyFee = parseFloat(paymentIntent.metadata?.monthlyFee || quote.clientBudget || "0");
           const billingMode = paymentIntent.metadata?.billingMode || quote.billingMode || "trial";
@@ -1320,6 +1368,40 @@ export async function handleStripeWebhook(req: any, res: any, notificationServic
         }
       } catch (error) {
         console.error("Error processing payment success:", error);
+      }
+    }
+  }
+
+  if (event.type === "charge.succeeded") {
+    const charge = event.data.object as any;
+    const paymentIntentId = charge.payment_intent;
+    console.log(`[Stripe Webhook] charge.succeeded for PI ${paymentIntentId}, amount: ${charge.amount}`);
+
+    if (paymentIntentId) {
+      try {
+        const [quote] = await db
+          .select()
+          .from(quotes)
+          .where(eq(quotes.paymentIntentId, paymentIntentId));
+
+        if (quote && quote.paymentStatus !== 'paid') {
+          console.log(`[Stripe Webhook] charge.succeeded triggering fulfillment for quote ${quote.id} (payment was ${quote.paymentStatus})`);
+
+          await db
+            .update(quotes)
+            .set({
+              status: "completed",
+              paymentStatus: "paid",
+              paidAt: new Date(),
+              paidAmount: (charge.amount / 100).toFixed(2),
+              updatedAt: new Date(),
+            })
+            .where(eq(quotes.id, quote.id));
+
+          await triggerQuoteFulfillment(quote, notificationService);
+        }
+      } catch (error) {
+        console.error("[Stripe Webhook] Error processing charge.succeeded:", error);
       }
     }
   }

@@ -3055,6 +3055,12 @@ export default function Sales() {
                                                 Paid
                                               </Badge>
                                             )}
+                                            {quote.paymentStatus === 'processing' && (
+                                              <Badge className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5">
+                                                <Clock className="h-3 w-3 mr-0.5" />
+                                                ACH Processing
+                                              </Badge>
+                                            )}
                                             {quote.paymentStatus === 'pending' && (
                                               <Badge className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5">
                                                 <Clock className="h-3 w-3 mr-0.5" />
@@ -3091,6 +3097,31 @@ export default function Sales() {
                                               >
                                                 <RefreshCw className="mr-2 h-4 w-4" />
                                                 Resend Email
+                                              </DropdownMenuItem>
+                                            )}
+                                            {quote.leadId && (quote.paymentStatus === 'paid' || quote.paymentStatus === 'processing') && !quote.clientId && (
+                                              <DropdownMenuItem
+                                                onClick={() => {
+                                                  apiRequest('POST', `/api/quotes/${quote.id}/retry-fulfillment`).then(async (res) => {
+                                                    const data = await res.json();
+                                                    queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+                                                    queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+                                                    queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+                                                    toast({
+                                                      title: "Success",
+                                                      description: data.message || "Fulfillment triggered",
+                                                    });
+                                                  }).catch(() => {
+                                                    toast({
+                                                      title: "Error",
+                                                      description: "Failed to retry fulfillment",
+                                                      variant: "destructive",
+                                                    });
+                                                  });
+                                                }}
+                                              >
+                                                <RefreshCw className="mr-2 h-4 w-4" />
+                                                Retry Lead Conversion
                                               </DropdownMenuItem>
                                             )}
                                             <DropdownMenuItem
