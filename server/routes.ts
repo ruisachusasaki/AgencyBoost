@@ -3645,6 +3645,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
               method: c.payment_method_details?.type || 'unknown',
               date: new Date(c.created * 1000).toISOString(),
               receiptUrl: c.receipt_url,
+              paymentIntentId: c.payment_intent || null,
             }));
 
             if (activeSubscription) {
@@ -3693,10 +3694,17 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         }
       }
 
-      const existingPaymentIds = new Set(payments.map(p => p.paymentIntentId).filter(Boolean));
+      const existingPaymentIntentIds = new Set(payments.map(p => p.paymentIntentId).filter(Boolean));
       for (const charge of stripeCharges) {
-        const chargePI = (charge as any).payment_intent;
-        if (!existingPaymentIds.has(charge.id) && !existingPaymentIds.has(chargePI)) {
+        const chargePaymentIntentId = charge.paymentIntentId;
+        if (chargePaymentIntentId && existingPaymentIntentIds.has(chargePaymentIntentId)) {
+          const existingIdx = payments.findIndex(p => p.paymentIntentId === chargePaymentIntentId);
+          if (existingIdx >= 0 && charge.receiptUrl) {
+            payments[existingIdx].receiptUrl = charge.receiptUrl;
+          }
+          continue;
+        }
+        if (!existingPaymentIntentIds.has(charge.id)) {
           payments.push(charge);
         }
       }
