@@ -105,7 +105,7 @@ export function MeetingTimerProvider({ children }: MeetingTimerProviderProps) {
       }
 
       queryClient.invalidateQueries({ queryKey: ['/api/meetings/active-timer'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/one-on-one'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/one-on-one/meetings'] });
       queryClient.invalidateQueries({ queryKey: ['/api/px-meetings'] });
 
       try {
