@@ -2316,10 +2316,73 @@ async function fixJoeEmailInProduction() {
   }
 }
 
+async function cleanupStuckTimers() {
+  try {
+    log("Running startup migration: cleanupStuckTimers");
+    const STUCK_THRESHOLD_HOURS = 24;
+    const now = Date.now();
+    const thresholdMs = STUCK_THRESHOLD_HOURS * 60 * 60 * 1000;
+
+    const allTasks = await db.select({
+      id: tasks.id,
+      timeEntries: tasks.timeEntries,
+    }).from(tasks);
+
+    let totalFixed = 0;
+
+    for (const task of allTasks) {
+      if (!task.timeEntries || !Array.isArray(task.timeEntries)) continue;
+      const entries = task.timeEntries as any[];
+      let modified = false;
+
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        if (!entry.isRunning || !entry.startTime) continue;
+
+        const startMs = new Date(entry.startTime).getTime();
+        const elapsed = now - startMs;
+
+        if (elapsed >= thresholdMs) {
+          const cappedHours = 8;
+          const cappedEndTime = new Date(startMs + cappedHours * 60 * 60 * 1000).toISOString();
+          entries[i] = {
+            ...entry,
+            endTime: cappedEndTime,
+            isRunning: false,
+            duration: cappedHours * 60,
+            autoCapped: true,
+            cleanedUpAt: new Date().toISOString(),
+          };
+          modified = true;
+          totalFixed++;
+          log(`  Fixed stuck timer: task=${task.id}, user=${entry.userId}, running for ${Math.round(elapsed / 3600000)}h`);
+        }
+      }
+
+      if (modified) {
+        const totalTracked = entries.reduce((total: number, e: any) => total + (e.duration || 0), 0);
+        await db.update(tasks).set({
+          timeEntries: entries,
+          timeTracked: totalTracked,
+        } as any).where(eq(tasks.id, task.id));
+      }
+    }
+
+    if (totalFixed > 0) {
+      log(`✅ Cleaned up ${totalFixed} stuck timer(s) exceeding ${STUCK_THRESHOLD_HOURS}h`);
+    } else {
+      log("No stuck timers found (>24h)");
+    }
+  } catch (error: any) {
+    log(`⚠️ cleanupStuckTimers error: ${error.message}`);
+  }
+}
+
 async function runStartupMigrations() {
   log("Starting background migrations...");
   try {
     await fixJoeEmailInProduction();
+    await cleanupStuckTimers();
     await ensureClientBriefColumns();
     await ensureQuotesProposalColumns();
     await ensureQuotesCostBreakdownColumns();

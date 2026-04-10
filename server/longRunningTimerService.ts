@@ -1,11 +1,12 @@
 import { db } from "./db";
-import { taskSettings, enhancedTasks, staff } from "@shared/schema";
+import { taskSettings, tasks, staff } from "@shared/schema";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { NotificationService } from "./notification-service";
 import { storage } from "./storage";
 
 const CHECK_INTERVAL_MS = 15 * 60 * 1000;
 const DEFAULT_THRESHOLD_HOURS = 8;
+const AUTO_CAP_HOURS = 12;
 let checkIntervalId: NodeJS.Timeout | null = null;
 let isRunning = false;
 const alertedTimers = new Set<string>();
@@ -60,6 +61,25 @@ async function getThresholdHours(): Promise<number> {
   return DEFAULT_THRESHOLD_HOURS;
 }
 
+async function getAutoCapHours(): Promise<number> {
+  try {
+    const [setting] = await db.select()
+      .from(taskSettings)
+      .where(eq(taskSettings.settingKey, "auto_cap_timer_hours"));
+
+    if (setting && setting.settingValue) {
+      const val = typeof setting.settingValue === 'object'
+        ? (setting.settingValue as any).value
+        : setting.settingValue;
+      const parsed = parseFloat(String(val));
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+  } catch (err) {
+    console.error("[LongRunningTimerCheck] Error fetching auto-cap setting:", err);
+  }
+  return AUTO_CAP_HOURS;
+}
+
 async function isAlertEnabled(): Promise<boolean> {
   try {
     const [setting] = await db.select()
@@ -93,6 +113,31 @@ async function getAdminUserIds(): Promise<string[]> {
   }
 }
 
+async function autoCapTimer(taskId: string, entryIndex: number, entry: any, entries: any[], capHours: number) {
+  try {
+    const capMs = capHours * 60 * 60 * 1000;
+    const startMs = new Date(entry.startTime).getTime();
+    const cappedEndTime = new Date(startMs + capMs).toISOString();
+    const cappedDurationMinutes = Math.floor(capHours * 60);
+
+    entries[entryIndex] = {
+      ...entry,
+      endTime: cappedEndTime,
+      isRunning: false,
+      duration: cappedDurationMinutes,
+      autoCapped: true,
+    };
+
+    const totalTracked = entries.reduce((total: number, e: any) => total + (e.duration || 0), 0);
+    await storage.updateTask(taskId, { timeEntries: entries, timeTracked: totalTracked } as any);
+    console.log(`[LongRunningTimerCheck] Auto-capped timer for task ${taskId}, user ${entry.userId} at ${capHours}h`);
+    return true;
+  } catch (err) {
+    console.error(`[LongRunningTimerCheck] Failed to auto-cap timer for task ${taskId}:`, err);
+    return false;
+  }
+}
+
 async function runLongRunningTimerCheck() {
   if (isRunning) {
     console.log("[LongRunningTimerCheck] Already running a check, skipping");
@@ -103,22 +148,20 @@ async function runLongRunningTimerCheck() {
 
   try {
     const enabled = await isAlertEnabled();
-    if (!enabled) {
-      return;
-    }
-
     const thresholdHours = await getThresholdHours();
+    const capHours = await getAutoCapHours();
     const thresholdMs = thresholdHours * 60 * 60 * 1000;
+    const capMs = capHours * 60 * 60 * 1000;
     const now = Date.now();
 
     const allTasks = await db.select({
-      id: enhancedTasks.id,
-      title: enhancedTasks.title,
-      timeEntries: enhancedTasks.timeEntries,
-    }).from(enhancedTasks);
+      id: tasks.id,
+      title: tasks.title,
+      timeEntries: tasks.timeEntries,
+    }).from(tasks);
 
     const longRunningTimers: Array<{
-      taskId: number;
+      taskId: string;
       taskTitle: string;
       userId: string;
       startTime: string;
@@ -128,14 +171,39 @@ async function runLongRunningTimerCheck() {
 
     for (const task of allTasks) {
       if (!task.timeEntries || !Array.isArray(task.timeEntries)) continue;
+      const entries = task.timeEntries as any[];
 
-      for (const entry of task.timeEntries as any[]) {
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
         if (!entry.isRunning || !entry.startTime || !entry.userId) continue;
 
         const startMs = new Date(entry.startTime).getTime();
         const elapsed = now - startMs;
 
-        if (elapsed >= thresholdMs) {
+        if (elapsed >= capMs) {
+          const capped = await autoCapTimer(task.id, i, entry, entries, capHours);
+          if (capped) {
+            const timerKey = `cap-${task.id}-${entry.userId}-${entry.startTime}`;
+            if (!alertedTimers.has(timerKey)) {
+              const notificationService = new NotificationService(storage);
+              await notificationService.notify({
+                userId: entry.userId,
+                type: 'task_assigned',
+                title: 'Timer Auto-Stopped',
+                message: `Your timer on "${task.title}" was automatically stopped after ${capHours} hours. The capped duration of ${Math.floor(capHours * 60)} minutes has been logged.`,
+                entityType: 'task',
+                entityId: String(task.id),
+                actionUrl: `/tasks?taskId=${task.id}`,
+                actionText: 'View Task',
+                priority: 'high',
+              });
+              alertedTimers.add(timerKey);
+            }
+          }
+          continue;
+        }
+
+        if (enabled && elapsed >= thresholdMs) {
           const timerKey = `${task.id}-${entry.userId}-${entry.startTime}`;
 
           if (!alertedTimers.has(timerKey)) {

@@ -36753,6 +36753,274 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  // POST /api/time-entries/start — atomic start with duplicate guard
+  app.post("/api/time-entries/start", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { taskId } = req.body;
+      if (!taskId) return res.status(400).json({ error: "taskId is required" });
+
+      const allTasks = await appStorage.getTasks();
+      for (const t of allTasks) {
+        if (t.timeEntries && Array.isArray(t.timeEntries)) {
+          const running = (t.timeEntries as any[]).find((e: any) => e.isRunning && e.userId === userId);
+          if (running) {
+            return res.status(409).json({ error: "Timer already running", taskId: t.id, taskTitle: t.title, entryId: running.id });
+          }
+        }
+      }
+
+      const task = await appStorage.getTask(String(taskId));
+      if (!task) return res.status(404).json({ error: "Task not found" });
+
+      const staffUser = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
+      const userName = staffUser.length ? `${staffUser[0].firstName} ${staffUser[0].lastName}` : "Unknown";
+
+      const now = new Date().toISOString();
+      const entryId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const newEntry = {
+        id: entryId,
+        taskId: String(taskId),
+        taskTitle: task.title,
+        startTime: now,
+        userId,
+        userName,
+        isRunning: true,
+      };
+
+      const existingEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
+      const merged = [...existingEntries, newEntry];
+
+      await appStorage.updateTask(String(taskId), { timeEntries: merged } as any);
+
+      res.json(newEntry);
+    } catch (error) {
+      console.error("Error starting timer:", error);
+      res.status(500).json({ error: "Failed to start timer" });
+    }
+  });
+
+  // POST /api/time-entries/stop — atomic stop with server-side duration
+  app.post("/api/time-entries/stop", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { taskId, entryId } = req.body;
+      if (!taskId || !entryId) return res.status(400).json({ error: "taskId and entryId are required" });
+
+      const task = await appStorage.getTask(String(taskId));
+      if (!task) return res.status(404).json({ error: "Task not found" });
+
+      const entries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
+      const idx = entries.findIndex((e: any) => e.id === entryId);
+      if (idx === -1) return res.status(404).json({ error: "Time entry not found" });
+
+      const entry = entries[idx] as any;
+      if (entry.userId !== userId) return res.status(403).json({ error: "Cannot stop another user's timer" });
+      if (!entry.isRunning) return res.json({ alreadyStopped: true, entry });
+
+      const now = new Date().toISOString();
+      const duration = Math.floor((new Date(now).getTime() - new Date(entry.startTime).getTime()) / 1000 / 60);
+
+      const updatedEntry = { ...entry, endTime: now, isRunning: false, duration };
+      entries[idx] = updatedEntry;
+
+      const totalTracked = entries.reduce((total: number, e: any) => total + (e.duration || 0), 0);
+      await appStorage.updateTask(String(taskId), { timeEntries: entries, timeTracked: totalTracked } as any);
+
+      res.json({ entry: updatedEntry, totalTracked, duration });
+    } catch (error) {
+      console.error("Error stopping timer:", error);
+      res.status(500).json({ error: "Failed to stop timer" });
+    }
+  });
+
+  // PATCH /api/time-entries/:entryId — edit a time entry's duration/times
+  app.patch("/api/time-entries/:entryId", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { entryId } = req.params;
+      const { taskId, startTime, endTime, duration } = req.body;
+      if (!taskId) return res.status(400).json({ error: "taskId is required" });
+
+      const task = await appStorage.getTask(String(taskId));
+      if (!task) return res.status(404).json({ error: "Task not found" });
+
+      const entries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
+      const idx = entries.findIndex((e: any) => e.id === entryId);
+      if (idx === -1) return res.status(404).json({ error: "Time entry not found" });
+
+      const entry = entries[idx] as any;
+      if (entry.isRunning) return res.status(400).json({ error: "Cannot edit a running timer — stop it first" });
+
+      const isAdminUser = await isCurrentUserAdmin(req);
+      if (entry.userId !== userId && !isAdminUser) {
+        return res.status(403).json({ error: "Cannot edit another user's time entry" });
+      }
+
+      if (startTime) entry.startTime = startTime;
+      if (endTime) entry.endTime = endTime;
+      if (typeof duration === 'number') {
+        entry.duration = duration;
+      } else if (entry.startTime && entry.endTime) {
+        entry.duration = Math.floor((new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / 1000 / 60);
+      }
+      entries[idx] = entry;
+
+      const totalTracked = entries.reduce((total: number, e: any) => total + (e.duration || 0), 0);
+      await appStorage.updateTask(String(taskId), { timeEntries: entries, timeTracked: totalTracked } as any);
+
+      res.json({ entry, totalTracked });
+    } catch (error) {
+      console.error("Error editing time entry:", error);
+      res.status(500).json({ error: "Failed to edit time entry" });
+    }
+  });
+
+  // DELETE /api/time-entries/:entryId — delete a time entry
+  app.delete("/api/time-entries/:entryId", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { entryId } = req.params;
+      const { taskId } = req.query;
+      if (!taskId) return res.status(400).json({ error: "taskId query param is required" });
+
+      const task = await appStorage.getTask(String(taskId));
+      if (!task) return res.status(404).json({ error: "Task not found" });
+
+      const entries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
+      const idx = entries.findIndex((e: any) => e.id === entryId);
+      if (idx === -1) return res.status(404).json({ error: "Time entry not found" });
+
+      const entry = entries[idx] as any;
+      const isAdminUser = await isCurrentUserAdmin(req);
+      if (entry.userId !== userId && !isAdminUser) {
+        return res.status(403).json({ error: "Cannot delete another user's time entry" });
+      }
+
+      entries.splice(idx, 1);
+      const totalTracked = entries.reduce((total: number, e: any) => total + (e.duration || 0), 0);
+      await appStorage.updateTask(String(taskId), { timeEntries: entries, timeTracked: totalTracked } as any);
+
+      res.json({ success: true, totalTracked });
+    } catch (error) {
+      console.error("Error deleting time entry:", error);
+      res.status(500).json({ error: "Failed to delete time entry" });
+    }
+  });
+
+  // POST /api/time-entries/manual — add a completed time entry manually
+  app.post("/api/time-entries/manual", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { taskId, startTime, endTime, duration, notes } = req.body;
+      if (!taskId) return res.status(400).json({ error: "taskId is required" });
+
+      let finalDuration = duration;
+      if (!finalDuration && startTime && endTime) {
+        finalDuration = Math.floor((new Date(endTime).getTime() - new Date(startTime).getTime()) / 1000 / 60);
+      }
+      if (!finalDuration || finalDuration <= 0) {
+        return res.status(400).json({ error: "Valid duration or start/end times are required" });
+      }
+
+      const task = await appStorage.getTask(String(taskId));
+      if (!task) return res.status(404).json({ error: "Task not found" });
+
+      const staffUser = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
+      const userName = staffUser.length ? `${staffUser[0].firstName} ${staffUser[0].lastName}` : "Unknown";
+
+      const now = new Date().toISOString();
+      const entryId = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const newEntry = {
+        id: entryId,
+        taskId: String(taskId),
+        taskTitle: task.title,
+        startTime: startTime || now,
+        endTime: endTime || now,
+        userId,
+        userName,
+        isRunning: false,
+        duration: finalDuration,
+        notes: notes || null,
+        isManual: true,
+      };
+
+      const existingEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
+      const merged = [...existingEntries, newEntry];
+      const totalTracked = merged.reduce((total: number, e: any) => total + (e.duration || 0), 0);
+
+      await appStorage.updateTask(String(taskId), { timeEntries: merged, timeTracked: totalTracked } as any);
+
+      res.json({ entry: newEntry, totalTracked });
+    } catch (error) {
+      console.error("Error creating manual time entry:", error);
+      res.status(500).json({ error: "Failed to create manual time entry" });
+    }
+  });
+
+  // POST /api/meetings/stop — stop active meeting from navbar
+  app.post("/api/meetings/stop", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { meetingId, meetingType } = req.body;
+      if (!meetingId || !meetingType) return res.status(400).json({ error: "meetingId and meetingType are required" });
+
+      const now = new Date();
+
+      if (meetingType === '1on1') {
+        const [meeting] = await db.select().from(oneOnOneMeetings).where(eq(oneOnOneMeetings.id, meetingId)).limit(1);
+        if (!meeting) return res.status(404).json({ error: "Meeting not found" });
+        if (meeting.managerId !== userId && meeting.directReportId !== userId) {
+          return res.status(403).json({ error: "Not a participant of this meeting" });
+        }
+        if (meeting.meetingEndedAt) return res.status(400).json({ error: "Meeting already ended" });
+        if (!meeting.meetingStartedAt) return res.status(400).json({ error: "Meeting not started" });
+
+        const [updated] = await db.update(oneOnOneMeetings)
+          .set({ meetingEndedAt: now, updatedAt: now })
+          .where(eq(oneOnOneMeetings.id, meetingId))
+          .returning();
+        return res.json({ success: true, meeting: updated });
+      } else if (meetingType === 'px') {
+        const [meeting] = await db.select().from(pxMeetings).where(eq(pxMeetings.id, meetingId)).limit(1);
+        if (!meeting) return res.status(404).json({ error: "Meeting not found" });
+
+        const attendees = await db.select().from(pxMeetingAttendees)
+          .where(eq(pxMeetingAttendees.meetingId, meetingId));
+        const isParticipant = attendees.some(a => a.userId === userId) || meeting.createdById === userId;
+        if (!isParticipant) {
+          return res.status(403).json({ error: "Not a participant of this meeting" });
+        }
+
+        if (meeting.meetingEndedAt) return res.status(400).json({ error: "Meeting already ended" });
+        if (!meeting.meetingStartedAt) return res.status(400).json({ error: "Meeting not started" });
+
+        const [updated] = await db.update(pxMeetings)
+          .set({ meetingEndedAt: now, updatedAt: now })
+          .where(eq(pxMeetings.id, meetingId))
+          .returning();
+        return res.json({ success: true, meeting: updated });
+      }
+
+      res.status(400).json({ error: "Invalid meeting type" });
+    } catch (error) {
+      console.error("Error stopping meeting:", error);
+      res.status(500).json({ error: "Failed to stop meeting" });
+    }
+  });
+
   // Get time entries by date range with optional filters - SECURED
   app.get("/api/reports/time-entries", requireAuth(), requirePermission('reporting', 'canView'), async (req, res) => {
     try {

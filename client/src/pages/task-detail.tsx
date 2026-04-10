@@ -206,6 +206,11 @@ export default function TaskDetail() {
   const [highlightedCommentId, setHighlightedCommentId] = useState<string | null>(null);
   const [highlightedAnnotationId, setHighlightedAnnotationId] = useState<string | null>(null);
   const [showManualTimeDialog, setShowManualTimeDialog] = useState(false);
+  const [showTimeEntries, setShowTimeEntries] = useState(false);
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [editEntryHours, setEditEntryHours] = useState("");
+  const [editEntryMinutes, setEditEntryMinutes] = useState("");
+  const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
   const getLocalDateString = () => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -514,44 +519,21 @@ export default function TaskDetail() {
   // Add manual time entry mutation
   const addManualTimeMutation = useMutation({
     mutationFn: async (data: { date: string; hours: number; minutes: number; notes: string }) => {
-      if (!task || !currentUser) return;
+      if (!task) return;
       
       const totalMinutes = (data.hours * 60) + data.minutes;
       if (totalMinutes <= 0) {
         throw new Error("Please enter a valid duration");
       }
       
-      // Create the time entry with the selected date
-      // Parse date as local time by appending T12:00:00 (noon) to avoid timezone issues
-      // This ensures the date stays correct regardless of timezone when converted to ISO
       const entryDate = new Date(data.date + 'T12:00:00');
       
-      const newEntry = {
-        id: Date.now().toString(),
+      await apiRequest("POST", "/api/time-entries/manual", {
         taskId: task.id,
-        taskTitle: task.title,
         startTime: entryDate.toISOString(),
         endTime: entryDate.toISOString(),
-        userId: currentUser.id,
-        userName: `${currentUser.firstName} ${currentUser.lastName}`,
-        isRunning: false,
         duration: totalMinutes,
-        source: 'manual',
-        notes: data.notes || undefined
-      };
-      
-      // Merge with existing entries
-      const existingEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
-      const mergedEntries = [...existingEntries, newEntry];
-      
-      // Calculate new total
-      const totalTracked = mergedEntries.reduce((total: number, entry: any) => 
-        total + (entry.duration || 0), 0
-      );
-      
-      await apiRequest("PUT", `/api/tasks/${task.id}`, {
-        timeEntries: mergedEntries,
-        timeTracked: totalTracked
+        notes: data.notes || undefined,
       });
     },
     onSuccess: () => {
@@ -575,6 +557,38 @@ export default function TaskDetail() {
         description: error?.message || "Failed to add time entry.",
         variant: "destructive",
       });
+    },
+  });
+
+  const editTimeEntryMutation = useMutation({
+    mutationFn: async ({ entryId, hours, minutes }: { entryId: string; hours: number; minutes: number }) => {
+      if (!task) return;
+      const duration = (hours * 60) + minutes;
+      if (duration <= 0) throw new Error("Duration must be greater than zero");
+      await apiRequest("PATCH", `/api/time-entries/${entryId}`, { taskId: task.id, duration });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}`] });
+      setEditingEntryId(null);
+      toast({ title: "Time Updated", variant: "default", description: "Time entry updated." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error?.message || "Failed to update time entry.", variant: "destructive" });
+    },
+  });
+
+  const deleteTimeEntryMutation = useMutation({
+    mutationFn: async (entryId: string) => {
+      if (!task) return;
+      await apiRequest("DELETE", `/api/time-entries/${entryId}?taskId=${task.id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}`] });
+      setDeleteEntryId(null);
+      toast({ title: "Entry Deleted", variant: "default", description: "Time entry deleted." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error?.message || "Failed to delete time entry.", variant: "destructive" });
     },
   });
 
@@ -1155,7 +1169,131 @@ export default function TaskDetail() {
                       <span className="text-sm text-slate-600">
                         {task.timeTracked ? `${Math.floor(task.timeTracked / 60)}h ${task.timeTracked % 60}m` : '0m'} tracked
                       </span>
+                      {Array.isArray(task.timeEntries) && task.timeEntries.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowTimeEntries(!showTimeEntries)}
+                          className="h-6 px-2 text-xs text-slate-500"
+                        >
+                          {showTimeEntries ? "Hide" : "Show"} entries ({task.timeEntries.length})
+                        </Button>
+                      )}
                     </div>
+                    {showTimeEntries && Array.isArray(task.timeEntries) && task.timeEntries.length > 0 && (
+                      <div className="mt-3 border rounded-md overflow-hidden">
+                        <div className="max-h-48 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700">
+                          {(task.timeEntries as any[])
+                            .slice()
+                            .sort((a: any, b: any) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+                            .map((entry: any) => (
+                            <div key={entry.id} className="flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <span className="text-slate-500 whitespace-nowrap">
+                                  {format(new Date(entry.startTime), "MMM d, h:mm a")}
+                                </span>
+                                <span className="text-slate-700 dark:text-slate-300 truncate">
+                                  {entry.userName || "Unknown"}
+                                </span>
+                                {entry.isRunning && (
+                                  <Badge className="bg-green-100 text-green-700 text-[10px] px-1">Running</Badge>
+                                )}
+                                {entry.autoCapped && (
+                                  <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1">Auto-capped</Badge>
+                                )}
+                                {(entry.isManual || entry.source === 'manual') && (
+                                  <Badge className="bg-blue-100 text-blue-700 text-[10px] px-1">Manual</Badge>
+                                )}
+                                {entry.notes && (
+                                  <span className="text-slate-400 truncate italic">{entry.notes}</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 ml-2">
+                                {editingEntryId === entry.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max="23"
+                                      value={editEntryHours}
+                                      onChange={(e) => setEditEntryHours(e.target.value)}
+                                      className="w-12 h-6 text-xs p-1"
+                                      placeholder="h"
+                                    />
+                                    <span>:</span>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max="59"
+                                      value={editEntryMinutes}
+                                      onChange={(e) => setEditEntryMinutes(e.target.value)}
+                                      className="w-12 h-6 text-xs p-1"
+                                      placeholder="m"
+                                    />
+                                    <Button
+                                      size="sm"
+                                      className="h-6 px-2 text-xs"
+                                      disabled={editTimeEntryMutation.isPending}
+                                      onClick={() => {
+                                        editTimeEntryMutation.mutate({
+                                          entryId: entry.id,
+                                          hours: parseInt(editEntryHours) || 0,
+                                          minutes: parseInt(editEntryMinutes) || 0,
+                                        });
+                                      }}
+                                    >
+                                      Save
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 px-1 text-xs"
+                                      onClick={() => setEditingEntryId(null)}
+                                    >
+                                      <span className="sr-only">Cancel</span>✕
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <span className="font-mono text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                      {entry.isRunning
+                                        ? "—"
+                                        : `${Math.floor((entry.duration || 0) / 60)}h ${(entry.duration || 0) % 60}m`}
+                                    </span>
+                                    {!entry.isRunning && (
+                                      <>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-5 w-5 p-0 text-slate-400 hover:text-slate-600"
+                                          onClick={() => {
+                                            setEditingEntryId(entry.id);
+                                            setEditEntryHours(String(Math.floor((entry.duration || 0) / 60)));
+                                            setEditEntryMinutes(String((entry.duration || 0) % 60));
+                                          }}
+                                          title="Edit duration"
+                                        >
+                                          <Edit className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-5 w-5 p-0 text-slate-400 hover:text-red-500"
+                                          onClick={() => setDeleteEntryId(entry.id)}
+                                          title="Delete entry"
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1582,6 +1720,26 @@ export default function TaskDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteEntryId} onOpenChange={(open) => { if (!open) setDeleteEntryId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Time Entry</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this time entry? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (deleteEntryId) deleteTimeEntryMutation.mutate(deleteEntryId); }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleteTimeEntryMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>

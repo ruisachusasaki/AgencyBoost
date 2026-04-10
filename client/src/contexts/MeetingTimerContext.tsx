@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 interface ActiveMeeting {
   id: string;
@@ -12,9 +13,13 @@ interface MeetingTimerContextType {
   activeMeeting: ActiveMeeting | null;
   isMeetingTimerRunning: boolean;
   meetingElapsedTime: number;
+  stopMeeting: () => Promise<void>;
+  isStoppingMeeting: boolean;
 }
 
 const MeetingTimerContext = createContext<MeetingTimerContextType | undefined>(undefined);
+
+const BROADCAST_CHANNEL_NAME = 'agencyboost-meeting-timer';
 
 export function useMeetingTimer() {
   const context = useContext(MeetingTimerContext);
@@ -30,6 +35,8 @@ interface MeetingTimerProviderProps {
 
 export function MeetingTimerProvider({ children }: MeetingTimerProviderProps) {
   const [meetingElapsedTime, setMeetingElapsedTime] = useState(0);
+  const [isStoppingMeeting, setIsStoppingMeeting] = useState(false);
+  const broadcastRef = useRef<BroadcastChannel | null>(null);
 
   const isClientPortal = typeof window !== 'undefined' && window.location.pathname.startsWith('/client-portal');
 
@@ -43,6 +50,26 @@ export function MeetingTimerProvider({ children }: MeetingTimerProviderProps) {
   });
 
   const isMeetingTimerRunning = !!activeMeeting;
+
+  useEffect(() => {
+    try {
+      const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+      broadcastRef.current = channel;
+
+      channel.onmessage = (event) => {
+        const { type } = event.data;
+        if (type === 'MEETING_STOPPED') {
+          queryClient.invalidateQueries({ queryKey: ['/api/meetings/active-timer'] });
+        }
+      };
+
+      return () => {
+        channel.close();
+        broadcastRef.current = null;
+      };
+    } catch {
+    }
+  }, []);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -66,10 +93,38 @@ export function MeetingTimerProvider({ children }: MeetingTimerProviderProps) {
     };
   }, [activeMeeting?.meetingStartedAt]);
 
+  const stopMeeting = useCallback(async () => {
+    if (!activeMeeting || isStoppingMeeting) return;
+
+    setIsStoppingMeeting(true);
+    try {
+      await apiRequest("POST", "/api/meetings/stop", {
+        meetingId: activeMeeting.id,
+        meetingType: activeMeeting.type,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['/api/meetings/active-timer'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/one-on-one'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/px-meetings'] });
+
+      try {
+        broadcastRef.current?.postMessage({ type: 'MEETING_STOPPED' });
+      } catch {
+      }
+    } catch (error) {
+      console.error('Error stopping meeting:', error);
+      throw error;
+    } finally {
+      setIsStoppingMeeting(false);
+    }
+  }, [activeMeeting, isStoppingMeeting]);
+
   const value: MeetingTimerContextType = {
     activeMeeting,
     isMeetingTimerRunning,
     meetingElapsedTime,
+    stopMeeting,
+    isStoppingMeeting,
   };
 
   return (
