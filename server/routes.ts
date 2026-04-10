@@ -36753,7 +36753,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  // POST /api/time-entries/start — atomic start with duplicate guard via SQL transaction
+  // POST /api/time-entries/start — atomic start with advisory lock for user-level uniqueness
   app.post("/api/time-entries/start", requireAuth(), async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
@@ -36762,42 +36762,40 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const { taskId } = req.body;
       if (!taskId) return res.status(400).json({ error: "taskId is required" });
 
-      const allTasks = await appStorage.getTasks();
-      for (const t of allTasks) {
-        if (t.timeEntries && Array.isArray(t.timeEntries)) {
-          const running = (t.timeEntries as any[]).find((e: any) => e.isRunning && e.userId === userId);
-          if (running) {
-            return res.status(409).json({ error: "Timer already running", taskId: t.id, taskTitle: t.title, entryId: running.id });
-          }
-        }
-      }
-
       const staffUser = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
       const userName = staffUser.length ? `${staffUser[0].firstName} ${staffUser[0].lastName}` : "Unknown";
 
       const now = new Date().toISOString();
       const entryId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const newEntry = {
-        id: entryId,
-        taskId: String(taskId),
-        startTime: now,
-        userId,
-        userName,
-        isRunning: true,
-        taskTitle: '',
-      };
+
+      const lockKey = Buffer.from(userId).reduce((hash, byte) => ((hash << 5) - hash + byte) | 0, 0);
 
       const result = await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockKey})`);
+
+        const allRows = await tx.execute(sql`SELECT id, title, time_entries FROM tasks`);
+        for (const t of allRows.rows || allRows) {
+          const entries = Array.isArray(t.time_entries) ? t.time_entries as any[] : [];
+          const running = entries.find((e: any) => e.isRunning && e.userId === userId);
+          if (running) {
+            return { error: 'duplicate_global', taskId: t.id, taskTitle: t.title, entryId: running.id };
+          }
+        }
+
         const [task] = await tx.execute(sql`SELECT id, title, time_entries FROM tasks WHERE id = ${String(taskId)} FOR UPDATE`);
         if (!task) return { error: 'not_found' };
 
-        newEntry.taskTitle = String(task.title);
-
         const existingEntries = Array.isArray(task.time_entries) ? task.time_entries as any[] : [];
-        const alreadyRunning = existingEntries.find((e: any) => e.isRunning && e.userId === userId);
-        if (alreadyRunning) {
-          return { error: 'duplicate', taskId: task.id, taskTitle: task.title, entryId: alreadyRunning.id };
-        }
+
+        const newEntry = {
+          id: entryId,
+          taskId: String(taskId),
+          taskTitle: String(task.title),
+          startTime: now,
+          userId,
+          userName,
+          isRunning: true,
+        };
 
         const merged = [...existingEntries, newEntry];
         await tx.execute(sql`UPDATE tasks SET time_entries = ${JSON.stringify(merged)}::jsonb WHERE id = ${String(taskId)}`);
@@ -36806,7 +36804,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       });
 
       if (result.error === 'not_found') return res.status(404).json({ error: "Task not found" });
-      if (result.error === 'duplicate') return res.status(409).json({ error: "Timer already running on this task", taskId: result.taskId, taskTitle: result.taskTitle, entryId: result.entryId });
+      if (result.error === 'duplicate_global') return res.status(409).json({ error: "Timer already running", taskId: result.taskId, taskTitle: result.taskTitle, entryId: result.entryId });
 
       res.json(result.entry);
     } catch (error) {

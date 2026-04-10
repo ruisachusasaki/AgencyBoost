@@ -1519,6 +1519,7 @@ function MeetingEditor({
       if (liveMeeting) {
         queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", liveMeeting.id, "details"] });
       }
+      try { new BroadcastChannel('agencyboost-meeting-timer').postMessage({ type: 'MEETING_STARTED' }); } catch {}
       toast({ title: "Meeting started", description: "Timer is now running for both participants." });
     },
     onError: (error: any) => {

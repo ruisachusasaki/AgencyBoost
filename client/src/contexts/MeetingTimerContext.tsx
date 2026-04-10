@@ -58,7 +58,7 @@ export function MeetingTimerProvider({ children }: MeetingTimerProviderProps) {
 
       channel.onmessage = (event) => {
         const { type } = event.data;
-        if (type === 'MEETING_STOPPED') {
+        if (type === 'MEETING_STOPPED' || type === 'MEETING_STARTED') {
           queryClient.invalidateQueries({ queryKey: ['/api/meetings/active-timer'] });
         }
       };

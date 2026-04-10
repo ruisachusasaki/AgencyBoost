@@ -427,6 +427,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
       if (meetingId) {
         queryClient.invalidateQueries({ queryKey: [`/api/px-meetings/${meetingId}`] });
       }
+      try { new BroadcastChannel('agencyboost-meeting-timer').postMessage({ type: 'MEETING_STARTED' }); } catch {}
       toast({ title: "Meeting started", description: "Timer is now running for all attendees." });
     },
     onError: (error: any) => {
