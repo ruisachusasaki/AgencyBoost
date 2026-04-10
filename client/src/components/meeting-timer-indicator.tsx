@@ -1,12 +1,10 @@
-import { Video, Square } from 'lucide-react';
+import { Video } from 'lucide-react';
 import { useMeetingTimer } from '@/contexts/MeetingTimerContext';
 import { useLocation } from 'wouter';
-import { useToast } from '@/hooks/use-toast';
 
 export default function MeetingTimerIndicator() {
-  const { activeMeeting, isMeetingTimerRunning, meetingElapsedTime, stopMeeting, isStoppingMeeting } = useMeetingTimer();
+  const { activeMeeting, isMeetingTimerRunning, meetingElapsedTime } = useMeetingTimer();
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
 
   if (!isMeetingTimerRunning || !activeMeeting) return null;
 
@@ -29,24 +27,6 @@ export default function MeetingTimerIndicator() {
     }
   };
 
-  const handleStop = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await stopMeeting();
-      toast({
-        title: "Meeting Ended",
-        description: `Ended "${activeMeeting.title}"`,
-        variant: "default",
-      });
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to end meeting. Try stopping from the meeting page.",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-md px-3 py-1.5 text-sm dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-400">
       <button
@@ -64,15 +44,6 @@ export default function MeetingTimerIndicator() {
         title={`Go to active meeting: ${activeMeeting.title}`}
       >
         {formatTime(meetingElapsedTime)}
-      </button>
-
-      <button
-        onClick={handleStop}
-        disabled={isStoppingMeeting}
-        className="ml-1 p-0.5 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors disabled:opacity-50"
-        title="End meeting"
-      >
-        <Square className="h-3 w-3 text-blue-600 dark:text-blue-400 fill-current" />
       </button>
     </div>
   );

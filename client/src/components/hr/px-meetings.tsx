@@ -427,7 +427,6 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
       if (meetingId) {
         queryClient.invalidateQueries({ queryKey: [`/api/px-meetings/${meetingId}`] });
       }
-      try { new BroadcastChannel('agencyboost-meeting-timer').postMessage({ type: 'MEETING_STARTED' }); } catch {}
       toast({ title: "Meeting started", description: "Timer is now running for all attendees." });
     },
     onError: (error: any) => {
@@ -446,7 +445,6 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
       if (meetingId) {
         queryClient.invalidateQueries({ queryKey: [`/api/px-meetings/${meetingId}`] });
       }
-      try { new BroadcastChannel('agencyboost-meeting-timer').postMessage({ type: 'MEETING_STOPPED' }); } catch {}
       const mins = Math.floor((data.durationSeconds || 0) / 60);
       const secs = (data.durationSeconds || 0) % 60;
       let desc = `Duration: ${mins}m ${secs}s. Time entries created for ${data.timeEntriesCreated} attendee(s).`;
