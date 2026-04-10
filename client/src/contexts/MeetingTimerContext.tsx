@@ -98,10 +98,11 @@ export function MeetingTimerProvider({ children }: MeetingTimerProviderProps) {
 
     setIsStoppingMeeting(true);
     try {
-      await apiRequest("POST", "/api/meetings/stop", {
-        meetingId: activeMeeting.id,
-        meetingType: activeMeeting.type,
-      });
+      if (activeMeeting.type === '1on1') {
+        await apiRequest("POST", `/api/hr/one-on-one/meetings/${activeMeeting.id}/finish`);
+      } else if (activeMeeting.type === 'px') {
+        await apiRequest("POST", `/api/px-meetings/${activeMeeting.id}/finish`);
+      }
 
       queryClient.invalidateQueries({ queryKey: ['/api/meetings/active-timer'] });
       queryClient.invalidateQueries({ queryKey: ['/api/hr/one-on-one'] });

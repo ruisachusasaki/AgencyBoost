@@ -526,12 +526,17 @@ export default function TaskDetail() {
         throw new Error("Please enter a valid duration");
       }
       
-      const entryDate = new Date(data.date + 'T12:00:00');
+      const now = new Date();
+      const selectedDate = new Date(data.date + 'T00:00:00');
+      const isToday = selectedDate.toDateString() === now.toDateString();
+      const safeTime = isToday
+        ? new Date(Math.min(selectedDate.getTime() + now.getHours() * 3600000 + now.getMinutes() * 60000, now.getTime())).toISOString()
+        : new Date(selectedDate.getTime() + 12 * 3600000).toISOString();
       
       await apiRequest("POST", "/api/time-entries/manual", {
         taskId: task.id,
-        startTime: entryDate.toISOString(),
-        endTime: entryDate.toISOString(),
+        startTime: safeTime,
+        endTime: safeTime,
         duration: totalMinutes,
         notes: data.notes || undefined,
       });

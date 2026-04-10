@@ -37009,58 +37009,9 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  // POST /api/meetings/stop — stop active meeting from navbar
-  app.post("/api/meetings/stop", requireAuth(), async (req, res) => {
-    try {
-      const userId = getAuthenticatedUserIdOrFail(req, res);
-      if (!userId) return;
-
-      const { meetingId, meetingType } = req.body;
-      if (!meetingId || !meetingType) return res.status(400).json({ error: "meetingId and meetingType are required" });
-
-      const now = new Date();
-
-      if (meetingType === '1on1') {
-        const [meeting] = await db.select().from(oneOnOneMeetings).where(eq(oneOnOneMeetings.id, meetingId)).limit(1);
-        if (!meeting) return res.status(404).json({ error: "Meeting not found" });
-        if (meeting.managerId !== userId && meeting.directReportId !== userId) {
-          return res.status(403).json({ error: "Not a participant of this meeting" });
-        }
-        if (meeting.meetingEndedAt) return res.status(400).json({ error: "Meeting already ended" });
-        if (!meeting.meetingStartedAt) return res.status(400).json({ error: "Meeting not started" });
-
-        const [updated] = await db.update(oneOnOneMeetings)
-          .set({ meetingEndedAt: now, updatedAt: now })
-          .where(eq(oneOnOneMeetings.id, meetingId))
-          .returning();
-        return res.json({ success: true, meeting: updated });
-      } else if (meetingType === 'px') {
-        const [meeting] = await db.select().from(pxMeetings).where(eq(pxMeetings.id, meetingId)).limit(1);
-        if (!meeting) return res.status(404).json({ error: "Meeting not found" });
-
-        const attendees = await db.select().from(pxMeetingAttendees)
-          .where(eq(pxMeetingAttendees.meetingId, meetingId));
-        const isParticipant = attendees.some(a => a.userId === userId) || meeting.createdById === userId;
-        if (!isParticipant) {
-          return res.status(403).json({ error: "Not a participant of this meeting" });
-        }
-
-        if (meeting.meetingEndedAt) return res.status(400).json({ error: "Meeting already ended" });
-        if (!meeting.meetingStartedAt) return res.status(400).json({ error: "Meeting not started" });
-
-        const [updated] = await db.update(pxMeetings)
-          .set({ meetingEndedAt: now, updatedAt: now })
-          .where(eq(pxMeetings.id, meetingId))
-          .returning();
-        return res.json({ success: true, meeting: updated });
-      }
-
-      res.status(400).json({ error: "Invalid meeting type" });
-    } catch (error) {
-      console.error("Error stopping meeting:", error);
-      res.status(500).json({ error: "Failed to stop meeting" });
-    }
-  });
+  // Meeting stop from navbar now uses existing finish endpoints directly from frontend:
+  // - POST /api/hr/one-on-one/meetings/:meetingId/finish (1on1)
+  // - POST /api/px-meetings/:id/finish (px)
 
   // Get time entries by date range with optional filters - SECURED
   app.get("/api/reports/time-entries", requireAuth(), requirePermission('reporting', 'canView'), async (req, res) => {
