@@ -25,6 +25,7 @@ const TimerContext = createContext<TimerContextType | undefined>(undefined);
 
 const BROADCAST_CHANNEL_NAME = 'agencyboost-task-timer';
 const STORAGE_SIGNAL_KEY = 'agencyboost-timer-signal';
+const SERVER_POLL_INTERVAL = 10000;
 
 export function useTimer() {
   const context = useContext(TimerContext);
@@ -44,6 +45,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
   const { toast } = useToast();
   const broadcastRef = useRef<BroadcastChannel | null>(null);
   const hasBroadcastChannel = useRef(false);
+  const currentTimerRef = useRef<TimeEntry | null>(null);
 
   const isClientPortal = typeof window !== 'undefined' && window.location.pathname.startsWith('/client-portal');
 
@@ -54,14 +56,18 @@ export function TimerProvider({ children }: TimerProviderProps) {
 
   const isTimerRunning = !!currentTimer;
 
-  const syncFromServer = useCallback(async (userId: string) => {
+  useEffect(() => {
+    currentTimerRef.current = currentTimer;
+  }, [currentTimer]);
+
+  const syncFromServer = useCallback(async () => {
     try {
       const response = await fetch('/api/time-entries/running');
       if (response.ok) {
         const runningEntry = await response.json();
-        if (runningEntry && runningEntry.userId === userId) {
+        if (runningEntry && runningEntry.isRunning) {
           setCurrentTimer(runningEntry);
-        } else {
+        } else if (currentTimerRef.current) {
           setCurrentTimer(null);
           setElapsedTime(0);
         }
@@ -134,9 +140,27 @@ export function TimerProvider({ children }: TimerProviderProps) {
 
   useEffect(() => {
     if (currentUser?.id) {
-      syncFromServer(currentUser.id);
+      syncFromServer();
     }
   }, [currentUser?.id, syncFromServer]);
+
+  useEffect(() => {
+    if (!currentUser?.id || isClientPortal) return;
+
+    const interval = setInterval(syncFromServer, SERVER_POLL_INTERVAL);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        syncFromServer();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [currentUser?.id, isClientPortal, syncFromServer]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -157,27 +181,6 @@ export function TimerProvider({ children }: TimerProviderProps) {
       if (interval) clearInterval(interval);
     };
   }, [currentTimer]);
-
-  useEffect(() => {
-    if (!currentTimer || !currentUser?.id) return;
-
-    const verifyTimerStillRunning = async () => {
-      try {
-        const response = await fetch('/api/time-entries/running');
-        if (response.ok) {
-          const runningEntry = await response.json();
-          if (!runningEntry || runningEntry.id !== currentTimer.id) {
-            setCurrentTimer(null);
-            setElapsedTime(0);
-          }
-        }
-      } catch {
-      }
-    };
-
-    const interval = setInterval(verifyTimerStillRunning, 15000);
-    return () => clearInterval(interval);
-  }, [currentTimer?.id, currentUser?.id]);
 
   useEffect(() => {
     localStorage.removeItem('activeTimer');
@@ -233,9 +236,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
           description: "You already have a timer running on another task.",
           variant: "destructive",
         });
-        if (currentUser?.id) {
-          syncFromServer(currentUser.id);
-        }
+        syncFromServer();
       } else {
         console.error('Error starting timer:', error);
         toast({
@@ -275,14 +276,27 @@ export function TimerProvider({ children }: TimerProviderProps) {
 
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tasks', savedTaskId] });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error stopping timer via server:', error);
 
-      toast({
-        title: "Failed to Stop Timer",
-        variant: "destructive",
-        description: `Could not stop the timer for "${savedTaskTitle}". Please try again.`,
-      });
+      const status = error?.status || error?.response?.status;
+      if (status === 404) {
+        setCurrentTimer(null);
+        setElapsedTime(0);
+        broadcastTimerEvent('TIMER_STOPPED', null);
+        toast({
+          title: "Timer Cleared",
+          variant: "default",
+          description: `The task or time entry was removed. Timer has been cleared.`,
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      } else {
+        toast({
+          title: "Failed to Stop Timer",
+          variant: "destructive",
+          description: `Could not stop the timer for "${savedTaskTitle}". Please try again.`,
+        });
+      }
     }
   };
 

@@ -36753,7 +36753,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  // POST /api/time-entries/start — atomic start with duplicate guard
+  // POST /api/time-entries/start — atomic start with duplicate guard via SQL transaction
   app.post("/api/time-entries/start", requireAuth(), async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
@@ -36772,9 +36772,6 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         }
       }
 
-      const task = await appStorage.getTask(String(taskId));
-      if (!task) return res.status(404).json({ error: "Task not found" });
-
       const staffUser = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
       const userName = staffUser.length ? `${staffUser[0].firstName} ${staffUser[0].lastName}` : "Unknown";
 
@@ -36783,31 +36780,42 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const newEntry = {
         id: entryId,
         taskId: String(taskId),
-        taskTitle: task.title,
         startTime: now,
         userId,
         userName,
         isRunning: true,
+        taskTitle: '',
       };
 
-      const existingEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
-      const alreadyRunningOnTask = existingEntries.find((e: any) => e.isRunning && e.userId === userId);
-      if (alreadyRunningOnTask) {
-        return res.status(409).json({ error: "Timer already running on this task", taskId: task.id, taskTitle: task.title, entryId: alreadyRunningOnTask.id });
-      }
+      const result = await db.transaction(async (tx) => {
+        const [task] = await tx.execute(sql`SELECT id, title, time_entries FROM tasks WHERE id = ${String(taskId)} FOR UPDATE`);
+        if (!task) return { error: 'not_found' };
 
-      const merged = [...existingEntries, newEntry];
+        newEntry.taskTitle = String(task.title);
 
-      await appStorage.updateTask(String(taskId), { timeEntries: merged } as any);
+        const existingEntries = Array.isArray(task.time_entries) ? task.time_entries as any[] : [];
+        const alreadyRunning = existingEntries.find((e: any) => e.isRunning && e.userId === userId);
+        if (alreadyRunning) {
+          return { error: 'duplicate', taskId: task.id, taskTitle: task.title, entryId: alreadyRunning.id };
+        }
 
-      res.json(newEntry);
+        const merged = [...existingEntries, newEntry];
+        await tx.execute(sql`UPDATE tasks SET time_entries = ${JSON.stringify(merged)}::jsonb WHERE id = ${String(taskId)}`);
+
+        return { success: true, entry: newEntry };
+      });
+
+      if (result.error === 'not_found') return res.status(404).json({ error: "Task not found" });
+      if (result.error === 'duplicate') return res.status(409).json({ error: "Timer already running on this task", taskId: result.taskId, taskTitle: result.taskTitle, entryId: result.entryId });
+
+      res.json(result.entry);
     } catch (error) {
       console.error("Error starting timer:", error);
       res.status(500).json({ error: "Failed to start timer" });
     }
   });
 
-  // POST /api/time-entries/stop — atomic stop with server-side duration
+  // POST /api/time-entries/stop — atomic stop with SQL transaction + row lock
   app.post("/api/time-entries/stop", requireAuth(), async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
@@ -36816,27 +36824,34 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const { taskId, entryId } = req.body;
       if (!taskId || !entryId) return res.status(400).json({ error: "taskId and entryId are required" });
 
-      const task = await appStorage.getTask(String(taskId));
-      if (!task) return res.status(404).json({ error: "Task not found" });
+      const result = await db.transaction(async (tx) => {
+        const [task] = await tx.execute(sql`SELECT id, title, time_entries FROM tasks WHERE id = ${String(taskId)} FOR UPDATE`);
+        if (!task) return { error: 'not_found', status: 404 };
 
-      const entries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
-      const idx = entries.findIndex((e: any) => e.id === entryId);
-      if (idx === -1) return res.status(404).json({ error: "Time entry not found" });
+        const entries = Array.isArray(task.time_entries) ? task.time_entries as any[] : [];
+        const idx = entries.findIndex((e: any) => e.id === entryId);
+        if (idx === -1) return { error: 'entry_not_found', status: 404 };
 
-      const entry = entries[idx] as any;
-      if (entry.userId !== userId) return res.status(403).json({ error: "Cannot stop another user's timer" });
-      if (!entry.isRunning) return res.json({ alreadyStopped: true, entry });
+        const entry = entries[idx];
+        if (entry.userId !== userId) return { error: 'forbidden', status: 403 };
+        if (!entry.isRunning) return { alreadyStopped: true, entry, status: 200 };
 
-      const now = new Date().toISOString();
-      const duration = Math.floor((new Date(now).getTime() - new Date(entry.startTime).getTime()) / 1000 / 60);
+        const now = new Date().toISOString();
+        const duration = Math.floor((new Date(now).getTime() - new Date(entry.startTime).getTime()) / 1000 / 60);
+        const updatedEntry = { ...entry, endTime: now, isRunning: false, duration };
+        entries[idx] = updatedEntry;
 
-      const updatedEntry = { ...entry, endTime: now, isRunning: false, duration };
-      entries[idx] = updatedEntry;
+        const totalTracked = entries.reduce((total: number, e: any) => total + (e.duration || 0), 0);
+        await tx.execute(sql`UPDATE tasks SET time_entries = ${JSON.stringify(entries)}::jsonb, time_tracked = ${totalTracked} WHERE id = ${String(taskId)}`);
 
-      const totalTracked = entries.reduce((total: number, e: any) => total + (e.duration || 0), 0);
-      await appStorage.updateTask(String(taskId), { timeEntries: entries, timeTracked: totalTracked } as any);
+        return { entry: updatedEntry, totalTracked, duration, status: 200 };
+      });
 
-      res.json({ entry: updatedEntry, totalTracked, duration });
+      if (result.error === 'not_found') return res.status(404).json({ error: "Task not found" });
+      if (result.error === 'entry_not_found') return res.status(404).json({ error: "Time entry not found" });
+      if (result.error === 'forbidden') return res.status(403).json({ error: "Cannot stop another user's timer" });
+
+      res.json({ entry: result.entry, totalTracked: result.totalTracked, duration: result.duration, alreadyStopped: result.alreadyStopped });
     } catch (error) {
       console.error("Error stopping timer:", error);
       res.status(500).json({ error: "Failed to stop timer" });
