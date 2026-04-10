@@ -27307,6 +27307,122 @@ AgencyBoost CRM`
       res.status(500).json({ message: "Failed to get client relations counts" });
     }
   });
+  app2.get("/api/clients/:id/billing", requireAuth(), requirePermission("clients", "canView"), async (req, res) => {
+    try {
+      const clientId = req.params.id;
+      const client = await storage2.getClient(clientId);
+      if (!client) return res.status(404).json({ message: "Client not found" });
+      const clientQuotes = await db.select().from(quotes).where(eq20(quotes.clientId, clientId)).orderBy(desc5(quotes.updatedAt));
+      const payments = [];
+      let activeSubscription = null;
+      let stripeCustomerId = null;
+      for (const q of clientQuotes) {
+        if (q.stripeCustomerId) stripeCustomerId = q.stripeCustomerId;
+        if (q.paidAt || q.paymentStatus === "paid" || q.paymentStatus === "processing") {
+          payments.push({
+            id: q.id,
+            type: "proposal_payment",
+            description: `Proposal: ${q.name || "Untitled"}`,
+            amount: q.paidAmount ? parseFloat(q.paidAmount) : 0,
+            status: q.paymentStatus || "unknown",
+            method: q.paymentMethod || "unknown",
+            date: q.paidAt || q.updatedAt,
+            paymentIntentId: q.paymentIntentId
+          });
+        }
+        if (q.stripeSubscriptionId) {
+          activeSubscription = {
+            subscriptionId: q.stripeSubscriptionId,
+            status: q.subscriptionStatus || "unknown",
+            quoteName: q.name || "Untitled",
+            quoteId: q.id,
+            monthlyAmount: q.clientBudget ? parseFloat(q.clientBudget) : 0
+          };
+        }
+      }
+      let stripeCharges = [];
+      let stripeInvoices = [];
+      if (stripeCustomerId) {
+        try {
+          const stripe = await getStripeAsync();
+          if (stripe) {
+            const charges = await stripe.charges.list({
+              customer: stripeCustomerId,
+              limit: 50
+            });
+            stripeCharges = charges.data.map((c) => ({
+              id: c.id,
+              type: "stripe_charge",
+              description: c.description || `Charge ${c.id.slice(-8)}`,
+              amount: c.amount / 100,
+              status: c.status,
+              method: c.payment_method_details?.type || "unknown",
+              date: new Date(c.created * 1e3).toISOString(),
+              receiptUrl: c.receipt_url
+            }));
+            if (activeSubscription) {
+              try {
+                const invoices2 = await stripe.invoices.list({
+                  customer: stripeCustomerId,
+                  subscription: activeSubscription.subscriptionId,
+                  limit: 50
+                });
+                stripeInvoices = invoices2.data.map((inv) => ({
+                  id: inv.id,
+                  type: "subscription_invoice",
+                  description: `Invoice ${inv.number || inv.id.slice(-8)}`,
+                  amount: (inv.amount_paid || 0) / 100,
+                  status: inv.status,
+                  date: inv.status_transitions?.paid_at ? new Date(inv.status_transitions.paid_at * 1e3).toISOString() : new Date((inv.created || 0) * 1e3).toISOString(),
+                  invoiceUrl: inv.hosted_invoice_url,
+                  invoicePdf: inv.invoice_pdf,
+                  periodStart: inv.period_start ? new Date(inv.period_start * 1e3).toISOString() : null,
+                  periodEnd: inv.period_end ? new Date(inv.period_end * 1e3).toISOString() : null
+                }));
+              } catch (invErr) {
+                console.error("[Billing] Error fetching Stripe invoices:", invErr);
+              }
+            }
+            if (activeSubscription) {
+              try {
+                const sub = await stripe.subscriptions.retrieve(activeSubscription.subscriptionId);
+                activeSubscription.currentPeriodStart = new Date(sub.current_period_start * 1e3).toISOString();
+                activeSubscription.currentPeriodEnd = new Date(sub.current_period_end * 1e3).toISOString();
+                activeSubscription.status = sub.status;
+                activeSubscription.cancelAtPeriodEnd = sub.cancel_at_period_end;
+                if (sub.items?.data?.[0]?.price?.unit_amount) {
+                  activeSubscription.monthlyAmount = sub.items.data[0].price.unit_amount / 100;
+                }
+              } catch (subErr) {
+                console.error("[Billing] Error fetching subscription details:", subErr);
+              }
+            }
+          }
+        } catch (stripeErr) {
+          console.error("[Billing] Error fetching Stripe data:", stripeErr);
+        }
+      }
+      const existingPaymentIds = new Set(payments.map((p) => p.paymentIntentId).filter(Boolean));
+      for (const charge of stripeCharges) {
+        const chargePI = charge.payment_intent;
+        if (!existingPaymentIds.has(charge.id) && !existingPaymentIds.has(chargePI)) {
+          payments.push(charge);
+        }
+      }
+      payments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const totalPaid = payments.filter((p) => p.status === "paid" || p.status === "succeeded").reduce((sum, p) => sum + (p.amount || 0), 0);
+      res.json({
+        payments,
+        stripeInvoices,
+        activeSubscription,
+        stripeCustomerId,
+        totalPaid
+      });
+    } catch (error) {
+      console.error("Error fetching client billing:", error);
+      res.status(500).json({ message: "Failed to fetch billing data" });
+    }
+  });
   app2.delete("/api/clients/:id", requireAuth(), requirePermission("clients", "canDelete"), async (req, res) => {
     try {
       const client = await storage2.getClient(req.params.id);
