@@ -36791,6 +36791,11 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       };
 
       const existingEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
+      const alreadyRunningOnTask = existingEntries.find((e: any) => e.isRunning && e.userId === userId);
+      if (alreadyRunningOnTask) {
+        return res.status(409).json({ error: "Timer already running on this task", taskId: task.id, taskTitle: task.title, entryId: alreadyRunningOnTask.id });
+      }
+
       const merged = [...existingEntries, newEntry];
 
       await appStorage.updateTask(String(taskId), { timeEntries: merged } as any);
@@ -36863,11 +36868,31 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         return res.status(403).json({ error: "Cannot edit another user's time entry" });
       }
 
-      if (startTime) entry.startTime = startTime;
-      if (endTime) entry.endTime = endTime;
       if (typeof duration === 'number') {
+        if (duration <= 0 || duration > 1440) {
+          return res.status(400).json({ error: "Duration must be between 1 and 1440 minutes" });
+        }
         entry.duration = duration;
-      } else if (entry.startTime && entry.endTime) {
+      }
+      if (startTime) {
+        if (isNaN(new Date(startTime).getTime())) {
+          return res.status(400).json({ error: "Invalid start time" });
+        }
+        if (new Date(startTime).getTime() > Date.now() + 60000) {
+          return res.status(400).json({ error: "Start time cannot be in the future" });
+        }
+        entry.startTime = startTime;
+      }
+      if (endTime) {
+        if (isNaN(new Date(endTime).getTime())) {
+          return res.status(400).json({ error: "Invalid end time" });
+        }
+        if (new Date(endTime).getTime() > Date.now() + 60000) {
+          return res.status(400).json({ error: "End time cannot be in the future" });
+        }
+        entry.endTime = endTime;
+      }
+      if (typeof duration !== 'number' && entry.startTime && entry.endTime) {
         entry.duration = Math.floor((new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / 1000 / 60);
       }
       entries[idx] = entry;
@@ -36925,12 +36950,28 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const { taskId, startTime, endTime, duration, notes } = req.body;
       if (!taskId) return res.status(400).json({ error: "taskId is required" });
 
+      if (startTime && isNaN(new Date(startTime).getTime())) {
+        return res.status(400).json({ error: "Invalid start time" });
+      }
+      if (endTime && isNaN(new Date(endTime).getTime())) {
+        return res.status(400).json({ error: "Invalid end time" });
+      }
+      if (startTime && new Date(startTime).getTime() > Date.now() + 60000) {
+        return res.status(400).json({ error: "Start time cannot be in the future" });
+      }
+      if (endTime && new Date(endTime).getTime() > Date.now() + 60000) {
+        return res.status(400).json({ error: "End time cannot be in the future" });
+      }
+
       let finalDuration = duration;
       if (!finalDuration && startTime && endTime) {
         finalDuration = Math.floor((new Date(endTime).getTime() - new Date(startTime).getTime()) / 1000 / 60);
       }
       if (!finalDuration || finalDuration <= 0) {
         return res.status(400).json({ error: "Valid duration or start/end times are required" });
+      }
+      if (finalDuration > 1440) {
+        return res.status(400).json({ error: "Duration cannot exceed 1440 minutes (24 hours)" });
       }
 
       const task = await appStorage.getTask(String(taskId));

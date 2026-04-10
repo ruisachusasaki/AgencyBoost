@@ -24,6 +24,7 @@ interface TimerContextType {
 const TimerContext = createContext<TimerContextType | undefined>(undefined);
 
 const BROADCAST_CHANNEL_NAME = 'agencyboost-task-timer';
+const STORAGE_SIGNAL_KEY = 'agencyboost-timer-signal';
 
 export function useTimer() {
   const context = useContext(TimerContext);
@@ -42,6 +43,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
   const [elapsedTime, setElapsedTime] = useState(0);
   const { toast } = useToast();
   const broadcastRef = useRef<BroadcastChannel | null>(null);
+  const hasBroadcastChannel = useRef(false);
 
   const isClientPortal = typeof window !== 'undefined' && window.location.pathname.startsWith('/client-portal');
 
@@ -52,48 +54,89 @@ export function TimerProvider({ children }: TimerProviderProps) {
 
   const isTimerRunning = !!currentTimer;
 
+  const syncFromServer = useCallback(async (userId: string) => {
+    try {
+      const response = await fetch('/api/time-entries/running');
+      if (response.ok) {
+        const runningEntry = await response.json();
+        if (runningEntry && runningEntry.userId === userId) {
+          setCurrentTimer(runningEntry);
+        } else {
+          setCurrentTimer(null);
+          setElapsedTime(0);
+        }
+      }
+    } catch {
+    }
+  }, []);
+
   useEffect(() => {
     try {
       const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
       broadcastRef.current = channel;
+      hasBroadcastChannel.current = true;
 
       channel.onmessage = (event) => {
         const { type, timer } = event.data;
         if (type === 'TIMER_STARTED') {
           setCurrentTimer(timer);
           setElapsedTime(0);
-          if (currentUser?.id) {
-            localStorage.setItem(`activeTimer_${currentUser.id}`, JSON.stringify(timer));
-          }
         } else if (type === 'TIMER_STOPPED') {
           setCurrentTimer(null);
           setElapsedTime(0);
-          if (currentUser?.id) {
-            localStorage.removeItem(`activeTimer_${currentUser.id}`);
-          }
         }
       };
 
       return () => {
         channel.close();
         broadcastRef.current = null;
+        hasBroadcastChannel.current = false;
       };
     } catch {
+      hasBroadcastChannel.current = false;
     }
-  }, [currentUser?.id]);
+  }, []);
+
+  useEffect(() => {
+    if (hasBroadcastChannel.current) return;
+
+    const handleStorageEvent = (event: StorageEvent) => {
+      if (event.key !== STORAGE_SIGNAL_KEY || !event.newValue) return;
+      try {
+        const { type, timer } = JSON.parse(event.newValue);
+        if (type === 'TIMER_STARTED') {
+          setCurrentTimer(timer);
+          setElapsedTime(0);
+        } else if (type === 'TIMER_STOPPED') {
+          setCurrentTimer(null);
+          setElapsedTime(0);
+        }
+      } catch {
+      }
+    };
+
+    window.addEventListener('storage', handleStorageEvent);
+    return () => window.removeEventListener('storage', handleStorageEvent);
+  }, []);
 
   const broadcastTimerEvent = useCallback((type: string, timer: TimeEntry | null) => {
     try {
       broadcastRef.current?.postMessage({ type, timer });
     } catch {
     }
+    if (!hasBroadcastChannel.current) {
+      try {
+        localStorage.setItem(STORAGE_SIGNAL_KEY, JSON.stringify({ type, timer, ts: Date.now() }));
+      } catch {
+      }
+    }
   }, []);
 
   useEffect(() => {
     if (currentUser?.id) {
-      checkForRunningTimer(currentUser.id);
+      syncFromServer(currentUser.id);
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, syncFromServer]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -116,75 +159,29 @@ export function TimerProvider({ children }: TimerProviderProps) {
   }, [currentTimer]);
 
   useEffect(() => {
-    if (currentTimer && currentUser?.id) {
-      localStorage.setItem(`activeTimer_${currentUser.id}`, JSON.stringify(currentTimer));
-    }
-  }, [currentTimer, currentUser?.id]);
-
-  useEffect(() => {
     if (!currentTimer || !currentUser?.id) return;
 
-    const syncWithServer = async () => {
+    const verifyTimerStillRunning = async () => {
       try {
-        const taskResponse = await fetch(`/api/tasks/${currentTimer.taskId}`);
-        if (taskResponse.status === 404) {
-          localStorage.removeItem(`activeTimer_${currentUser.id}`);
-          setCurrentTimer(null);
-          setElapsedTime(0);
-          return;
-        }
-        if (!taskResponse.ok) return;
-        const task = await taskResponse.json();
-        const entries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
-        const serverEntry = entries.find((e: any) => e.id === currentTimer.id);
-        if (!serverEntry || !serverEntry.isRunning) {
-          localStorage.removeItem(`activeTimer_${currentUser.id}`);
-          setCurrentTimer(null);
-          setElapsedTime(0);
+        const response = await fetch('/api/time-entries/running');
+        if (response.ok) {
+          const runningEntry = await response.json();
+          if (!runningEntry || runningEntry.id !== currentTimer.id) {
+            setCurrentTimer(null);
+            setElapsedTime(0);
+          }
         }
       } catch {
       }
     };
 
-    const interval = setInterval(syncWithServer, 15000);
+    const interval = setInterval(verifyTimerStillRunning, 15000);
     return () => clearInterval(interval);
   }, [currentTimer?.id, currentUser?.id]);
 
   useEffect(() => {
     localStorage.removeItem('activeTimer');
   }, []);
-
-  const checkForRunningTimer = async (userId: string) => {
-    try {
-      const response = await fetch('/api/time-entries/running');
-      if (response.ok) {
-        const runningEntry = await response.json();
-        if (runningEntry && runningEntry.userId === userId) {
-          setCurrentTimer(runningEntry);
-          localStorage.setItem(`activeTimer_${userId}`, JSON.stringify(runningEntry));
-          return;
-        }
-      }
-    } catch (error) {
-      console.error('Error checking server for running timer:', error);
-    }
-
-    const savedTimer = localStorage.getItem(`activeTimer_${userId}`);
-    if (savedTimer) {
-      try {
-        const timer = JSON.parse(savedTimer);
-        if (timer.userId === userId) {
-          setCurrentTimer(timer);
-          return;
-        } else {
-          localStorage.removeItem(`activeTimer_${userId}`);
-        }
-      } catch (error) {
-        console.error('Error parsing saved timer:', error);
-        localStorage.removeItem(`activeTimer_${userId}`);
-      }
-    }
-  };
 
   const startTimer = async (taskId: string, taskTitle: string) => {
     if (currentTimer) {
@@ -237,7 +234,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
           variant: "destructive",
         });
         if (currentUser?.id) {
-          checkForRunningTimer(currentUser.id);
+          syncFromServer(currentUser.id);
         }
       } else {
         console.error('Error starting timer:', error);
@@ -264,9 +261,6 @@ export function TimerProvider({ children }: TimerProviderProps) {
       });
       const result = await response.json();
 
-      if (currentUser?.id) {
-        localStorage.removeItem(`activeTimer_${currentUser.id}`);
-      }
       setCurrentTimer(null);
       setElapsedTime(0);
 
@@ -280,23 +274,15 @@ export function TimerProvider({ children }: TimerProviderProps) {
       });
 
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${savedTaskId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks', savedTaskId] });
     } catch (error) {
       console.error('Error stopping timer via server:', error);
 
-      if (currentUser?.id) {
-        localStorage.removeItem(`activeTimer_${currentUser.id}`);
-      }
-      setCurrentTimer(null);
-      setElapsedTime(0);
-
       toast({
-        title: "Timer Stopped",
-        variant: "default",
-        description: `Timer cleared. Time entry for "${savedTaskTitle}" may not have been saved.`,
+        title: "Failed to Stop Timer",
+        variant: "destructive",
+        description: `Could not stop the timer for "${savedTaskTitle}". Please try again.`,
       });
-
-      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
     }
   };
 
