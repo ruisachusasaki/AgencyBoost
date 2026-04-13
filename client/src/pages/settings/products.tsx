@@ -139,6 +139,7 @@ interface TaskTemplate {
   priority: string;
   sortOrder: number;
   dependsOnTemplateId?: string;
+  onboardingWeek?: number | null;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -195,6 +196,7 @@ export default function ProductsSettings() {
   const [packageSearchTerm, setPackageSearchTerm] = useState("");
   const [taskMappingSearchTerm, setTaskMappingSearchTerm] = useState("");
   const [taskMappingCategoryFilter, setTaskMappingCategoryFilter] = useState("all");
+  const [groupByWeek, setGroupByWeek] = useState(false);
   const [bundleFormType, setBundleFormType] = useState("recurring");
   const [packageItemSearch, setPackageItemSearch] = useState("");
   const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set());
@@ -217,6 +219,7 @@ export default function ProductsSettings() {
   const editNameRef = useRef<HTMLInputElement>(null);
   const [createTemplateName, setCreateTemplateName] = useState("");
   const [editTemplateName, setEditTemplateName] = useState("");
+  const [editTemplateTaskType, setEditTemplateTaskType] = useState("");
   const [createTemplateDescription, setCreateTemplateDescription] = useState("");
   const [editTemplateDescription, setEditTemplateDescription] = useState("");
   const [descEditorKey, setDescEditorKey] = useState(0);
@@ -905,6 +908,80 @@ export default function ProductsSettings() {
     createTemplateMutation.mutate(data);
   };
 
+  const renderTemplateRow = (tmpl: TaskTemplate, parentType: string, parentId: string) => (
+    <TableRow
+      key={tmpl.id}
+      draggable
+      onDragStart={(e) => handleTemplateDragStart(e, tmpl.id, `${parentType}-${parentId}`)}
+      onDragEnd={handleTemplateDragEnd}
+      onDragOver={handleTemplateDragOver}
+      onDrop={(e) => handleTemplateDrop(e, tmpl.id, parentType, parentId)}
+      className={dragState?.templateId === tmpl.id ? 'opacity-50' : ''}
+    >
+      <TableCell className="w-8 cursor-grab active:cursor-grabbing">
+        <GripVertical className="h-4 w-4 text-gray-400" />
+      </TableCell>
+      <TableCell className="font-medium">{tmpl.name}</TableCell>
+      <TableCell>
+        <div className="flex items-center gap-1">
+          <Badge className={tmpl.taskType === 'onboarding' ? 'bg-orange-100 text-orange-800 hover:bg-orange-100' : tmpl.taskType === 'one-time' ? 'bg-purple-100 text-purple-800 hover:bg-purple-100' : 'bg-teal-100 text-teal-800 hover:bg-teal-100'}>
+            {tmpl.taskType === 'onboarding' ? 'Onboarding' : tmpl.taskType === 'one-time' ? 'One-Time' : 'Recurring'}
+          </Badge>
+          {tmpl.taskType === 'onboarding' && tmpl.onboardingWeek != null && (
+            <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300 text-xs">
+              Wk {tmpl.onboardingWeek}
+            </Badge>
+          )}
+        </div>
+      </TableCell>
+      <TableCell className="hidden md:table-cell capitalize">{tmpl.quantityMode.replace('_', ' ')}</TableCell>
+      <TableCell className="hidden lg:table-cell">
+        {tmpl.departmentId ? departmentsList.find((d: Department) => d.id === tmpl.departmentId)?.name || '-' : '-'}
+      </TableCell>
+      <TableCell className="hidden lg:table-cell">
+        {tmpl.assignedStaffFirstName ? `${tmpl.assignedStaffFirstName} ${tmpl.assignedStaffLastName || ''}`.trim() : '-'}
+      </TableCell>
+      <TableCell className="hidden md:table-cell">{tmpl.dueDateOffset} days</TableCell>
+      <TableCell className="hidden md:table-cell">
+        <Badge variant="outline" className={
+          tmpl.priority === 'urgent' ? 'border-red-300 text-red-700' :
+          tmpl.priority === 'high' ? 'border-orange-300 text-orange-700' :
+          tmpl.priority === 'low' ? 'border-gray-300 text-gray-500' :
+          'border-gray-300 text-gray-700'
+        }>
+          {tmpl.priority}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="sm" onClick={() => { setEditingTemplate(tmpl); setEditTemplateName(tmpl.name || ""); setEditTemplateDescription(tmpl.description || ""); setEditTemplateTaskType(tmpl.taskType); setIsEditTemplateOpen(true); }} title="Edit">
+            <Edit2 className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => duplicateTemplateMutation.mutate(tmpl.id)} disabled={duplicateTemplateMutation.isPending} title="Duplicate">
+            <Copy className="h-3.5 w-3.5" />
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" title="Deactivate">
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Deactivate Template</AlertDialogTitle>
+                <AlertDialogDescription>This will deactivate the template "{tmpl.name}". It can be reactivated later.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => deleteTemplateMutation.mutate(tmpl.id)}>Deactivate</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+
   const handleUpdateTemplate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingTemplate) return;
@@ -924,6 +1001,9 @@ export default function ProductsSettings() {
       productId: editingTemplate.productId || null,
       bundleId: editingTemplate.bundleId || null,
       packageId: editingTemplate.packageId || null,
+      onboardingWeek: (formData.get("taskType") as string) === "onboarding"
+        ? (formData.get("onboardingWeek") ? parseInt(formData.get("onboardingWeek") as string) : null)
+        : null,
     };
     updateTemplateMutation.mutate({ id: editingTemplate.id, data });
   };
@@ -1645,6 +1725,17 @@ export default function ProductsSettings() {
                   ))}
                 </SelectContent>
               </Select>
+            )}
+            {activeTab === "taskMapping" && (
+              <Button
+                variant={groupByWeek ? "default" : "outline"}
+                size="sm"
+                className="h-10"
+                onClick={() => setGroupByWeek(!groupByWeek)}
+              >
+                <Layers className="h-4 w-4 mr-1.5" />
+                Group by Week
+              </Button>
             )}
           </div>
           
@@ -3154,72 +3245,41 @@ export default function ProductsSettings() {
                                                 </TableRow>
                                               </TableHeader>
                                               <TableBody>
-                                                {templates.sort((a: TaskTemplate, b: TaskTemplate) => a.sortOrder - b.sortOrder).map((tmpl: TaskTemplate) => (
-                                                  <TableRow
-                                                    key={tmpl.id}
-                                                    draggable
-                                                    onDragStart={(e) => handleTemplateDragStart(e, tmpl.id, `product-${product.id}`)}
-                                                    onDragEnd={handleTemplateDragEnd}
-                                                    onDragOver={handleTemplateDragOver}
-                                                    onDrop={(e) => handleTemplateDrop(e, tmpl.id, 'product', product.id)}
-                                                    className={dragState?.templateId === tmpl.id ? 'opacity-50' : ''}
-                                                  >
-                                                    <TableCell className="w-8 cursor-grab active:cursor-grabbing">
-                                                      <GripVertical className="h-4 w-4 text-gray-400" />
-                                                    </TableCell>
-                                                    <TableCell className="font-medium">{tmpl.name}</TableCell>
-                                                    <TableCell>
-                                                      <Badge className={tmpl.taskType === 'onboarding' ? 'bg-orange-100 text-orange-800 hover:bg-orange-100' : tmpl.taskType === 'one-time' ? 'bg-purple-100 text-purple-800 hover:bg-purple-100' : 'bg-teal-100 text-teal-800 hover:bg-teal-100'}>
-                                                        {tmpl.taskType === 'onboarding' ? 'Onboarding' : tmpl.taskType === 'one-time' ? 'One-Time' : 'Recurring'}
-                                                      </Badge>
-                                                    </TableCell>
-                                                    <TableCell className="hidden md:table-cell capitalize">{tmpl.quantityMode.replace('_', ' ')}</TableCell>
-                                                    <TableCell className="hidden lg:table-cell">
-                                                      {tmpl.departmentId ? departmentsList.find((d: Department) => d.id === tmpl.departmentId)?.name || '-' : '-'}
-                                                    </TableCell>
-                                                    <TableCell className="hidden lg:table-cell">
-                                                      {tmpl.assignedStaffFirstName ? `${tmpl.assignedStaffFirstName} ${tmpl.assignedStaffLastName || ''}`.trim() : '-'}
-                                                    </TableCell>
-                                                    <TableCell className="hidden md:table-cell">{tmpl.dueDateOffset} days</TableCell>
-                                                    <TableCell className="hidden md:table-cell">
-                                                      <Badge variant="outline" className={
-                                                        tmpl.priority === 'urgent' ? 'border-red-300 text-red-700' :
-                                                        tmpl.priority === 'high' ? 'border-orange-300 text-orange-700' :
-                                                        tmpl.priority === 'low' ? 'border-gray-300 text-gray-500' :
-                                                        'border-gray-300 text-gray-700'
-                                                      }>
-                                                        {tmpl.priority}
-                                                      </Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                      <div className="flex gap-1">
-                                                        <Button variant="ghost" size="sm" onClick={() => { setEditingTemplate(tmpl); setEditTemplateName(tmpl.name || ""); setEditTemplateDescription(tmpl.description || ""); setIsEditTemplateOpen(true); }} title="Edit">
-                                                          <Edit2 className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                        <Button variant="ghost" size="sm" onClick={() => duplicateTemplateMutation.mutate(tmpl.id)} disabled={duplicateTemplateMutation.isPending} title="Duplicate">
-                                                          <Copy className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                        <AlertDialog>
-                                                          <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" title="Deactivate">
-                                                              <Trash2 className="h-3.5 w-3.5" />
-                                                            </Button>
-                                                          </AlertDialogTrigger>
-                                                          <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                              <AlertDialogTitle>Deactivate Template</AlertDialogTitle>
-                                                              <AlertDialogDescription>This will deactivate the template "{tmpl.name}". It can be reactivated later.</AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                              <AlertDialogAction onClick={() => deleteTemplateMutation.mutate(tmpl.id)}>Deactivate</AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                          </AlertDialogContent>
-                                                        </AlertDialog>
-                                                      </div>
-                                                    </TableCell>
-                                                  </TableRow>
-                                                ))}
+                                                {(() => {
+                                                  const sorted = templates.sort((a: TaskTemplate, b: TaskTemplate) => a.sortOrder - b.sortOrder);
+                                                  if (!groupByWeek) return sorted.map((tmpl: TaskTemplate) => renderTemplateRow(tmpl, 'product', product.id));
+                                                  const weekGroups: Record<string, TaskTemplate[]> = {};
+                                                  sorted.forEach((tmpl: TaskTemplate) => {
+                                                    if (tmpl.taskType !== 'onboarding') {
+                                                      const key = '_non_onboarding';
+                                                      if (!weekGroups[key]) weekGroups[key] = [];
+                                                      weekGroups[key].push(tmpl);
+                                                    } else {
+                                                      const key = tmpl.onboardingWeek != null ? `week_${tmpl.onboardingWeek}` : '_unassigned';
+                                                      if (!weekGroups[key]) weekGroups[key] = [];
+                                                      weekGroups[key].push(tmpl);
+                                                    }
+                                                  });
+                                                  const weekKeys = Object.keys(weekGroups).filter(k => k.startsWith('week_')).sort((a, b) => parseInt(a.split('_')[1]) - parseInt(b.split('_')[1]));
+                                                  const sections: Array<{ label: string; key: string; templates: TaskTemplate[] }> = [];
+                                                  weekKeys.forEach(k => {
+                                                    const weekNum = k.split('_')[1];
+                                                    sections.push({ label: `Week ${weekNum}`, key: k, templates: weekGroups[k] });
+                                                  });
+                                                  if (weekGroups['_unassigned']) sections.push({ label: 'Unassigned', key: '_unassigned', templates: weekGroups['_unassigned'] });
+                                                  if (weekGroups['_non_onboarding']) sections.push({ label: 'Other (Non-Onboarding)', key: '_non_onboarding', templates: weekGroups['_non_onboarding'] });
+                                                  return sections.map(section => (
+                                                    <Fragment key={section.key}>
+                                                      <TableRow>
+                                                        <TableCell colSpan={9} className="bg-gray-50 py-1.5 px-3 border-b">
+                                                          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{section.label}</span>
+                                                          <span className="text-xs text-gray-400 ml-2">({section.templates.length})</span>
+                                                        </TableCell>
+                                                      </TableRow>
+                                                      {section.templates.map((tmpl: TaskTemplate) => renderTemplateRow(tmpl, 'product', product.id))}
+                                                    </Fragment>
+                                                  ));
+                                                })()}
                                               </TableBody>
                                             </Table>
                                           </div>
@@ -3630,7 +3690,7 @@ export default function ProductsSettings() {
                   <div className="h-6 flex items-center">
                     <Label htmlFor="edit-template-taskType">Task Type *</Label>
                   </div>
-                  <select name="taskType" id="edit-template-taskType" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue={editingTemplate.taskType} required>
+                  <select name="taskType" id="edit-template-taskType" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" value={editTemplateTaskType} onChange={(e) => setEditTemplateTaskType(e.target.value)} required>
                     <option value="onboarding">Onboarding</option>
                     <option value="recurring">Recurring</option>
                     <option value="one-time">One-Time</option>
@@ -3662,6 +3722,24 @@ export default function ProductsSettings() {
                   </select>
                 </div>
               </div>
+              {editTemplateTaskType === "onboarding" && (
+                <div>
+                  <div className="h-6 flex items-center gap-1.5">
+                    <Label htmlFor="edit-template-onboardingWeek">Onboarding Week</Label>
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" align="start" className="max-w-[260px] text-xs leading-relaxed z-[100]" sideOffset={5}>
+                          <p>Which onboarding week this task should be released in. Leave blank for week 1 (immediate release at conversion).</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <Input id="edit-template-onboardingWeek" name="onboardingWeek" type="number" min={1} placeholder="e.g. 1" defaultValue={editingTemplate.onboardingWeek ?? ""} />
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="edit-template-departmentId">Department</Label>

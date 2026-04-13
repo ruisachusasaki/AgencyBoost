@@ -16571,6 +16571,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           priority: productTaskTemplates.priority,
           sortOrder: productTaskTemplates.sortOrder,
           dependsOnTemplateId: productTaskTemplates.dependsOnTemplateId,
+          onboardingWeek: productTaskTemplates.onboardingWeek,
           status: productTaskTemplates.status,
           createdAt: productTaskTemplates.createdAt,
           updatedAt: productTaskTemplates.updatedAt,
@@ -16610,6 +16611,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           priority: productTaskTemplates.priority,
           sortOrder: productTaskTemplates.sortOrder,
           dependsOnTemplateId: productTaskTemplates.dependsOnTemplateId,
+          onboardingWeek: productTaskTemplates.onboardingWeek,
           status: productTaskTemplates.status,
           createdAt: productTaskTemplates.createdAt,
           updatedAt: productTaskTemplates.updatedAt,
@@ -16716,6 +16718,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         priority: original.priority,
         sortOrder: newSortOrder,
         dependsOnTemplateId: original.dependsOnTemplateId,
+        onboardingWeek: original.onboardingWeek,
         status: 'active',
       }).returning();
 
@@ -16782,6 +16785,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           estimatedHours: tmpl.estimatedHours,
           priority: tmpl.priority,
           sortOrder: nextSort++,
+          onboardingWeek: tmpl.onboardingWeek,
           status: 'active',
         }).returning();
         copiedTemplates.push(copied);
