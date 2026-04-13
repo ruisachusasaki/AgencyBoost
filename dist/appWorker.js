@@ -56420,8 +56420,13 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       const isAdmin = await isCurrentUserAdmin(req);
       let hasAccess = isAdmin;
       if (!hasAccess) {
+        const roleIds = [];
+        const staffRec = await db.select({ roleId: staff.roleId }).from(staff).where(eq20(staff.id, userId2)).limit(1);
+        if (staffRec.length > 0 && staffRec[0].roleId) roleIds.push(staffRec[0].roleId);
         const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq20(userRoles.userId, userId2));
-        const roleIds = userRolesList.map((ur) => ur.roleId).filter(Boolean);
+        for (const ur of userRolesList) {
+          if (ur.roleId && !roleIds.includes(ur.roleId)) roleIds.push(ur.roleId);
+        }
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and18(
@@ -56485,8 +56490,13 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       const isAdmin = await isCurrentUserAdmin(req);
       let hasAccess = isAdmin;
       if (!hasAccess) {
+        const roleIds = [];
+        const staffRec = await db.select({ roleId: staff.roleId }).from(staff).where(eq20(staff.id, currentUserId2)).limit(1);
+        if (staffRec.length > 0 && staffRec[0].roleId) roleIds.push(staffRec[0].roleId);
         const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq20(userRoles.userId, currentUserId2));
-        const roleIds = userRolesList.map((ur) => ur.roleId).filter(Boolean);
+        for (const ur of userRolesList) {
+          if (ur.roleId && !roleIds.includes(ur.roleId)) roleIds.push(ur.roleId);
+        }
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and18(
@@ -56532,8 +56542,13 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       const isAdmin = await isCurrentUserAdmin(req);
       let hasAccess = isAdmin;
       if (!hasAccess) {
+        const roleIds = [];
+        const staffRec = await db.select({ roleId: staff.roleId }).from(staff).where(eq20(staff.id, currentUserId2)).limit(1);
+        if (staffRec.length > 0 && staffRec[0].roleId) roleIds.push(staffRec[0].roleId);
         const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq20(userRoles.userId, currentUserId2));
-        const roleIds = userRolesList.map((ur) => ur.roleId).filter(Boolean);
+        for (const ur of userRolesList) {
+          if (ur.roleId && !roleIds.includes(ur.roleId)) roleIds.push(ur.roleId);
+        }
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and18(
@@ -56581,8 +56596,13 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       const isAdmin = await isCurrentUserAdmin(req);
       let hasAccess = isAdmin;
       if (!hasAccess) {
+        const roleIds = [];
+        const staffRec = await db.select({ roleId: staff.roleId }).from(staff).where(eq20(staff.id, currentUserId2)).limit(1);
+        if (staffRec.length > 0 && staffRec[0].roleId) roleIds.push(staffRec[0].roleId);
         const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq20(userRoles.userId, currentUserId2));
-        const roleIds = userRolesList.map((ur) => ur.roleId).filter(Boolean);
+        for (const ur of userRolesList) {
+          if (ur.roleId && !roleIds.includes(ur.roleId)) roleIds.push(ur.roleId);
+        }
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and18(
@@ -56616,8 +56636,13 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       const isAdmin = await isCurrentUserAdmin(req);
       let hasAccess = isAdmin;
       if (!hasAccess) {
+        const roleIds = [];
+        const staffRec = await db.select({ roleId: staff.roleId }).from(staff).where(eq20(staff.id, currentUserId2)).limit(1);
+        if (staffRec.length > 0 && staffRec[0].roleId) roleIds.push(staffRec[0].roleId);
         const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq20(userRoles.userId, currentUserId2));
-        const roleIds = userRolesList.map((ur) => ur.roleId).filter(Boolean);
+        for (const ur of userRolesList) {
+          if (ur.roleId && !roleIds.includes(ur.roleId)) roleIds.push(ur.roleId);
+        }
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and18(
@@ -56691,8 +56716,17 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       const isAdminUser = await isCurrentUserAdmin(req);
       let hasAccess = isAdminUser;
       if (!hasAccess) {
+        const roleIds = [];
+        const staffRecord = await db.select({ roleId: staff.roleId }).from(staff).where(eq20(staff.id, userId2)).limit(1);
+        if (staffRecord.length > 0 && staffRecord[0].roleId) {
+          roleIds.push(staffRecord[0].roleId);
+        }
         const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq20(userRoles.userId, userId2));
-        const roleIds = userRolesList.map((ur) => ur.roleId).filter(Boolean);
+        for (const ur of userRolesList) {
+          if (ur.roleId && !roleIds.includes(ur.roleId)) {
+            roleIds.push(ur.roleId);
+          }
+        }
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and18(

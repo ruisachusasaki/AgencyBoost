@@ -42386,11 +42386,11 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       let hasAccess = isAdmin;
 
       if (!hasAccess) {
-        const userRolesList = await db
-          .select({ roleId: userRoles.roleId })
-          .from(userRoles)
-          .where(eq(userRoles.userId, userId));
-        const roleIds = userRolesList.map(ur => ur.roleId).filter(Boolean);
+        const roleIds: string[] = [];
+        const staffRec = await db.select({ roleId: staff.roleId }).from(staff).where(eq(staff.id, userId)).limit(1);
+        if (staffRec.length > 0 && staffRec[0].roleId) roleIds.push(staffRec[0].roleId);
+        const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq(userRoles.userId, userId));
+        for (const ur of userRolesList) { if (ur.roleId && !roleIds.includes(ur.roleId)) roleIds.push(ur.roleId); }
 
         if (roleIds.length > 0) {
           const perms = await db
@@ -42468,11 +42468,11 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       let hasAccess = isAdmin;
 
       if (!hasAccess) {
-        const userRolesList = await db
-          .select({ roleId: userRoles.roleId })
-          .from(userRoles)
-          .where(eq(userRoles.userId, currentUserId));
-        const roleIds = userRolesList.map(ur => ur.roleId).filter(Boolean);
+        const roleIds: string[] = [];
+        const staffRec = await db.select({ roleId: staff.roleId }).from(staff).where(eq(staff.id, currentUserId)).limit(1);
+        if (staffRec.length > 0 && staffRec[0].roleId) roleIds.push(staffRec[0].roleId);
+        const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq(userRoles.userId, currentUserId));
+        for (const ur of userRolesList) { if (ur.roleId && !roleIds.includes(ur.roleId)) roleIds.push(ur.roleId); }
 
         if (roleIds.length > 0) {
           const perms = await db
@@ -42535,11 +42535,11 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       let hasAccess = isAdmin;
 
       if (!hasAccess) {
-        const userRolesList = await db
-          .select({ roleId: userRoles.roleId })
-          .from(userRoles)
-          .where(eq(userRoles.userId, currentUserId));
-        const roleIds = userRolesList.map(ur => ur.roleId).filter(Boolean);
+        const roleIds: string[] = [];
+        const staffRec = await db.select({ roleId: staff.roleId }).from(staff).where(eq(staff.id, currentUserId)).limit(1);
+        if (staffRec.length > 0 && staffRec[0].roleId) roleIds.push(staffRec[0].roleId);
+        const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq(userRoles.userId, currentUserId));
+        for (const ur of userRolesList) { if (ur.roleId && !roleIds.includes(ur.roleId)) roleIds.push(ur.roleId); }
 
         if (roleIds.length > 0) {
           const perms = await db
@@ -42607,11 +42607,11 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       let hasAccess = isAdmin;
 
       if (!hasAccess) {
-        const userRolesList = await db
-          .select({ roleId: userRoles.roleId })
-          .from(userRoles)
-          .where(eq(userRoles.userId, currentUserId));
-        const roleIds = userRolesList.map(ur => ur.roleId).filter(Boolean);
+        const roleIds: string[] = [];
+        const staffRec = await db.select({ roleId: staff.roleId }).from(staff).where(eq(staff.id, currentUserId)).limit(1);
+        if (staffRec.length > 0 && staffRec[0].roleId) roleIds.push(staffRec[0].roleId);
+        const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq(userRoles.userId, currentUserId));
+        for (const ur of userRolesList) { if (ur.roleId && !roleIds.includes(ur.roleId)) roleIds.push(ur.roleId); }
 
         if (roleIds.length > 0) {
           const perms = await db
@@ -42656,11 +42656,11 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       let hasAccess = isAdmin;
 
       if (!hasAccess) {
-        const userRolesList = await db
-          .select({ roleId: userRoles.roleId })
-          .from(userRoles)
-          .where(eq(userRoles.userId, currentUserId));
-        const roleIds = userRolesList.map(ur => ur.roleId).filter(Boolean);
+        const roleIds: string[] = [];
+        const staffRec = await db.select({ roleId: staff.roleId }).from(staff).where(eq(staff.id, currentUserId)).limit(1);
+        if (staffRec.length > 0 && staffRec[0].roleId) roleIds.push(staffRec[0].roleId);
+        const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq(userRoles.userId, currentUserId));
+        for (const ur of userRolesList) { if (ur.roleId && !roleIds.includes(ur.roleId)) roleIds.push(ur.roleId); }
 
         if (roleIds.length > 0) {
           const perms = await db
@@ -42750,11 +42750,22 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       let hasAccess = isAdminUser;
 
       if (!hasAccess) {
+        const roleIds: string[] = [];
+
+        const staffRecord = await db.select({ roleId: staff.roleId }).from(staff).where(eq(staff.id, userId)).limit(1);
+        if (staffRecord.length > 0 && staffRecord[0].roleId) {
+          roleIds.push(staffRecord[0].roleId);
+        }
+
         const userRolesList = await db
           .select({ roleId: userRoles.roleId })
           .from(userRoles)
           .where(eq(userRoles.userId, userId));
-        const roleIds = userRolesList.map(ur => ur.roleId).filter(Boolean);
+        for (const ur of userRolesList) {
+          if (ur.roleId && !roleIds.includes(ur.roleId)) {
+            roleIds.push(ur.roleId);
+          }
+        }
 
         if (roleIds.length > 0) {
           const perms = await db
