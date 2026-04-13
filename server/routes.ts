@@ -37156,6 +37156,60 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  app.get("/api/client-portal/onboarding-timeline", requireClientPortalAuth(), async (req, res) => {
+    try {
+      const clientPortalUserId = getAuthenticatedClientPortalUserIdOrFail(req, res);
+      if (!clientPortalUserId) return;
+
+      const [clientPortalUser] = await db
+        .select({ clientId: clientPortalUsers.clientId })
+        .from(clientPortalUsers)
+        .where(eq(clientPortalUsers.id, clientPortalUserId))
+        .limit(1);
+
+      if (!clientPortalUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const clientResult = await db.execute(sql`
+        SELECT onboarding_start_date as "onboardingStartDate", 
+               onboarding_week_released as "onboardingWeekReleased"
+        FROM clients 
+        WHERE id = ${clientPortalUser.clientId}
+      `);
+      const clientRow = ((clientResult as any).rows?.[0]) ?? ((clientResult as any)[0]);
+
+      if (!clientRow || !clientRow.onboardingStartDate) {
+        return res.json({ onboardingStartDate: null, onboardingWeekReleased: 0, tasks: [] });
+      }
+
+      const onboardingTasks = await db.execute(sql`
+        SELECT 
+          t.id, t.title, t.status, t.priority, 
+          t.due_date as "dueDate", t.onboarding_week as "onboardingWeek",
+          COALESCE(d.name, COALESCE(s.first_name || ' ' || s.last_name, null)) as "assignedTo"
+        FROM tasks t
+        LEFT JOIN departments d ON d.id = t.department_id
+        LEFT JOIN staff s ON s.id = t.assigned_to
+        WHERE t.client_id = ${clientPortalUser.clientId}
+          AND t.onboarding_week IS NOT NULL
+          AND t.visible_to_client = true
+        ORDER BY t.onboarding_week ASC, t.due_date ASC
+      `);
+
+      const taskRows = (onboardingTasks as any).rows || onboardingTasks;
+
+      res.json({
+        onboardingStartDate: clientRow.onboardingStartDate,
+        onboardingWeekReleased: clientRow.onboardingWeekReleased || 0,
+        tasks: taskRows
+      });
+    } catch (error) {
+      console.error("Get onboarding timeline error:", error);
+      res.status(500).json({ error: "Failed to get onboarding timeline" });
+    }
+  });
+
   // Get client portal tasks
   app.get("/api/client-portal/tasks", requireClientPortalAuth(), async (req, res) => {
     try {

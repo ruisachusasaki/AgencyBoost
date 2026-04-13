@@ -13,9 +13,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Calendar as CalendarIcon, CheckCircle2, Clock, Users, LogOut, BarChart3, Filter, X, ChevronLeft, ChevronRight, ThumbsUp, MessageCircle, Send, ArrowLeft, Paperclip, User } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle2, Circle, Clock, Users, LogOut, BarChart3, Filter, X, ChevronLeft, ChevronRight, ThumbsUp, MessageCircle, Send, ArrowLeft, Paperclip, User } from "lucide-react";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format, subDays, subMonths, startOfDay, endOfDay } from "date-fns";
+import { format, subDays, subMonths, startOfDay, endOfDay, addDays } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import ClientPortalTaskAttachments from "@/components/ClientPortalTaskAttachments";
@@ -89,6 +89,22 @@ const priorityColors = {
   high: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
   urgent: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
 };
+
+interface OnboardingTimelineTask {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  dueDate: string | null;
+  onboardingWeek: number;
+  assignedTo: string | null;
+}
+
+interface OnboardingTimelineData {
+  onboardingStartDate: string | null;
+  onboardingWeekReleased: number;
+  tasks: OnboardingTimelineTask[];
+}
 
 // Available filter options
 const statusOptions = [
@@ -796,6 +812,18 @@ export default function ClientPortalDashboard() {
   const totalTaskCount = tasksResponse?.total || 0;
   const totalPages = Math.ceil(totalTaskCount / pageSize);
 
+  const { data: onboardingTimeline } = useQuery<OnboardingTimelineData>({
+    queryKey: ["/api/client-portal/onboarding-timeline"],
+    queryFn: async () => {
+      const res = await fetch("/api/client-portal/onboarding-timeline", { credentials: "include" });
+      if (!res.ok) return { onboardingStartDate: null, onboardingWeekReleased: 0, tasks: [] };
+      return await res.json();
+    },
+  });
+
+  const showOnboardingTimeline = onboardingTimeline?.onboardingStartDate && 
+    onboardingTimeline.onboardingWeekReleased > 0;
+
   const handleLogout = async () => {
     try {
       await fetch("/api/client-portal/logout", {
@@ -931,6 +959,85 @@ export default function ClientPortalDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Onboarding Timeline */}
+        {showOnboardingTimeline && onboardingTimeline && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5" style={{ color: 'hsl(179, 100%, 39%)' }} />
+              Onboarding Timeline
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Array.from({ length: onboardingTimeline.onboardingWeekReleased }, (_, i) => i + 1).map((weekNum) => {
+                const startDate = new Date(onboardingTimeline.onboardingStartDate!);
+                const weekStart = addDays(startDate, (weekNum - 1) * 7);
+                const weekEnd = addDays(weekStart, 6);
+                const weekTasks = onboardingTimeline.tasks.filter(t => t.onboardingWeek === weekNum);
+                const completedCount = weekTasks.filter(t => t.status === 'completed').length;
+                const totalCount = weekTasks.length;
+                const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+                const isAllComplete = totalCount > 0 && completedCount === totalCount;
+                const isCurrentWeek = weekNum === onboardingTimeline.onboardingWeekReleased;
+
+                return (
+                  <Card 
+                    key={weekNum} 
+                    className={`relative overflow-hidden transition-shadow ${isCurrentWeek ? 'shadow-md ring-1' : ''}`}
+                    style={isCurrentWeek ? { borderLeftWidth: '3px', borderLeftColor: 'hsl(179, 100%, 39%)', ringColor: 'hsl(179, 100%, 39%)' } : undefined}
+                  >
+                    <CardHeader className="pb-2 pt-4 px-4">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-semibold">Week {weekNum}</CardTitle>
+                        {isAllComplete && (
+                          <CheckCircle2 className="h-4 w-4" style={{ color: 'hsl(179, 100%, 39%)' }} />
+                        )}
+                        {isCurrentWeek && !isAllComplete && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-teal-300 text-teal-700 bg-teal-50">Active</Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {format(weekStart, "MMM d")} – {format(weekEnd, "MMM d")}
+                      </p>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4 pt-0">
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                          <span>{completedCount} of {totalCount} complete</span>
+                          <span>{progressPct}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${progressPct}%`, backgroundColor: 'hsl(179, 100%, 39%)' }}
+                          />
+                        </div>
+                      </div>
+                      {weekTasks.length > 0 && (
+                        <div className="space-y-1.5">
+                          {weekTasks.map(task => (
+                            <div key={task.id} className="flex items-center gap-2 text-sm">
+                              {task.status === 'completed' ? (
+                                <CheckCircle2 className="h-3.5 w-3.5 shrink-0" style={{ color: 'hsl(179, 100%, 39%)' }} />
+                              ) : (
+                                <Circle className="h-3.5 w-3.5 shrink-0 text-gray-300 dark:text-gray-600" />
+                              )}
+                              <span className={`truncate ${task.status === 'completed' ? 'text-muted-foreground line-through' : ''}`}>
+                                {task.title}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {weekTasks.length === 0 && (
+                        <p className="text-xs text-muted-foreground text-center py-2">No tasks for this week</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Filters Section */}
         <Card className="mb-6">
