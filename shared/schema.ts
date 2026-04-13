@@ -524,6 +524,8 @@ export const clients = pgTable("clients", {
   onboardingCompleted: boolean("onboarding_completed").default(false),
   onboardingProgress: jsonb("onboarding_progress"),
   onboardingCurrentStep: integer("onboarding_current_step").default(0),
+  onboardingStartDate: timestamp("onboarding_start_date"),
+  onboardingWeekReleased: integer("onboarding_week_released").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -965,6 +967,8 @@ export const tasks = pgTable("tasks", {
   
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
+
+  onboardingWeek: integer("onboarding_week"),
 
   sourceTemplateId: varchar("source_template_id"),
   generationId: varchar("generation_id"),
@@ -1915,6 +1919,8 @@ export const taskTemplates = pgTable("task_templates", {
   // Complete task structure for advanced templates
   templateData: jsonb("template_data"), // Full task structure with sub-tasks and dependencies
   
+  onboardingWeek: integer("onboarding_week"),
+
   createdBy: uuid("created_by").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -5580,6 +5586,7 @@ export const productTaskTemplates = pgTable("product_task_templates", {
   priority: varchar("priority").default("medium"), // 'low' | 'medium' | 'high' | 'urgent'
   sortOrder: integer("sort_order").notNull().default(0),
   dependsOnTemplateId: varchar("depends_on_template_id"),
+  onboardingWeek: integer("onboarding_week"),
   status: varchar("status").notNull().default("active"), // 'active' | 'inactive'
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

@@ -1,0 +1,82 @@
+IMPORTANT: Before making any changes, audit the following files in full:
+- shared/schema.ts (specifically the task_templates, tasks, and clients table definitions)
+- server/services/leadConversionService.ts
+- server/taskGenerationEngine.ts
+- server/recurringTaskService.ts
+
+Do NOT modify any existing functionality. All changes are purely additive. Do not alter any existing columns, logic, or behavior — only add new fields and new conditional code paths.
+
+---
+
+SCHEMA CHANGES (shared/schema.ts):
+
+1. Add to task_templates table:
+   - onboardingWeek: integer("onboarding_week") — nullable, no default
+
+2. Add to tasks table:
+   - onboardingWeek: integer("onboarding_week") — nullable, no default
+
+3. Add to clients table:
+   - onboardingStartDate: timestamp("onboarding_start_date") — nullable, no default
+   - onboardingWeekReleased: integer("onboarding_week_released").default(0)
+
+Run the Drizzle migration after schema changes.
+
+---
+
+TASK GENERATION ENGINE (server/taskGenerationEngine.ts):
+
+Audit the existing generateTasksFromTemplates() function signature and implementation before changing anything.
+
+Add an optional parameter targetWeek (type: number | null | undefined) to the onboarding generation path.
+
+When generationType is "onboarding" AND targetWeek is provided:
+- Filter the templates being spawned to only those where onboardingWeek equals targetWeek OR onboardingWeek is null
+- When creating the task record from a template, copy the template's onboardingWeek value into the task's onboardingWeek column
+
+When targetWeek is NOT provided (preserving current behavior), spawn all onboarding templates as before. This is important for backward compatibility.
+
+---
+
+LEAD CONVERSION SERVICE (server/services/leadConversionService.ts):
+
+Audit the full file before changing anything.
+
+After the client record is created, add two additional fields to the client update/insert:
+- onboardingStartDate: new Date()
+- onboardingWeekReleased: 1
+
+Then, when calling generateTasksFromTemplates() with generationType "onboarding", pass targetWeek: 1 so only week 1 tasks (and tasks with no week assigned) spawn at conversion time.
+
+Do not change anything else in the conversion flow.
+
+---
+
+RECURRING TASK SERVICE (server/recurringTaskService.ts):
+
+Audit the full file before changing anything. Understand the exact pattern used for the existing 24-hour job before writing any new code.
+
+Add a new function processOnboardingWeekReleases() that runs inside the same 24-hour loop, after existing recurring task processing.
+
+Logic:
+1. Query all clients where onboardingStartDate IS NOT NULL
+2. For each client, calculate daysSinceStart = Math.floor((Date.now() - client.onboardingStartDate.getTime()) / (1000 * 60 * 60 * 24))
+3. Calculate currentWeek = Math.floor(daysSinceStart / 7) + 1
+4. If currentWeek > client.onboardingWeekReleased:
+   a. For each week from (onboardingWeekReleased + 1) through currentWeek:
+      - Call generateTasksFromTemplates() with generationType "onboarding" and targetWeek = that week number
+      - Pass the client's current products/bundles/packages as the items (use the same lookup pattern already in the recurring service)
+   b. Update the client's onboardingWeekReleased to currentWeek
+5. If currentWeek <= client.onboardingWeekReleased, skip — already released
+
+Use a try/catch per client so one failure doesn't block others. Log successes and failures the same way the existing job logs.
+
+Do NOT modify the existing recurring task logic. Only add the new function call at the end of the loop.
+
+---
+
+VERIFICATION:
+- Confirm migration ran cleanly
+- Confirm a test lead conversion still works and only spawns week 1 tasks (and unassigned-week tasks)
+- Confirm the recurring job still runs without errors
+- Confirm no existing task template or task data was modified

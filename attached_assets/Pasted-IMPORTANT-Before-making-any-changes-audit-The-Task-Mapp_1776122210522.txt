@@ -1,0 +1,60 @@
+IMPORTANT: Before making any changes, audit:
+- The Task Mapping tab component under Settings > Products & Services
+- The task template edit modal component
+- The API route(s) for GET and PUT on task templates
+
+Do NOT modify any existing functionality. Do not change the behavior of any existing field, filter, or display logic. All changes are additive.
+
+---
+
+API (server/routes.ts or relevant route file):
+
+Audit the existing GET /api/task-templates and PUT /api/task-templates/:id routes.
+
+Ensure onboardingWeek is included in:
+- The GET response for task templates (it should come through automatically if using Drizzle select *, but verify)
+- The PUT body parsing and update logic — accept onboardingWeek as an optional integer (1 or higher) or null
+
+---
+
+TEMPLATE EDIT MODAL:
+
+Audit the full modal before making changes.
+
+When the Task Type field is set to "Onboarding", display a new field below the Task Type dropdown:
+- Label: "Onboarding Week"
+- Input: a number input, minimum value 1, no maximum enforced
+- Placeholder: "e.g. 1"
+- The field should be nullable — clearing it sets onboardingWeek to null
+- When Task Type is NOT "Onboarding", hide this field entirely and do not submit a value for it
+- Use the same form styling, spacing, and layout as adjacent fields in the modal
+
+Wire this field to the form state and ensure it is included in the PUT request payload.
+
+---
+
+TASK MAPPING TAB — TEMPLATE LIST:
+
+Audit the current template list/row rendering before making changes.
+
+1. On each template row where onboardingWeek is set and task type is Onboarding, add a small badge showing "Wk [N]" (e.g. "Wk 2") immediately adjacent to the existing Onboarding badge. Style it consistently with the existing badge — same size, same border-radius — but use a neutral gray or secondary color so it is visually distinct from the orange Onboarding badge.
+
+2. Add a new filter option to the existing filter controls: "Group by Week". This filter should only be visible when the product type filter is set to Onboarding (or when the results are filtered to onboarding templates).
+
+   When "Group by Week" is active:
+   - Templates with onboardingWeek = 1 appear under a "Week 1" section header
+   - Templates with onboardingWeek = 2 appear under "Week 2" — and so on for however many weeks exist in the data
+   - Templates with onboardingWeek = null appear under an "Unassigned" section at the bottom
+   - Section headers should be visually clear but not heavy — a simple label with a divider is fine
+   - Within each week section, preserve the existing product-grouped layout (the ACCOUNT MANAGEMENT / CLIENT BRIEF CREATION grouping etc.)
+
+   When "Group by Week" is NOT active, the list renders exactly as it does today.
+
+---
+
+VERIFICATION:
+- Confirm editing a template with type Onboarding shows the Onboarding Week field
+- Confirm editing a non-Onboarding template does NOT show the field
+- Confirm saving a week value persists correctly and shows the Wk N badge on the list
+- Confirm the Group by Week toggle works and does not break the default list view
+- Confirm no existing template data was modified

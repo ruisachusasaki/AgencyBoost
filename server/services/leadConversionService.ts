@@ -91,6 +91,8 @@ export async function convertLeadToClient(
         contactOwner: lead.assignedTo || null,
         notes: lead.notes || null,
         tags: lead.tags || [],
+        onboardingStartDate: new Date(),
+        onboardingWeekReleased: 1,
         createdAt: new Date(),
       })
       .returning();
@@ -505,10 +507,11 @@ export async function convertLeadToClient(
             items: generationItems,
             generationType: "onboarding",
             cycleStartDate: new Date(),
+            targetWeek: 1,
           });
 
           console.log(
-            `✅ [LeadConversion] Task generation for client ${result.clientId}: ${summary.totalTasksCreated} onboarding tasks created`
+            `✅ [LeadConversion] Task generation for client ${result.clientId}: ${summary.totalTasksCreated} week-1 onboarding tasks created`
           );
           if (summary.errors.length > 0) {
             console.warn(

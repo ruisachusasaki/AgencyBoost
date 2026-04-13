@@ -2285,6 +2285,20 @@ async function ensureScheduledHiredEmailsTable() {
   }
 }
 
+async function ensureOnboardingWeekColumns() {
+  try {
+    log("Running startup migration: ensureOnboardingWeekColumns");
+    await db.execute(sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS onboarding_start_date TIMESTAMP`);
+    await db.execute(sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS onboarding_week_released INTEGER DEFAULT 0`);
+    await db.execute(sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
+    await db.execute(sql`ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
+    await db.execute(sql`ALTER TABLE product_task_templates ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
+    log("Onboarding week columns migration completed successfully");
+  } catch (error: any) {
+    log(`Onboarding week columns migration error: ${error.message}`);
+  }
+}
+
 async function fixJoeEmailInProduction() {
   try {
     const joeActiveId = '030e554b-c0bc-446e-9538-e351f3d17b10';
@@ -2344,6 +2358,7 @@ async function runStartupMigrations() {
     await ensureTaskCommentsClientPortalColumn();
     await ensurePxMeetingsObjectivesColumn();
     await ensureScheduledHiredEmailsTable();
+    await ensureOnboardingWeekColumns();
     log("✅ All startup migrations completed successfully");
   } catch (error) {
     log(`⚠️ Startup migrations encountered an error: ${error}`);

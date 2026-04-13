@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNotNull } from "drizzle-orm";
 import {
   clientRecurringConfig,
   clientProducts,
@@ -196,9 +196,117 @@ async function runRecurringTaskCheck() {
     console.log(
       `[RecurringTasks] Check complete. ${clientsProcessed} clients processed, ${totalGenerated} tasks generated.`
     );
+
+    await processOnboardingWeekReleases();
   } catch (error: any) {
     console.error("[RecurringTasks] Fatal error during check:", error.message);
   } finally {
     isRunning = false;
+  }
+}
+
+async function processOnboardingWeekReleases() {
+  console.log("[OnboardingWeeks] Starting onboarding week release check...");
+
+  try {
+    const onboardingClients = await db
+      .select({
+        id: clients.id,
+        name: clients.name,
+        company: clients.company,
+        onboardingStartDate: clients.onboardingStartDate,
+        onboardingWeekReleased: clients.onboardingWeekReleased,
+      })
+      .from(clients)
+      .where(isNotNull(clients.onboardingStartDate));
+
+    if (onboardingClients.length === 0) {
+      console.log("[OnboardingWeeks] No clients with onboarding start dates found");
+      return;
+    }
+
+    let totalReleased = 0;
+    let clientsAdvanced = 0;
+
+    for (const client of onboardingClients) {
+      try {
+        const startDate = new Date(client.onboardingStartDate!);
+        const daysSinceStart = Math.floor(
+          (Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        const currentWeek = Math.floor(daysSinceStart / 7) + 1;
+        const alreadyReleased = client.onboardingWeekReleased ?? 0;
+
+        if (currentWeek <= alreadyReleased) continue;
+
+        const clientName = client.company || client.name || client.id;
+
+        const assignedProducts = await db
+          .select({ productId: clientProducts.productId })
+          .from(clientProducts)
+          .where(eq(clientProducts.clientId, client.id));
+
+        const assignedBundles = await db
+          .select({ bundleId: clientBundles.bundleId })
+          .from(clientBundles)
+          .where(eq(clientBundles.clientId, client.id));
+
+        const assignedPkgs = await db
+          .select({ packageId: clientPackages.packageId })
+          .from(clientPackages)
+          .where(eq(clientPackages.clientId, client.id));
+
+        const items: Array<{ productId?: string; bundleId?: string; packageId?: string; quantity: number }> = [];
+        for (const cp of assignedProducts) items.push({ productId: cp.productId, quantity: 1 });
+        for (const cb of assignedBundles) items.push({ bundleId: cb.bundleId, quantity: 1 });
+        for (const cpkg of assignedPkgs) items.push({ packageId: cpkg.packageId, quantity: 1 });
+
+        if (items.length === 0) continue;
+
+        for (let week = alreadyReleased + 1; week <= currentWeek; week++) {
+          const summary = await generateTasksFromTemplates({
+            clientId: client.id,
+            items,
+            generationType: "onboarding",
+            cycleStartDate: startDate,
+            targetWeek: week,
+          });
+
+          totalReleased += summary.totalTasksCreated;
+
+          if (summary.totalTasksCreated > 0) {
+            console.log(
+              `[OnboardingWeeks] Released ${summary.totalTasksCreated} week-${week} onboarding tasks for client ${clientName}`
+            );
+          }
+
+          if (summary.errors.length > 0) {
+            console.warn(
+              `[OnboardingWeeks] Warnings for client ${clientName}, week ${week}:`,
+              summary.errors
+            );
+          }
+        }
+
+        await db
+          .update(clients)
+          .set({ onboardingWeekReleased: currentWeek })
+          .where(eq(clients.id, client.id));
+
+        clientsAdvanced++;
+      } catch (clientError: any) {
+        const clientName = client.company || client.name || client.id;
+        console.error(
+          `[OnboardingWeeks] Failed to process onboarding weeks for client ${clientName}:`,
+          clientError.message
+        );
+      }
+    }
+
+    console.log(
+      `[OnboardingWeeks] Check complete. ${clientsAdvanced} clients advanced, ${totalReleased} onboarding tasks released.`
+    );
+  } catch (error: any) {
+    console.error("[OnboardingWeeks] Fatal error during onboarding week check:", error.message);
   }
 }

@@ -1,0 +1,54 @@
+IMPORTANT: Before making any changes, audit:
+- client/src/pages/client-portal/dashboard.tsx in full
+- The API route(s) that serve task data to the client portal
+- How the client portal currently authenticates and identifies the current client
+
+Do NOT modify any existing client portal functionality — not the stat cards, not the task grid, not the task detail dialog, not filters. All changes are additive.
+
+---
+
+API:
+
+Add or extend an endpoint accessible to client portal sessions that returns:
+- The client's onboardingStartDate
+- The client's onboardingWeekReleased (the highest week number released so far)
+- All tasks for this client where onboardingWeek IS NOT NULL, including: id, name, status, priority, dueDate, onboardingWeek, assignedTo (department or staff name, whichever is available)
+
+If the client has no onboardingStartDate, return an empty onboarding payload — do not error.
+
+---
+
+CLIENT PORTAL DASHBOARD:
+
+Add a new "Onboarding Timeline" section to the dashboard. Position it ABOVE the existing task grid (stat cards stay at the top, timeline comes next, existing task grid below).
+
+Only render the Onboarding Timeline section if the client has onboardingStartDate set and has at least one onboarding task.
+
+VISUAL DESIGN:
+
+The timeline should feel like a progress journey, not an internal task list. Guidelines:
+
+- Each released week (1 through onboardingWeekReleased) renders as a distinct card/panel
+- Week cards are arranged horizontally on wider screens and stack vertically on mobile
+- Each week card shows:
+  - "Week [N]" as the card heading
+  - The date range for that week (calculated as: onboardingStartDate + (N-1)*7 days through onboardingStartDate + N*7 - 1 days), formatted as "Apr 7 – Apr 13"
+  - A circular or linear progress indicator showing completed tasks vs total tasks for that week (e.g. "4 of 7 complete")
+  - A progress bar beneath it using the primary teal color (hsl(179, 100%, 39%) / #00C9C6) for completion fill
+  - A collapsed list of tasks in that week — each showing task name and a status icon (a filled circle for complete, an empty circle for incomplete). Keep this list clean and minimal, not a data table.
+- The current active week (the highest released week) should be visually emphasized — slightly elevated card or a subtle teal left border accent
+- Unreleased future weeks should NOT be shown at all — do not show locked/greyed-out future weeks
+- If all tasks in a week are complete, the week card should show a subtle "Complete" state (e.g. a teal checkmark badge on the card header)
+
+Use the existing teal primary color throughout. No blue. Toast variants remain "default" and "destructive" only.
+
+Do not add filtering, sorting, or interactive controls to the timeline — it is read-only for the client.
+
+---
+
+VERIFICATION:
+- Confirm the timeline section renders correctly for a client with onboarding tasks
+- Confirm a client with no onboardingStartDate sees no timeline section (existing dashboard renders normally)
+- Confirm the existing task grid, stat cards, filters, and task detail dialog are completely unaffected
+- Confirm the timeline is responsive on mobile
+- Confirm no internal-only data (staff compensation, internal notes, etc.) is exposed through the new endpoint

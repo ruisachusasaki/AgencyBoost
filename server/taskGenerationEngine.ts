@@ -29,6 +29,7 @@ interface GenerationParams {
   generationType: "onboarding" | "recurring";
   cycleNumber?: number;
   cycleStartDate?: Date;
+  targetWeek?: number | null;
 }
 
 interface GenerationSummary {
@@ -48,6 +49,7 @@ export async function generateTasksFromTemplates(
     generationType,
     cycleNumber,
     cycleStartDate = new Date(),
+    targetWeek,
   } = params;
 
   const summary: GenerationSummary = {
@@ -205,11 +207,18 @@ export async function generateTasksFromTemplates(
         continue;
       }
 
-      const templates = await db
+      let templates = await db
         .select()
         .from(productTaskTemplates)
         .where(and(...conditions))
         .orderBy(asc(productTaskTemplates.sortOrder));
+
+      if (generationType === "onboarding" && targetWeek !== undefined && targetWeek !== null) {
+        templates = templates.filter(t => {
+          const tw = t.onboardingWeek;
+          return tw === null || tw === undefined || tw === targetWeek;
+        });
+      }
 
       if (templates.length === 0) continue;
 
@@ -273,6 +282,8 @@ export async function generateTasksFromTemplates(
               urgent: "urgent",
             };
 
+            const templateOnboardingWeek = template.onboardingWeek ?? null;
+
             const [newTask] = await db
               .insert(tasks)
               .values({
@@ -289,6 +300,7 @@ export async function generateTasksFromTemplates(
                   ? Math.round(parseFloat(template.estimatedHours) * 60)
                   : undefined,
                 sourceTemplateId: template.id,
+                onboardingWeek: generationType === "onboarding" ? templateOnboardingWeek : undefined,
               })
               .returning({ id: tasks.id });
 
