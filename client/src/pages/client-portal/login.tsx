@@ -83,7 +83,7 @@ export default function ClientPortalLogin() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center gap-3 mb-2">
             {branding.logoUrl ? (
-              <img src={branding.logoUrl} alt={branding.companyName || "Company Logo"} className="h-12 w-auto object-contain" />
+              <img src="/api/public/client-portal-logo" alt={branding.companyName || "Company Logo"} className="h-12 w-auto object-contain" />
             ) : (
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl" style={{ backgroundColor: `${branding.primaryColor || 'hsl(179, 100%, 39%)'}20` }}>
                 <ArrowRight className="w-6 h-6" style={{ color: branding.primaryColor || 'hsl(179, 100%, 39%)' }} />

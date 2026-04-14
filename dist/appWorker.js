@@ -33847,6 +33847,27 @@ AgencyBoost CRM`
       res.json({});
     }
   });
+  app2.get("/api/public/client-portal-logo", async (req, res) => {
+    try {
+      const [setting] = await db.select().from(taskSettings).where(eq20(taskSettings.settingKey, "client_portal_branding"));
+      const logoUrl = setting?.settingValue?.logoUrl;
+      if (!logoUrl || typeof logoUrl !== "string") {
+        return res.sendStatus(404);
+      }
+      const { ObjectStorageService: ObjectStorageService2 } = await Promise.resolve().then(() => (init_objectStorage(), objectStorage_exports));
+      const objectStorageService = new ObjectStorageService2();
+      const objectFile = await objectStorageService.getObjectEntityFile(logoUrl);
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      await objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error serving client portal logo:", error);
+      const { ObjectNotFoundError: ObjectNotFoundError2 } = await Promise.resolve().then(() => (init_objectStorage(), objectStorage_exports));
+      if (error instanceof ObjectNotFoundError2) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
+  });
   app2.get("/objects/:objectPath(*)", requireAuth(), async (req, res) => {
     try {
       console.log("Serving object for path:", req.path);

@@ -874,7 +874,7 @@ export default function ClientPortalDashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               {branding.logoUrl ? (
-                <img src={branding.logoUrl} alt={branding.companyName || "Logo"} className="h-10 w-auto object-contain bg-white rounded px-2 py-1" />
+                <img src="/api/public/client-portal-logo" alt={branding.companyName || "Logo"} className="h-10 w-auto object-contain bg-white rounded px-2 py-1" />
               ) : (
                 <div className="inline-flex items-center justify-center w-10 h-10 bg-white/20 rounded-lg">
                   <div className="w-5 h-5 bg-white rounded"></div>

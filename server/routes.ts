@@ -11719,6 +11719,29 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  app.get("/api/public/client-portal-logo", async (req, res) => {
+    try {
+      const [setting] = await db.select().from(taskSettings)
+        .where(eq(taskSettings.settingKey, 'client_portal_branding'));
+      const logoUrl = (setting?.settingValue as any)?.logoUrl;
+      if (!logoUrl || typeof logoUrl !== 'string') {
+        return res.sendStatus(404);
+      }
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(logoUrl);
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      await objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error serving client portal logo:", error);
+      const { ObjectNotFoundError } = await import("./objectStorage");
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
+  });
+
   app.get("/objects/:objectPath(*)", requireAuth(), async (req, res) => {
     try {
       console.log("Serving object for path:", req.path);
