@@ -288,47 +288,68 @@ export default function TicketsPage() {
   const allStatuses = ["open", "in_progress", "on_hold", "resolved"];
   const defaultStatuses = ["open", "in_progress", "on_hold"];
 
-  const initParams = useRef(new URLSearchParams(window.location.search)).current;
+  const savedFilters = useRef<Record<string, string> | null>(null);
+  if (savedFilters.current === null) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasUrlFilters = urlParams.has("status") || urlParams.has("type") || urlParams.has("priority") ||
+      urlParams.has("assignedTo") || urlParams.has("source") || urlParams.has("search");
+    if (hasUrlFilters) {
+      const obj: Record<string, string> = {};
+      urlParams.forEach((v, k) => { obj[k] = v; });
+      savedFilters.current = obj;
+    } else {
+      try {
+        const stored = sessionStorage.getItem("ticketFilters");
+        if (stored) savedFilters.current = JSON.parse(stored);
+      } catch {}
+    }
+    if (!savedFilters.current) savedFilters.current = {};
+  }
+
+  const gf = (key: string, fallback: string) => savedFilters.current![key] || fallback;
+
   const [statusFilter, setStatusFilter] = useState<string[]>(() => {
-    const s = initParams.get("status");
+    const s = gf("status", "");
     return s ? s.split(",").filter(Boolean) : defaultStatuses;
   });
-  const [typeFilter, setTypeFilter] = useState(() => initParams.get("type") || "all");
-  const [priorityFilter, setPriorityFilter] = useState(() => initParams.get("priority") || "all");
-  const [assignedToFilter, setAssignedToFilter] = useState(() => initParams.get("assignedTo") || "all");
-  const [sourceFilter, setSourceFilter] = useState(() => initParams.get("source") || "all");
-  const [searchTerm, setSearchTerm] = useState(() => initParams.get("search") || "");
+  const [typeFilter, setTypeFilter] = useState(() => gf("type", "all"));
+  const [priorityFilter, setPriorityFilter] = useState(() => gf("priority", "all"));
+  const [assignedToFilter, setAssignedToFilter] = useState(() => gf("assignedTo", "all"));
+  const [sourceFilter, setSourceFilter] = useState(() => gf("source", "all"));
+  const [searchTerm, setSearchTerm] = useState(() => gf("search", ""));
   const [currentPage, setCurrentPage] = useState(() => {
-    const p = initParams.get("page");
+    const p = gf("page", "");
     return p ? parseInt(p, 10) || 1 : 1;
   });
   const [pageSize, setPageSize] = useState(() => {
-    const ps = initParams.get("limit");
+    const ps = gf("limit", "");
     return ps ? parseInt(ps, 10) || 20 : 20;
   });
-  const [sortBy, setSortBy] = useState<string>(() => initParams.get("sortBy") || "createdAt");
+  const [sortBy, setSortBy] = useState<string>(() => gf("sortBy", "createdAt"));
   const [sortDir, setSortDir] = useState<"asc" | "desc">(() => {
-    const d = initParams.get("sortDir");
+    const d = gf("sortDir", "");
     return d === "asc" ? "asc" : "desc";
   });
 
   useEffect(() => {
-    const params = new URLSearchParams();
+    const filterState: Record<string, string> = {};
     const statusStr = statusFilter.slice().sort().join(",");
     const defaultStr = defaultStatuses.slice().sort().join(",");
-    if (statusStr !== defaultStr) params.set("status", statusFilter.join(","));
-    if (typeFilter !== "all") params.set("type", typeFilter);
-    if (priorityFilter !== "all") params.set("priority", priorityFilter);
-    if (assignedToFilter !== "all") params.set("assignedTo", assignedToFilter);
-    if (sourceFilter !== "all") params.set("source", sourceFilter);
-    if (searchTerm) params.set("search", searchTerm);
-    if (currentPage !== 1) params.set("page", String(currentPage));
-    if (pageSize !== 20) params.set("limit", String(pageSize));
-    if (sortBy !== "createdAt") params.set("sortBy", sortBy);
-    if (sortDir !== "desc") params.set("sortDir", sortDir);
+    if (statusStr !== defaultStr) filterState.status = statusFilter.join(",");
+    if (typeFilter !== "all") filterState.type = typeFilter;
+    if (priorityFilter !== "all") filterState.priority = priorityFilter;
+    if (assignedToFilter !== "all") filterState.assignedTo = assignedToFilter;
+    if (sourceFilter !== "all") filterState.source = sourceFilter;
+    if (searchTerm) filterState.search = searchTerm;
+    if (currentPage !== 1) filterState.page = String(currentPage);
+    if (pageSize !== 20) filterState.limit = String(pageSize);
+    if (sortBy !== "createdAt") filterState.sortBy = sortBy;
+    if (sortDir !== "desc") filterState.sortDir = sortDir;
+    try { sessionStorage.setItem("ticketFilters", JSON.stringify(filterState)); } catch {}
+    const params = new URLSearchParams(filterState);
     const qs = params.toString();
     const newUrl = qs ? `/tickets?${qs}` : "/tickets";
-    window.history.replaceState(null, "", newUrl);
+    try { window.history.replaceState(null, "", newUrl); } catch {}
   }, [statusFilter, typeFilter, priorityFilter, assignedToFilter, sourceFilter, searchTerm, currentPage, pageSize, sortBy, sortDir]);
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
