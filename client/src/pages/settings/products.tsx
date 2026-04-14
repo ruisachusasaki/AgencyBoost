@@ -42,7 +42,11 @@ import {
   GripVertical,
   AlertCircle,
   Info,
-  Tags
+  Tags,
+  LayoutGrid,
+  CalendarDays,
+  CheckCircle2,
+  Circle
 } from "lucide-react";
 import { Link } from "wouter";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -198,6 +202,7 @@ export default function ProductsSettings() {
   const [taskMappingCategoryFilter, setTaskMappingCategoryFilter] = useState("all");
   const [taskMappingTypeFilter, setTaskMappingTypeFilter] = useState("all");
   const [groupByWeek, setGroupByWeek] = useState(false);
+  const [onboardingWeekView, setOnboardingWeekView] = useState(false);
   const [bundleFormType, setBundleFormType] = useState("recurring");
   const [packageItemSearch, setPackageItemSearch] = useState("");
   const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set());
@@ -1751,6 +1756,17 @@ export default function ProductsSettings() {
                 Group by Week
               </Button>
             )}
+            {activeTab === "taskMapping" && (
+              <Button
+                variant={onboardingWeekView ? "default" : "outline"}
+                size="sm"
+                className="h-10"
+                onClick={() => setOnboardingWeekView(!onboardingWeekView)}
+              >
+                <CalendarDays className="h-4 w-4 mr-1.5" />
+                Week View
+              </Button>
+            )}
           </div>
           
           {activeTab === "products" && (
@@ -3113,6 +3129,152 @@ export default function ProductsSettings() {
               <div className="text-center py-8">Loading task templates...</div>
             ) : (
               <>
+                {onboardingWeekView && (
+                  <Card className="mb-6">
+                    <CardHeader>
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <CalendarDays className="w-5 h-5" />
+                          Onboarding Week View
+                        </CardTitle>
+                        <CardDescription className="mt-1.5">Visual overview of onboarding tasks organized by week across all products</CardDescription>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {(() => {
+                        const allOnboardingTemplates: Array<TaskTemplate & { productName: string }> = [];
+                        products.forEach((p: Product) => {
+                          const templates = getTemplatesForItem('product', p.id);
+                          templates.forEach((t: TaskTemplate) => {
+                            if (t.taskType === 'onboarding') {
+                              allOnboardingTemplates.push({ ...t, productName: p.name });
+                            }
+                          });
+                        });
+
+                        if (allOnboardingTemplates.length === 0) {
+                          return <div className="text-center py-8 text-gray-400 text-sm">No onboarding task templates found</div>;
+                        }
+
+                        const weekMap: Record<number, Array<TaskTemplate & { productName: string }>> = {};
+                        const unassigned: Array<TaskTemplate & { productName: string }> = [];
+                        allOnboardingTemplates.forEach(t => {
+                          if (t.onboardingWeek != null && t.onboardingWeek > 0) {
+                            if (!weekMap[t.onboardingWeek]) weekMap[t.onboardingWeek] = [];
+                            weekMap[t.onboardingWeek].push(t);
+                          } else {
+                            unassigned.push(t);
+                          }
+                        });
+
+                        const weekNums = Object.keys(weekMap).map(Number).sort((a, b) => a - b);
+                        const maxWeek = weekNums.length > 0 ? weekNums[weekNums.length - 1] : 0;
+
+                        return (
+                          <div className="space-y-6">
+                            <div className="flex items-center gap-6 text-sm text-muted-foreground mb-2">
+                              <span>{allOnboardingTemplates.length} onboarding templates</span>
+                              <span>{weekNums.length} weeks configured</span>
+                              {unassigned.length > 0 && <span className="text-amber-600">{unassigned.length} unassigned to a week</span>}
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                              {Array.from({ length: maxWeek }, (_, i) => i + 1).map(weekNum => {
+                                const weekTemplates = weekMap[weekNum] || [];
+                                const productGroups: Record<string, Array<TaskTemplate & { productName: string }>> = {};
+                                weekTemplates.forEach(t => {
+                                  if (!productGroups[t.productName]) productGroups[t.productName] = [];
+                                  productGroups[t.productName].push(t);
+                                });
+
+                                return (
+                                  <div key={weekNum} className="border rounded-lg overflow-hidden">
+                                    <div className="px-4 py-3 border-b" style={{ backgroundColor: 'hsl(179, 100%, 96%)' }}>
+                                      <div className="flex items-center justify-between">
+                                        <h4 className="font-semibold text-sm">Week {weekNum}</h4>
+                                        <Badge variant="outline" className="text-xs">{weekTemplates.length} {weekTemplates.length === 1 ? 'task' : 'tasks'}</Badge>
+                                      </div>
+                                    </div>
+                                    <div className="p-3">
+                                      {weekTemplates.length === 0 ? (
+                                        <p className="text-xs text-gray-400 text-center py-3">No tasks scheduled</p>
+                                      ) : (
+                                        <div className="space-y-3">
+                                          {Object.entries(productGroups).sort(([a], [b]) => a.localeCompare(b)).map(([prodName, tmpls]) => (
+                                            <div key={prodName}>
+                                              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">{prodName}</p>
+                                              <div className="space-y-1">
+                                                {tmpls.map(tmpl => (
+                                                  <div key={tmpl.id} className="flex items-start gap-2 text-sm py-1 px-2 rounded hover:bg-gray-50">
+                                                    <Circle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-gray-300" />
+                                                    <div className="min-w-0 flex-1">
+                                                      <span className="text-sm leading-tight">{tmpl.name}</span>
+                                                      <div className="flex items-center gap-2 mt-0.5">
+                                                        {tmpl.priority && (
+                                                          <span className={`text-[10px] px-1.5 py-0 rounded ${tmpl.priority === 'urgent' ? 'bg-red-100 text-red-700' : tmpl.priority === 'high' ? 'bg-orange-100 text-orange-700' : tmpl.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
+                                                            {tmpl.priority}
+                                                          </span>
+                                                        )}
+                                                        {tmpl.dueOffsetDays != null && (
+                                                          <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                                                            <Clock className="h-2.5 w-2.5" />
+                                                            {tmpl.dueOffsetDays}d
+                                                          </span>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              {unassigned.length > 0 && (
+                                <div className="border rounded-lg overflow-hidden border-amber-200">
+                                  <div className="px-4 py-3 border-b bg-amber-50">
+                                    <div className="flex items-center justify-between">
+                                      <h4 className="font-semibold text-sm text-amber-800">Unassigned</h4>
+                                      <Badge variant="outline" className="text-xs border-amber-300 text-amber-700">{unassigned.length} {unassigned.length === 1 ? 'task' : 'tasks'}</Badge>
+                                    </div>
+                                  </div>
+                                  <div className="p-3">
+                                    <div className="space-y-3">
+                                      {(() => {
+                                        const groups: Record<string, Array<TaskTemplate & { productName: string }>> = {};
+                                        unassigned.forEach(t => {
+                                          if (!groups[t.productName]) groups[t.productName] = [];
+                                          groups[t.productName].push(t);
+                                        });
+                                        return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([prodName, tmpls]) => (
+                                          <div key={prodName}>
+                                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">{prodName}</p>
+                                            <div className="space-y-1">
+                                              {tmpls.map(tmpl => (
+                                                <div key={tmpl.id} className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-gray-50">
+                                                  <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                                                  <span className="truncate">{tmpl.name}</span>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        ));
+                                      })()}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Product-Level Templates */}
                 <Card>
                   <CardHeader>
