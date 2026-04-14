@@ -2448,30 +2448,9 @@ export default function Tasks() {
       </Draggable>
     );
 
-    // Show workflow selector and empty state if no workflow or columns
     if (!selectedWorkflow || columns.length === 0) {
       return (
         <div className="space-y-4">
-          {/* Workflow Selector */}
-          <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg">
-            <label className="text-sm font-medium text-slate-700">Workflow:</label>
-            <Select 
-              value={workflowFilter} 
-              onValueChange={setWorkflowFilter}
-            >
-              <SelectTrigger className="w-64">
-                <SelectValue placeholder="Select a workflow" />
-              </SelectTrigger>
-              <SelectContent>
-                {workflows.map((workflow: any) => (
-                  <SelectItem key={workflow.id} value={workflow.id}>
-                    {workflow.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
           {workflows.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-slate-500 mb-4">No workflows found. Create a workflow first to use Kanban view.</p>
@@ -2494,26 +2473,6 @@ export default function Tasks() {
 
     return (
       <div className="space-y-4">
-        {/* Workflow Selector */}
-        <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg">
-          <label className="text-sm font-medium text-slate-700">Workflow:</label>
-          <Select 
-            value={workflowFilter} 
-            onValueChange={setWorkflowFilter}
-          >
-            <SelectTrigger className="w-64">
-              <SelectValue placeholder="Select a workflow" />
-            </SelectTrigger>
-            <SelectContent>
-              {workflows.map((workflow: any) => (
-                <SelectItem key={workflow.id} value={workflow.id}>
-                  {workflow.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Kanban Board */}
         <DragDropContext onDragEnd={onDragEnd}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
@@ -3172,14 +3131,34 @@ export default function Tasks() {
               </div>
             </DragDropContext>
           ) : (
-            <KanbanView 
-              tasks={filteredAndSortedTasks}
-              staff={staff}
-              clients={clients}
-              onDragEnd={handleKanbanDragEnd}
-              onDeleteTask={handleDeleteTask}
-              deleteTaskMutation={deleteTaskMutation}
-            />
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg">
+                <label className="text-sm font-medium text-slate-700">Workflow:</label>
+                <Select 
+                  value={workflowFilter} 
+                  onValueChange={setWorkflowFilter}
+                >
+                  <SelectTrigger className="w-64">
+                    <SelectValue placeholder="Select a workflow" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {workflows.map((workflow: any) => (
+                      <SelectItem key={workflow.id} value={workflow.id}>
+                        {workflow.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <KanbanView 
+                tasks={filteredAndSortedTasks}
+                staff={staff}
+                clients={clients}
+                onDragEnd={handleKanbanDragEnd}
+                onDeleteTask={handleDeleteTask}
+                deleteTaskMutation={deleteTaskMutation}
+              />
+            </div>
           )}
         </CardContent>
       </Card>
