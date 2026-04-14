@@ -196,6 +196,7 @@ export default function ProductsSettings() {
   const [packageSearchTerm, setPackageSearchTerm] = useState("");
   const [taskMappingSearchTerm, setTaskMappingSearchTerm] = useState("");
   const [taskMappingCategoryFilter, setTaskMappingCategoryFilter] = useState("all");
+  const [taskMappingTypeFilter, setTaskMappingTypeFilter] = useState("all");
   const [groupByWeek, setGroupByWeek] = useState(false);
   const [bundleFormType, setBundleFormType] = useState("recurring");
   const [packageItemSearch, setPackageItemSearch] = useState("");
@@ -1727,6 +1728,19 @@ export default function ProductsSettings() {
               </Select>
             )}
             {activeTab === "taskMapping" && (
+              <Select value={taskMappingTypeFilter} onValueChange={setTaskMappingTypeFilter}>
+                <SelectTrigger className="w-44">
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="onboarding">Onboarding</SelectItem>
+                  <SelectItem value="recurring">Recurring</SelectItem>
+                  <SelectItem value="one-time">One-Time</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            {activeTab === "taskMapping" && (
               <Button
                 variant={groupByWeek ? "default" : "outline"}
                 size="sm"
@@ -3139,11 +3153,14 @@ export default function ProductsSettings() {
                         {(() => {
                           const searchLower = taskMappingSearchTerm.toLowerCase();
                           const filteredProducts = products.filter((p: Product) => {
+                            const templates = getTemplatesForItem('product', p.id);
                             const matchesSearch = !searchLower || p.name.toLowerCase().includes(searchLower) ||
-                              getTemplatesForItem('product', p.id).some((t: TaskTemplate) => t.name.toLowerCase().includes(searchLower));
+                              templates.some((t: TaskTemplate) => t.name.toLowerCase().includes(searchLower));
                             const matchesCategory = taskMappingCategoryFilter === 'all' ||
                               (taskMappingCategoryFilter === 'uncategorized' ? !p.categoryId : p.categoryId === taskMappingCategoryFilter);
-                            return matchesSearch && matchesCategory;
+                            const matchesType = taskMappingTypeFilter === 'all' ||
+                              templates.some((t: TaskTemplate) => t.taskType === taskMappingTypeFilter);
+                            return matchesSearch && matchesCategory && matchesType;
                           });
                           const grouped: Record<string, Product[]> = {};
                           filteredProducts.forEach((p: Product) => {
@@ -3246,7 +3263,8 @@ export default function ProductsSettings() {
                                               </TableHeader>
                                               <TableBody>
                                                 {(() => {
-                                                  const sorted = templates.sort((a: TaskTemplate, b: TaskTemplate) => a.sortOrder - b.sortOrder);
+                                                  const filtered = taskMappingTypeFilter === 'all' ? templates : templates.filter((t: TaskTemplate) => t.taskType === taskMappingTypeFilter);
+                                                  const sorted = filtered.sort((a: TaskTemplate, b: TaskTemplate) => a.sortOrder - b.sortOrder);
                                                   if (!groupByWeek) return sorted.map((tmpl: TaskTemplate) => renderTemplateRow(tmpl, 'product', product.id));
                                                   const weekGroups: Record<string, TaskTemplate[]> = {};
                                                   sorted.forEach((tmpl: TaskTemplate) => {
