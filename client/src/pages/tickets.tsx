@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -287,16 +287,49 @@ export default function TicketsPage() {
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const allStatuses = ["open", "in_progress", "on_hold", "resolved"];
   const defaultStatuses = ["open", "in_progress", "on_hold"];
-  const [statusFilter, setStatusFilter] = useState<string[]>(defaultStatuses);
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [priorityFilter, setPriorityFilter] = useState("all");
-  const [assignedToFilter, setAssignedToFilter] = useState("all");
-  const [sourceFilter, setSourceFilter] = useState("all");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [sortBy, setSortBy] = useState<string>("createdAt");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  const initParams = useRef(new URLSearchParams(window.location.search)).current;
+  const [statusFilter, setStatusFilter] = useState<string[]>(() => {
+    const s = initParams.get("status");
+    return s ? s.split(",").filter(Boolean) : defaultStatuses;
+  });
+  const [typeFilter, setTypeFilter] = useState(() => initParams.get("type") || "all");
+  const [priorityFilter, setPriorityFilter] = useState(() => initParams.get("priority") || "all");
+  const [assignedToFilter, setAssignedToFilter] = useState(() => initParams.get("assignedTo") || "all");
+  const [sourceFilter, setSourceFilter] = useState(() => initParams.get("source") || "all");
+  const [searchTerm, setSearchTerm] = useState(() => initParams.get("search") || "");
+  const [currentPage, setCurrentPage] = useState(() => {
+    const p = initParams.get("page");
+    return p ? parseInt(p, 10) || 1 : 1;
+  });
+  const [pageSize, setPageSize] = useState(() => {
+    const ps = initParams.get("limit");
+    return ps ? parseInt(ps, 10) || 20 : 20;
+  });
+  const [sortBy, setSortBy] = useState<string>(() => initParams.get("sortBy") || "createdAt");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">(() => {
+    const d = initParams.get("sortDir");
+    return d === "asc" ? "asc" : "desc";
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    const statusStr = statusFilter.slice().sort().join(",");
+    const defaultStr = defaultStatuses.slice().sort().join(",");
+    if (statusStr !== defaultStr) params.set("status", statusFilter.join(","));
+    if (typeFilter !== "all") params.set("type", typeFilter);
+    if (priorityFilter !== "all") params.set("priority", priorityFilter);
+    if (assignedToFilter !== "all") params.set("assignedTo", assignedToFilter);
+    if (sourceFilter !== "all") params.set("source", sourceFilter);
+    if (searchTerm) params.set("search", searchTerm);
+    if (currentPage !== 1) params.set("page", String(currentPage));
+    if (pageSize !== 20) params.set("limit", String(pageSize));
+    if (sortBy !== "createdAt") params.set("sortBy", sortBy);
+    if (sortDir !== "desc") params.set("sortDir", sortDir);
+    const qs = params.toString();
+    const newUrl = qs ? `/tickets?${qs}` : "/tickets";
+    window.history.replaceState(null, "", newUrl);
+  }, [statusFilter, typeFilter, priorityFilter, assignedToFilter, sourceFilter, searchTerm, currentPage, pageSize, sortBy, sortDir]);
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingTicket, setEditingTicket] = useState<TicketData | null>(null);
