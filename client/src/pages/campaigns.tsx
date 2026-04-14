@@ -735,8 +735,9 @@ export default function Campaigns() {
   const handleEditTemplate = (template: EmailTemplate | SmsTemplate) => {
     setEditingTemplate(template);
     if ((template as any).subject) {
-      // Email template
       setEmailContent((template as EmailTemplate).content || "");
+      setEmailSubject((template as EmailTemplate).subject || "");
+      setEmailPreviewText((template as EmailTemplate).previewText || "");
     } else {
       // SMS template
       setSmsContent((template as SmsTemplate).content || "");
@@ -748,6 +749,8 @@ export default function Campaigns() {
     setIsEditDialogOpen(false);
     setEditingTemplate(null);
     setEmailContent("");
+    setEmailSubject("");
+    setEmailPreviewText("");
     setSmsContent("");
   };
 
@@ -1876,12 +1879,18 @@ export default function Campaigns() {
                 <Input name="name" placeholder="Enter template name" defaultValue={editingTemplate.name} required />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Subject Line</label>
-                <Input name="subject" placeholder="Email subject" defaultValue={(editingTemplate as any).subject} required />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium">Subject Line</label>
+                  <MergeTagsDropdown onInsert={insertMergeTagIntoSubject} inline />
+                </div>
+                <Input name="subject" placeholder="Email subject" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} required />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Preview Text</label>
-                <Input name="previewText" placeholder="Preview text (optional)" defaultValue={(editingTemplate as any).previewText || ""} />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium">Preview Text</label>
+                  <MergeTagsDropdown onInsert={insertMergeTagIntoPreviewText} inline />
+                </div>
+                <Input name="previewText" placeholder="Preview text (optional)" value={emailPreviewText} onChange={(e) => setEmailPreviewText(e.target.value)} />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
