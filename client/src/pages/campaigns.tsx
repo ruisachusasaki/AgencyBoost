@@ -115,16 +115,21 @@ export default function Campaigns() {
   });
 
   // Define available merge tags based on client schema - dynamic with custom fields
+  const [mergeTagSearch, setMergeTagSearch] = useState("");
+
   const mergeTagGroups = [
     {
       label: "Contact Information",
       tags: [
-        { label: "Name", value: "{{name}}" },
+        { label: "Full Name", value: "{{name}}" },
         { label: "Email", value: "{{email}}" },
         { label: "Phone", value: "{{phone}}" },
         { label: "Company", value: "{{company}}" },
-        { label: "Position", value: "{{position}}" },
+        { label: "Position / Title", value: "{{position}}" },
         { label: "Website", value: "{{website}}" },
+        { label: "Status", value: "{{status}}" },
+        { label: "Contact Source", value: "{{contactSource}}" },
+        { label: "Tags", value: "{{tags}}" },
       ]
     },
     {
@@ -138,17 +143,38 @@ export default function Campaigns() {
       ]
     },
     {
-      label: "Business Information",
+      label: "Billing & Revenue",
       tags: [
-        { label: "Client Vertical", value: "{{clientVertical}}" },
-        { label: "Monthly Revenue", value: "{{mrr}}" },
+        { label: "Monthly Revenue (MRR)", value: "{{mrr}}" },
         { label: "Payment Terms", value: "{{paymentTerms}}" },
         { label: "Invoicing Contact", value: "{{invoicingContact}}" },
         { label: "Invoicing Email", value: "{{invoicingEmail}}" },
+        { label: "Upside Bonus %", value: "{{upsideBonus}}" },
       ]
     },
     {
-      label: "User Fields",
+      label: "Client Resources",
+      tags: [
+        { label: "Growth OS Dashboard", value: "{{growthOsDashboard}}" },
+        { label: "StoryBrand", value: "{{storyBrand}}" },
+        { label: "Style Guide", value: "{{styleGuide}}" },
+        { label: "Google Drive Folder", value: "{{googleDriveFolder}}" },
+        { label: "Testing Log", value: "{{testingLog}}" },
+        { label: "Cornerstone Blueprint", value: "{{cornerstoneBlueprint}}" },
+        { label: "Custom GPT", value: "{{customGpt}}" },
+      ]
+    },
+    {
+      label: "Lead Fields",
+      tags: [
+        { label: "Lead Source", value: "{{leadSource}}" },
+        { label: "Lead Value", value: "{{leadValue}}" },
+        { label: "Lead Probability %", value: "{{leadProbability}}" },
+        { label: "Projected Close Date", value: "{{projectedCloseDate}}" },
+      ]
+    },
+    {
+      label: "Sender / User Fields",
       tags: [
         { label: "User First Name", value: "{{user_first_name}}" },
         { label: "User Last Name", value: "{{user_last_name}}" },
@@ -158,13 +184,33 @@ export default function Campaigns() {
       ]
     },
     {
+      label: "Company Info",
+      tags: [
+        { label: "Company Name", value: "{{company_name}}" },
+        { label: "Company Phone", value: "{{company_phone}}" },
+        { label: "Company Email", value: "{{company_email}}" },
+        { label: "Company Website", value: "{{company_website}}" },
+        { label: "Company Address", value: "{{company_address}}" },
+        { label: "Company City", value: "{{company_city}}" },
+        { label: "Company State", value: "{{company_state}}" },
+        { label: "Company Zip", value: "{{company_zip}}" },
+      ]
+    },
+    {
+      label: "Dates",
+      tags: [
+        { label: "Current Date", value: "{{current_date}}" },
+        { label: "Current Year", value: "{{current_year}}" },
+      ]
+    },
+    {
       label: "Other",
       tags: [
         { label: "Notes", value: "{{notes}}" },
-        { label: "Contact Source", value: "{{contactSource}}" },
+        { label: "Client Vertical", value: "{{clientVertical}}" },
+        { label: "Onboarding Start Date", value: "{{onboardingStartDate}}" },
       ]
     },
-    // Dynamically add custom fields if they exist
     ...(Array.isArray(customFields) && customFields.length > 0 ? [{
       label: "Custom Fields",
       tags: customFields.map((field: any) => ({
@@ -1063,38 +1109,71 @@ export default function Campaigns() {
   };
 
   // Merge Tags Dropdown Component
-  const MergeTagsDropdown = ({ onInsert, buttonText = "Insert Merge Tag" }: { onInsert: (tag: string) => void; buttonText?: string }) => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" type="button">
-          <Tag className="h-4 w-4 mr-2" />
-          {buttonText}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-64" align="start">
-        {mergeTagGroups.map((group, groupIndex) => (
-          <div key={group.label}>
-            <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">
-              {group.label}
+  const MergeTagsDropdown = ({ onInsert, buttonText = "Insert Merge Tag", inline = false }: { onInsert: (tag: string) => void; buttonText?: string; inline?: boolean }) => {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState("");
+
+    const filteredGroups = mergeTagGroups.map(group => ({
+      ...group,
+      tags: group.tags.filter(tag =>
+        tag.label.toLowerCase().includes(search.toLowerCase()) ||
+        tag.value.toLowerCase().includes(search.toLowerCase())
+      )
+    })).filter(group => group.tags.length > 0);
+
+    return (
+      <div className={inline ? "absolute right-1 top-1/2 -translate-y-1/2" : "relative"}>
+        {inline ? (
+          <Button variant="ghost" size="sm" type="button" className="h-7 w-7 p-0" onClick={() => { setOpen(!open); setSearch(""); }}>
+            <Tag className="h-4 w-4 text-gray-500 hover:text-gray-700" />
+          </Button>
+        ) : (
+          <Button variant="outline" size="sm" type="button" onClick={() => { setOpen(!open); setSearch(""); }}>
+            <Tag className="h-4 w-4 mr-2" />
+            {buttonText}
+          </Button>
+        )}
+        {open && (
+          <div className="absolute right-0 top-full mt-1 w-80 bg-popover border rounded-md shadow-lg p-2 z-[200]" onClick={(e) => e.stopPropagation()}>
+            <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert merge tag</p>
+            <div className="relative mb-2">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search merge tags..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-7 pl-7 text-xs"
+                autoFocus
+              />
             </div>
-            {group.tags.map((tag) => (
-              <DropdownMenuItem 
-                key={tag.value} 
-                onClick={() => onInsert(tag.value)}
-                className="cursor-pointer"
-              >
-                <div className="flex flex-col">
-                  <span className="font-medium">{tag.label}</span>
-                  <span className="text-xs text-gray-500">{tag.value}</span>
-                </div>
-              </DropdownMenuItem>
-            ))}
-            {groupIndex < mergeTagGroups.length - 1 && <DropdownMenuSeparator />}
+            <div className="max-h-72 overflow-y-auto overscroll-contain">
+              <div className="space-y-0.5">
+                {filteredGroups.map(group => (
+                  <div key={group.label}>
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pt-1.5 pb-0.5">{group.label}</p>
+                    {group.tags.map(tag => (
+                      <button
+                        key={tag.value}
+                        type="button"
+                        className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between"
+                        onClick={() => { onInsert(tag.value); setOpen(false); }}
+                      >
+                        <span className="font-medium truncate mr-2">{tag.label}</span>
+                        <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{tag.value}</code>
+                      </button>
+                    ))}
+                  </div>
+                ))}
+                {filteredGroups.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-2">No merge tags found</p>
+                )}
+              </div>
+            </div>
           </div>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="container mx-auto p-6">
@@ -1219,40 +1298,7 @@ export default function Campaigns() {
                           className="pr-10"
                           required 
                         />
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              type="button"
-                              className="absolute right-1 h-7 w-7 p-0"
-                            >
-                              <Tag className="h-4 w-4 text-gray-500 hover:text-gray-700" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="w-64" align="end">
-                            {mergeTagGroups.map((group, groupIndex) => (
-                              <div key={group.label}>
-                                <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">
-                                  {group.label}
-                                </div>
-                                {group.tags.map((tag) => (
-                                  <DropdownMenuItem 
-                                    key={tag.value} 
-                                    onClick={() => insertMergeTagIntoSubject(tag.value)}
-                                    className="cursor-pointer"
-                                  >
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">{tag.label}</span>
-                                      <span className="text-xs text-gray-500">{tag.value}</span>
-                                    </div>
-                                  </DropdownMenuItem>
-                                ))}
-                                {groupIndex < mergeTagGroups.length - 1 && <DropdownMenuSeparator />}
-                              </div>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <MergeTagsDropdown onInsert={insertMergeTagIntoSubject} inline />
                       </div>
                     </div>
                     <div>
@@ -1265,40 +1311,7 @@ export default function Campaigns() {
                           placeholder="Preview text (optional)"
                           className="pr-10"
                         />
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              type="button"
-                              className="absolute right-1 h-7 w-7 p-0"
-                            >
-                              <Tag className="h-4 w-4 text-gray-500 hover:text-gray-700" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="w-64" align="end">
-                            {mergeTagGroups.map((group, groupIndex) => (
-                              <div key={group.label}>
-                                <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">
-                                  {group.label}
-                                </div>
-                                {group.tags.map((tag) => (
-                                  <DropdownMenuItem 
-                                    key={tag.value} 
-                                    onClick={() => insertMergeTagIntoPreviewText(tag.value)}
-                                    className="cursor-pointer"
-                                  >
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">{tag.label}</span>
-                                      <span className="text-xs text-gray-500">{tag.value}</span>
-                                    </div>
-                                  </DropdownMenuItem>
-                                ))}
-                                {groupIndex < mergeTagGroups.length - 1 && <DropdownMenuSeparator />}
-                              </div>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <MergeTagsDropdown onInsert={insertMergeTagIntoPreviewText} inline />
                       </div>
                     </div>
                     <div>
