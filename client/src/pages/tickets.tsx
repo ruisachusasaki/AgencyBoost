@@ -292,7 +292,8 @@ export default function TicketsPage() {
   if (savedFilters.current === null) {
     const urlParams = new URLSearchParams(window.location.search);
     const hasUrlFilters = urlParams.has("status") || urlParams.has("type") || urlParams.has("priority") ||
-      urlParams.has("assignedTo") || urlParams.has("source") || urlParams.has("search");
+      urlParams.has("assignedTo") || urlParams.has("source") || urlParams.has("search") ||
+      urlParams.has("page") || urlParams.has("limit") || urlParams.has("sortBy") || urlParams.has("sortDir");
     if (hasUrlFilters) {
       const obj: Record<string, string> = {};
       urlParams.forEach((v, k) => { obj[k] = v; });
