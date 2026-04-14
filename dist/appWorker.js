@@ -948,6 +948,8 @@ var init_schema = __esm({
       onboardingCompleted: boolean("onboarding_completed").default(false),
       onboardingProgress: jsonb("onboarding_progress"),
       onboardingCurrentStep: integer("onboarding_current_step").default(0),
+      onboardingStartDate: timestamp("onboarding_start_date"),
+      onboardingWeekReleased: integer("onboarding_week_released").default(0),
       createdAt: timestamp("created_at").defaultNow()
     });
     clientRoadmapEntries = pgTable("client_roadmap_entries", {
@@ -1404,6 +1406,7 @@ var init_schema = __esm({
       statusHistory: jsonb("status_history").default(sql`'[]'`),
       completedAt: timestamp("completed_at"),
       createdAt: timestamp("created_at").defaultNow(),
+      onboardingWeek: integer("onboarding_week"),
       sourceTemplateId: varchar("source_template_id"),
       generationId: varchar("generation_id")
     });
@@ -2175,6 +2178,7 @@ var init_schema = __esm({
       // Complete task structure for advanced templates
       templateData: jsonb("template_data"),
       // Full task structure with sub-tasks and dependencies
+      onboardingWeek: integer("onboarding_week"),
       createdBy: uuid("created_by").notNull().references(() => staff.id),
       createdAt: timestamp("created_at").defaultNow(),
       updatedAt: timestamp("updated_at").defaultNow()
@@ -5178,6 +5182,7 @@ var init_schema = __esm({
       // 'low' | 'medium' | 'high' | 'urgent'
       sortOrder: integer("sort_order").notNull().default(0),
       dependsOnTemplateId: varchar("depends_on_template_id"),
+      onboardingWeek: integer("onboarding_week"),
       status: varchar("status").notNull().default("active"),
       // 'active' | 'inactive'
       createdAt: timestamp("created_at").defaultNow(),
@@ -5636,7 +5641,8 @@ async function generateTasksFromTemplates(params) {
     items,
     generationType,
     cycleNumber,
-    cycleStartDate = /* @__PURE__ */ new Date()
+    cycleStartDate = /* @__PURE__ */ new Date(),
+    targetWeek
   } = params;
   const summary = {
     totalTasksCreated: 0,
@@ -5754,7 +5760,13 @@ async function generateTasksFromTemplates(params) {
         console.log(`[TaskGen] Skipping item ${itemDesc} \u2014 already generated for this ${generationType}${cycleNumber ? ` cycle ${cycleNumber}` : ""}`);
         continue;
       }
-      const templates = await db.select().from(productTaskTemplates).where(and4(...conditions)).orderBy(asc(productTaskTemplates.sortOrder));
+      let templates = await db.select().from(productTaskTemplates).where(and4(...conditions)).orderBy(asc(productTaskTemplates.sortOrder));
+      if (generationType === "onboarding" && targetWeek !== void 0 && targetWeek !== null) {
+        templates = templates.filter((t) => {
+          const tw = t.onboardingWeek;
+          return tw === null || tw === void 0 || tw === targetWeek;
+        });
+      }
       if (templates.length === 0) continue;
       let itemName = "Unknown";
       if (item.productId) itemName = await lookupProductName(item.productId);
@@ -5805,6 +5817,7 @@ async function generateTasksFromTemplates(params) {
               high: "high",
               urgent: "urgent"
             };
+            const templateOnboardingWeek = template.onboardingWeek ?? null;
             const [newTask] = await db.insert(tasks).values({
               title: resolvedTitle,
               description: resolvedDescription || void 0,
@@ -5816,7 +5829,8 @@ async function generateTasksFromTemplates(params) {
               workflowId: template.workflowId || void 0,
               dueDate,
               timeEstimate: template.estimatedHours ? Math.round(parseFloat(template.estimatedHours) * 60) : void 0,
-              sourceTemplateId: template.id
+              sourceTemplateId: template.id,
+              onboardingWeek: generationType === "onboarding" ? templateOnboardingWeek : void 0
             }).returning({ id: tasks.id });
             createdTaskIds.push(newTask.id);
             summary.totalTasksCreated++;
@@ -5935,6 +5949,8 @@ async function convertLeadToClient(leadId, triggeredBy, options) {
       contactOwner: lead.assignedTo || null,
       notes: lead.notes || null,
       tags: lead.tags || [],
+      onboardingStartDate: /* @__PURE__ */ new Date(),
+      onboardingWeekReleased: 1,
       createdAt: /* @__PURE__ */ new Date()
     }).returning();
     console.log(`[LeadConversion] Client created: ${client.id} ("${client.name}")`);
@@ -6196,10 +6212,11 @@ async function convertLeadToClient(leadId, triggeredBy, options) {
             clientId: result.clientId,
             items: generationItems,
             generationType: "onboarding",
-            cycleStartDate: /* @__PURE__ */ new Date()
+            cycleStartDate: /* @__PURE__ */ new Date(),
+            targetWeek: 1
           });
           console.log(
-            `\u2705 [LeadConversion] Task generation for client ${result.clientId}: ${summary.totalTasksCreated} onboarding tasks created`
+            `\u2705 [LeadConversion] Task generation for client ${result.clientId}: ${summary.totalTasksCreated} week-1 onboarding tasks created`
           );
           if (summary.errors.length > 0) {
             console.warn(
@@ -21405,7 +21422,7 @@ __export(recurringTaskService_exports, {
   startRecurringTaskService: () => startRecurringTaskService,
   stopRecurringTaskService: () => stopRecurringTaskService
 });
-import { eq as eq28, and as and25 } from "drizzle-orm";
+import { eq as eq28, and as and25, isNotNull as isNotNull5 } from "drizzle-orm";
 function startRecurringTaskService() {
   if (checkIntervalId3) {
     console.log("[RecurringTasks] Already running");
@@ -21524,10 +21541,83 @@ async function runRecurringTaskCheck() {
     console.log(
       `[RecurringTasks] Check complete. ${clientsProcessed} clients processed, ${totalGenerated} tasks generated.`
     );
+    await processOnboardingWeekReleases();
   } catch (error) {
     console.error("[RecurringTasks] Fatal error during check:", error.message);
   } finally {
     isRunning4 = false;
+  }
+}
+async function processOnboardingWeekReleases() {
+  console.log("[OnboardingWeeks] Starting onboarding week release check...");
+  try {
+    const onboardingClients = await db.select({
+      id: clients.id,
+      name: clients.name,
+      company: clients.company,
+      onboardingStartDate: clients.onboardingStartDate,
+      onboardingWeekReleased: clients.onboardingWeekReleased
+    }).from(clients).where(isNotNull5(clients.onboardingStartDate));
+    if (onboardingClients.length === 0) {
+      console.log("[OnboardingWeeks] No clients with onboarding start dates found");
+      return;
+    }
+    let totalReleased = 0;
+    let clientsAdvanced = 0;
+    for (const client of onboardingClients) {
+      try {
+        const startDate = new Date(client.onboardingStartDate);
+        const daysSinceStart = Math.floor(
+          (Date.now() - startDate.getTime()) / (1e3 * 60 * 60 * 24)
+        );
+        const currentWeek = Math.floor(daysSinceStart / 7) + 1;
+        const alreadyReleased = client.onboardingWeekReleased ?? 0;
+        if (currentWeek <= alreadyReleased) continue;
+        const clientName = client.company || client.name || client.id;
+        const assignedProducts = await db.select({ productId: clientProducts.productId }).from(clientProducts).where(eq28(clientProducts.clientId, client.id));
+        const assignedBundles = await db.select({ bundleId: clientBundles.bundleId }).from(clientBundles).where(eq28(clientBundles.clientId, client.id));
+        const assignedPkgs = await db.select({ packageId: clientPackages.packageId }).from(clientPackages).where(eq28(clientPackages.clientId, client.id));
+        const items = [];
+        for (const cp of assignedProducts) items.push({ productId: cp.productId, quantity: 1 });
+        for (const cb of assignedBundles) items.push({ bundleId: cb.bundleId, quantity: 1 });
+        for (const cpkg of assignedPkgs) items.push({ packageId: cpkg.packageId, quantity: 1 });
+        if (items.length === 0) continue;
+        for (let week = alreadyReleased + 1; week <= currentWeek; week++) {
+          const summary = await generateTasksFromTemplates({
+            clientId: client.id,
+            items,
+            generationType: "onboarding",
+            cycleStartDate: startDate,
+            targetWeek: week
+          });
+          totalReleased += summary.totalTasksCreated;
+          if (summary.totalTasksCreated > 0) {
+            console.log(
+              `[OnboardingWeeks] Released ${summary.totalTasksCreated} week-${week} onboarding tasks for client ${clientName}`
+            );
+          }
+          if (summary.errors.length > 0) {
+            console.warn(
+              `[OnboardingWeeks] Warnings for client ${clientName}, week ${week}:`,
+              summary.errors
+            );
+          }
+        }
+        await db.update(clients).set({ onboardingWeekReleased: currentWeek }).where(eq28(clients.id, client.id));
+        clientsAdvanced++;
+      } catch (clientError) {
+        const clientName = client.company || client.name || client.id;
+        console.error(
+          `[OnboardingWeeks] Failed to process onboarding weeks for client ${clientName}:`,
+          clientError.message
+        );
+      }
+    }
+    console.log(
+      `[OnboardingWeeks] Check complete. ${clientsAdvanced} clients advanced, ${totalReleased} onboarding tasks released.`
+    );
+  } catch (error) {
+    console.error("[OnboardingWeeks] Fatal error during onboarding week check:", error.message);
   }
 }
 var CHECK_INTERVAL_MS3, INITIAL_DELAY_MS, checkIntervalId3, isRunning4;
@@ -37408,6 +37498,7 @@ AgencyBoost CRM`
         priority: productTaskTemplates.priority,
         sortOrder: productTaskTemplates.sortOrder,
         dependsOnTemplateId: productTaskTemplates.dependsOnTemplateId,
+        onboardingWeek: productTaskTemplates.onboardingWeek,
         status: productTaskTemplates.status,
         createdAt: productTaskTemplates.createdAt,
         updatedAt: productTaskTemplates.updatedAt
@@ -37440,6 +37531,7 @@ AgencyBoost CRM`
         priority: productTaskTemplates.priority,
         sortOrder: productTaskTemplates.sortOrder,
         dependsOnTemplateId: productTaskTemplates.dependsOnTemplateId,
+        onboardingWeek: productTaskTemplates.onboardingWeek,
         status: productTaskTemplates.status,
         createdAt: productTaskTemplates.createdAt,
         updatedAt: productTaskTemplates.updatedAt
@@ -37522,6 +37614,7 @@ AgencyBoost CRM`
         priority: original.priority,
         sortOrder: newSortOrder,
         dependsOnTemplateId: original.dependsOnTemplateId,
+        onboardingWeek: original.onboardingWeek,
         status: "active"
       }).returning();
       res.status(201).json(duplicate);
@@ -37568,6 +37661,7 @@ AgencyBoost CRM`
           estimatedHours: tmpl.estimatedHours,
           priority: tmpl.priority,
           sortOrder: nextSort++,
+          onboardingWeek: tmpl.onboardingWeek,
           status: "active"
         }).returning();
         copiedTemplates.push(copied);
@@ -52592,6 +52686,48 @@ ${appointment.description || ""}
       });
     }
   });
+  app2.get("/api/client-portal/onboarding-timeline", requireClientPortalAuth(), async (req, res) => {
+    try {
+      const clientPortalUserId = getAuthenticatedClientPortalUserIdOrFail(req, res);
+      if (!clientPortalUserId) return;
+      const [clientPortalUser] = await db.select({ clientId: clientPortalUsers.clientId }).from(clientPortalUsers).where(eq20(clientPortalUsers.id, clientPortalUserId)).limit(1);
+      if (!clientPortalUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const clientResult = await db.execute(sql11`
+        SELECT onboarding_start_date as "onboardingStartDate", 
+               onboarding_week_released as "onboardingWeekReleased"
+        FROM clients 
+        WHERE id = ${clientPortalUser.clientId}
+      `);
+      const clientRow = clientResult.rows?.[0] ?? clientResult[0];
+      if (!clientRow || !clientRow.onboardingStartDate) {
+        return res.json({ onboardingStartDate: null, onboardingWeekReleased: 0, tasks: [] });
+      }
+      const onboardingTasks = await db.execute(sql11`
+        SELECT 
+          t.id, t.title, t.status, t.priority, 
+          t.due_date as "dueDate", t.onboarding_week as "onboardingWeek",
+          COALESCE(d.name, COALESCE(s.first_name || ' ' || s.last_name, null)) as "assignedTo"
+        FROM tasks t
+        LEFT JOIN departments d ON d.id = t.department_id
+        LEFT JOIN staff s ON s.id = t.assigned_to
+        WHERE t.client_id = ${clientPortalUser.clientId}
+          AND t.onboarding_week IS NOT NULL
+          AND t.visible_to_client = true
+        ORDER BY t.onboarding_week ASC, t.due_date ASC
+      `);
+      const taskRows = onboardingTasks.rows || onboardingTasks;
+      res.json({
+        onboardingStartDate: clientRow.onboardingStartDate,
+        onboardingWeekReleased: clientRow.onboardingWeekReleased || 0,
+        tasks: taskRows
+      });
+    } catch (error) {
+      console.error("Get onboarding timeline error:", error);
+      res.status(500).json({ error: "Failed to get onboarding timeline" });
+    }
+  });
   app2.get("/api/client-portal/tasks", requireClientPortalAuth(), async (req, res) => {
     try {
       const clientPortalUserId = getAuthenticatedClientPortalUserIdOrFail(req, res);
@@ -61471,6 +61607,19 @@ async function ensureScheduledHiredEmailsTable() {
     log(`Scheduled hired emails migration error: ${error.message}`);
   }
 }
+async function ensureOnboardingWeekColumns() {
+  try {
+    log("Running startup migration: ensureOnboardingWeekColumns");
+    await db.execute(sql16`ALTER TABLE clients ADD COLUMN IF NOT EXISTS onboarding_start_date TIMESTAMP`);
+    await db.execute(sql16`ALTER TABLE clients ADD COLUMN IF NOT EXISTS onboarding_week_released INTEGER DEFAULT 0`);
+    await db.execute(sql16`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
+    await db.execute(sql16`ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
+    await db.execute(sql16`ALTER TABLE product_task_templates ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
+    log("Onboarding week columns migration completed successfully");
+  } catch (error) {
+    log(`Onboarding week columns migration error: ${error.message}`);
+  }
+}
 async function fixJoeEmailInProduction() {
   try {
     const joeActiveId = "030e554b-c0bc-446e-9538-e351f3d17b10";
@@ -61521,6 +61670,7 @@ async function runStartupMigrations() {
     await ensureTaskCommentsClientPortalColumn();
     await ensurePxMeetingsObjectivesColumn();
     await ensureScheduledHiredEmailsTable();
+    await ensureOnboardingWeekColumns();
     log("\u2705 All startup migrations completed successfully");
   } catch (error) {
     log(`\u26A0\uFE0F Startup migrations encountered an error: ${error}`);
