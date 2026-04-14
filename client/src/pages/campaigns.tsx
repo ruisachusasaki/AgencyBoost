@@ -1122,11 +1122,12 @@ export default function Campaigns() {
     })).filter(group => group.tags.length > 0);
 
     return (
-      <div className={inline ? "absolute right-1 top-1/2 -translate-y-1/2" : "relative"}>
+      <div className="relative">
         {inline ? (
-          <Button variant="ghost" size="sm" type="button" className="h-7 w-7 p-0" onClick={() => { setOpen(!open); setSearch(""); }}>
-            <Tag className="h-4 w-4 text-gray-500 hover:text-gray-700" />
-          </Button>
+          <button type="button" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => { setOpen(!open); setSearch(""); }}>
+            <Tag className="h-3.5 w-3.5" />
+            <span>Insert Merge Tag</span>
+          </button>
         ) : (
           <Button variant="outline" size="sm" type="button" onClick={() => { setOpen(!open); setSearch(""); }}>
             <Tag className="h-4 w-4 mr-2" />
@@ -1288,31 +1289,29 @@ export default function Campaigns() {
                       <Input name="name" placeholder="Enter template name" required />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Subject Line</label>
-                      <div className="relative flex items-center">
-                        <Input 
-                          name="subject" 
-                          value={emailSubject}
-                          onChange={(e) => setEmailSubject(e.target.value)}
-                          placeholder="Email subject" 
-                          className="pr-10"
-                          required 
-                        />
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-sm font-medium">Subject Line</label>
                         <MergeTagsDropdown onInsert={insertMergeTagIntoSubject} inline />
                       </div>
+                      <Input 
+                        name="subject" 
+                        value={emailSubject}
+                        onChange={(e) => setEmailSubject(e.target.value)}
+                        placeholder="Email subject" 
+                        required 
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Preview Text</label>
-                      <div className="relative flex items-center">
-                        <Input 
-                          name="previewText" 
-                          value={emailPreviewText}
-                          onChange={(e) => setEmailPreviewText(e.target.value)}
-                          placeholder="Preview text (optional)"
-                          className="pr-10"
-                        />
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-sm font-medium">Preview Text</label>
                         <MergeTagsDropdown onInsert={insertMergeTagIntoPreviewText} inline />
                       </div>
+                      <Input 
+                        name="previewText" 
+                        value={emailPreviewText}
+                        onChange={(e) => setEmailPreviewText(e.target.value)}
+                        placeholder="Preview text (optional)"
+                      />
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-2">
