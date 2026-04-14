@@ -1979,89 +1979,87 @@ export default function Tasks() {
     },
   });
 
-  // Bulk Actions Toolbar Component
-  const BulkActionsToolbar = () => {
-    const [bulkAssigneeDialogOpen, setBulkAssigneeDialogOpen] = useState(false);
-    const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
-    const [bulkDueDateDialogOpen, setBulkDueDateDialogOpen] = useState(false);
-    const [bulkPriorityDialogOpen, setBulkPriorityDialogOpen] = useState(false);
-    const [bulkClientDialogOpen, setBulkClientDialogOpen] = useState(false);
-    const [tempAssignee, setTempAssignee] = useState("");
-    const [tempStatus, setTempStatus] = useState("");
-    const [tempDueDate, setTempDueDate] = useState("");
-    const [tempPriority, setTempPriority] = useState("");
-    const [tempClient, setTempClient] = useState("");
+  const [bulkAssigneeDialogOpen, setBulkAssigneeDialogOpen] = useState(false);
+  const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
+  const [bulkDueDateDialogOpen, setBulkDueDateDialogOpen] = useState(false);
+  const [bulkPriorityDialogOpen, setBulkPriorityDialogOpen] = useState(false);
+  const [bulkClientDialogOpen, setBulkClientDialogOpen] = useState(false);
+  const [tempAssignee, setTempAssignee] = useState("");
+  const [tempStatus, setTempStatus] = useState("");
+  const [tempDueDate, setTempDueDate] = useState("");
+  const [tempPriority, setTempPriority] = useState("");
+  const [tempClient, setTempClient] = useState("");
 
-    const handleBulkDelete = () => {
-      setIsBulkDeleteConfirmOpen(true);
-    };
+  const handleBulkDelete = () => {
+    setIsBulkDeleteConfirmOpen(true);
+  };
 
-    const handleBulkAssignee = () => {
-      if (!tempAssignee) return;
-      bulkUpdateMutation.mutate({
-        taskIds: Array.from(selectedTasks),
-        updates: { assignedTo: tempAssignee }
-      });
-      setBulkAssigneeDialogOpen(false);
-      setTempAssignee("");
-    };
+  const handleBulkAssignee = () => {
+    if (!tempAssignee) return;
+    bulkUpdateMutation.mutate({
+      taskIds: Array.from(selectedTasks),
+      updates: { assignedTo: tempAssignee }
+    });
+    setBulkAssigneeDialogOpen(false);
+    setTempAssignee("");
+  };
 
-    const handleBulkStatus = () => {
-      if (!tempStatus) return;
-      bulkUpdateMutation.mutate({
-        taskIds: Array.from(selectedTasks),
-        updates: { status: tempStatus }
-      });
-      setBulkStatusDialogOpen(false);
-      setTempStatus("");
-    };
+  const handleBulkStatus = () => {
+    if (!tempStatus) return;
+    bulkUpdateMutation.mutate({
+      taskIds: Array.from(selectedTasks),
+      updates: { status: tempStatus }
+    });
+    setBulkStatusDialogOpen(false);
+    setTempStatus("");
+  };
 
-    const handleBulkDueDate = () => {
-      if (!tempDueDate) return;
-      bulkUpdateMutation.mutate({
-        taskIds: Array.from(selectedTasks),
-        updates: { dueDate: new Date(tempDueDate).toISOString() }
-      });
-      setBulkDueDateDialogOpen(false);
-      setTempDueDate("");
-    };
+  const handleBulkDueDate = () => {
+    if (!tempDueDate) return;
+    bulkUpdateMutation.mutate({
+      taskIds: Array.from(selectedTasks),
+      updates: { dueDate: new Date(tempDueDate).toISOString() }
+    });
+    setBulkDueDateDialogOpen(false);
+    setTempDueDate("");
+  };
 
-    const handleBulkPriority = () => {
-      if (!tempPriority) return;
-      bulkUpdateMutation.mutate({
-        taskIds: Array.from(selectedTasks),
-        updates: { priority: tempPriority }
-      });
-      setBulkPriorityDialogOpen(false);
-      setTempPriority("");
-    };
+  const handleBulkPriority = () => {
+    if (!tempPriority) return;
+    bulkUpdateMutation.mutate({
+      taskIds: Array.from(selectedTasks),
+      updates: { priority: tempPriority }
+    });
+    setBulkPriorityDialogOpen(false);
+    setTempPriority("");
+  };
 
-    const handleBulkClient = () => {
-      if (!tempClient) return;
-      
-      // Parse the client/lead selection
-      let updates: any = {};
-      if (tempClient === "none") {
-        updates.clientId = null;
-        updates.leadId = null;
-      } else if (tempClient.startsWith("client-")) {
-        const clientId = tempClient.replace("client-", "");
-        updates.clientId = clientId;
-        updates.leadId = null;
-      } else if (tempClient.startsWith("lead-")) {
-        const leadId = tempClient.replace("lead-", "");
-        updates.clientId = null;
-        updates.leadId = leadId;
-      }
-      
-      bulkUpdateMutation.mutate({
-        taskIds: Array.from(selectedTasks),
-        updates
-      });
-      setBulkClientDialogOpen(false);
-      setTempClient("");
-    };
+  const handleBulkClient = () => {
+    if (!tempClient) return;
+    
+    let updates: any = {};
+    if (tempClient === "none") {
+      updates.clientId = null;
+      updates.leadId = null;
+    } else if (tempClient.startsWith("client-")) {
+      const clientId = tempClient.replace("client-", "");
+      updates.clientId = clientId;
+      updates.leadId = null;
+    } else if (tempClient.startsWith("lead-")) {
+      const leadId = tempClient.replace("lead-", "");
+      updates.clientId = null;
+      updates.leadId = leadId;
+    }
+    
+    bulkUpdateMutation.mutate({
+      taskIds: Array.from(selectedTasks),
+      updates
+    });
+    setBulkClientDialogOpen(false);
+    setTempClient("");
+  };
 
+  const renderBulkActionsToolbar = () => {
     if (selectedTasks.size === 0) return null;
 
     return (
@@ -2947,7 +2945,7 @@ export default function Tasks() {
           {/* Bulk Actions Toolbar */}
           {viewMode === "table" && filteredAndSortedTasks.length > 0 && (
             <div className="p-4 pb-0">
-              <BulkActionsToolbar />
+              {renderBulkActionsToolbar()}
             </div>
           )}
           
