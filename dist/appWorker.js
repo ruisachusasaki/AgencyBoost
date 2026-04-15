@@ -6240,6 +6240,37 @@ async function convertLeadToClient(leadId, triggeredBy, options) {
       );
     }
   }
+  if (!result.alreadyConverted) {
+    try {
+      const sections = await db.select().from(clientBriefSections);
+      for (const section of sections) {
+        if (section.defaultTemplate && section.isEnabled) {
+          const coreKeyMap = {
+            background: "briefBackground",
+            objectives: "briefObjectives",
+            brand_info: "briefBrandInfo",
+            audience_info: "briefAudienceInfo",
+            products_services: "briefProductsServices",
+            competitors: "briefCompetitors",
+            marketing_tech: "briefMarketingTech",
+            miscellaneous: "briefMiscellaneous"
+          };
+          if (section.scope === "core" && section.key && coreKeyMap[section.key]) {
+            const col = coreKeyMap[section.key];
+            await db.update(clients).set({ [col]: section.defaultTemplate }).where(eq6(clients.id, result.clientId));
+          } else {
+            await db.insert(clientBriefValues).values({
+              clientId: result.clientId,
+              sectionId: section.id,
+              value: section.defaultTemplate
+            }).onConflictDoNothing();
+          }
+        }
+      }
+    } catch (templateError) {
+      console.error("[LeadConversion] Error applying default brief templates (non-blocking):", templateError);
+    }
+  }
   console.log(`[LeadConversion] Conversion complete. Returning clientId=${result.clientId}`);
   return { success: result.success, clientId: result.clientId, alreadyConverted: result.alreadyConverted };
 }
@@ -26998,6 +27029,16 @@ AgencyBoost CRM`
         }
       } catch (taskGenError) {
         console.error("Error generating onboarding tasks (non-blocking):", taskGenError);
+      }
+      try {
+        const briefSections = await storage2.listBriefSections();
+        for (const section of briefSections) {
+          if (section.defaultTemplate && section.isEnabled) {
+            await storage2.setClientBriefValue(client.id, section.id, section.defaultTemplate);
+          }
+        }
+      } catch (templateError) {
+        console.error("Error applying default brief templates (non-blocking):", templateError);
       }
       await createAuditLog(
         "created",

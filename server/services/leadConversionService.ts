@@ -13,6 +13,8 @@ import {
   leadPipelineStages,
   taskSettings,
   clientRecurringConfig,
+  clientBriefSections,
+  clientBriefValues,
   staff,
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -530,6 +532,34 @@ export async function convertLeadToClient(
         "[LeadConversion] Error generating onboarding tasks (non-blocking):",
         taskGenError
       );
+    }
+  }
+
+  if (!result.alreadyConverted) {
+    try {
+      const sections = await db.select().from(clientBriefSections);
+      for (const section of sections) {
+        if (section.defaultTemplate && section.isEnabled) {
+          const coreKeyMap: Record<string, string> = {
+            background: 'briefBackground', objectives: 'briefObjectives',
+            brand_info: 'briefBrandInfo', audience_info: 'briefAudienceInfo',
+            products_services: 'briefProductsServices', competitors: 'briefCompetitors',
+            marketing_tech: 'briefMarketingTech', miscellaneous: 'briefMiscellaneous',
+          };
+          if (section.scope === 'core' && section.key && coreKeyMap[section.key]) {
+            const col = coreKeyMap[section.key];
+            await db.update(clients).set({ [col]: section.defaultTemplate } as any).where(eq(clients.id, result.clientId));
+          } else {
+            await db.insert(clientBriefValues).values({
+              clientId: result.clientId,
+              sectionId: section.id,
+              value: section.defaultTemplate,
+            }).onConflictDoNothing();
+          }
+        }
+      }
+    } catch (templateError) {
+      console.error('[LeadConversion] Error applying default brief templates (non-blocking):', templateError);
     }
   }
 

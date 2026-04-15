@@ -3086,6 +3086,17 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         console.error('Error generating onboarding tasks (non-blocking):', taskGenError);
       }
 
+      try {
+        const briefSections = await appStorage.listBriefSections();
+        for (const section of briefSections) {
+          if (section.defaultTemplate && section.isEnabled) {
+            await appStorage.setClientBriefValue(client.id, section.id, section.defaultTemplate);
+          }
+        }
+      } catch (templateError) {
+        console.error('Error applying default brief templates (non-blocking):', templateError);
+      }
+
       // Log the creation with authenticated user
       await createAuditLog(
         "created",
