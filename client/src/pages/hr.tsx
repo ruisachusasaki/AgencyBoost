@@ -256,7 +256,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
   // Pagination state for who's off calendar
   const [whosOffPage, setWhosOffPage] = useState(1);
   const [whosOffPageSize, setWhosOffPageSize] = useState(20);
-  const [whosOffViewMode, setWhosOffViewMode] = useState<"list" | "calendar">("list");
+  const [whosOffViewMode, setWhosOffViewMode] = useState<"list" | "calendar">("calendar");
   const [whosOffCalendarMonth, setWhosOffCalendarMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
