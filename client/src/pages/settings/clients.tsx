@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { ClientOnboardingFormEditor } from "@/components/client-onboarding-form-editor";
 
 // Icon mapping for client brief sections
@@ -45,7 +46,8 @@ const clientBriefSectionSchema = z.object({
   placeholder: z.string().max(200, "Placeholder must be under 200 characters").optional(),
   icon: z.string().min(1, "Icon is required"),
   type: z.enum(["text", "rich_text"]),
-  isEnabled: z.boolean()
+  isEnabled: z.boolean(),
+  defaultTemplate: z.string().optional()
 });
 
 type ClientBriefSectionForm = z.infer<typeof clientBriefSectionSchema>;
@@ -60,6 +62,7 @@ interface ClientBriefSection {
   isEnabled: boolean;
   scope: 'core' | 'custom';
   type: 'text' | 'rich_text';
+  defaultTemplate?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -1950,7 +1953,8 @@ export default function ClientsSettings() {
       placeholder: "",
       icon: "FileText",
       type: "text",
-      isEnabled: true
+      isEnabled: true,
+      defaultTemplate: ""
     }
   });
 
@@ -1984,7 +1988,8 @@ export default function ClientsSettings() {
       placeholder: section.placeholder || "",
       icon: section.icon,
       type: section.type,
-      isEnabled: section.isEnabled
+      isEnabled: section.isEnabled,
+      defaultTemplate: section.defaultTemplate || ""
     });
     setIsEditDialogOpen(true);
   };
@@ -2004,7 +2009,8 @@ export default function ClientsSettings() {
       placeholder: "",
       icon: "FileText",
       type: "text",
-      isEnabled: true
+      isEnabled: true,
+      defaultTemplate: ""
     });
     setIsCreateDialogOpen(true);
   };
@@ -2312,7 +2318,7 @@ export default function ClientsSettings() {
 
         {/* Create Section Dialog */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent className="max-w-md" data-testid="dialog-create-section">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-create-section">
             <DialogHeader>
               <DialogTitle>Create New Section</DialogTitle>
               <DialogDescription>
@@ -2403,6 +2409,29 @@ export default function ClientsSettings() {
                 />
                 <FormField
                   control={form.control}
+                  name="defaultTemplate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Default Template (Optional)</FormLabel>
+                      <div className="text-sm text-gray-500 mb-2">
+                        Pre-filled content for new clients. Staff can edit after creation.
+                      </div>
+                      <FormControl>
+                        <div className="border rounded-md">
+                          <RichTextEditor
+                            content={field.value || ""}
+                            onChange={field.onChange}
+                            placeholder="Enter default template content..."
+                            className="min-h-[150px]"
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="isEnabled"
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
@@ -2446,7 +2475,7 @@ export default function ClientsSettings() {
 
         {/* Edit Section Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-md" data-testid="dialog-edit-section">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-edit-section">
             <DialogHeader>
               <DialogTitle>Edit Section</DialogTitle>
               <DialogDescription>
@@ -2533,6 +2562,29 @@ export default function ClientsSettings() {
                           <SelectItem value="rich_text">Rich Text</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="defaultTemplate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Default Template (Optional)</FormLabel>
+                      <div className="text-sm text-gray-500 mb-2">
+                        Pre-filled content for new clients. Staff can edit after creation.
+                      </div>
+                      <FormControl>
+                        <div className="border rounded-md">
+                          <RichTextEditor
+                            content={field.value || ""}
+                            onChange={field.onChange}
+                            placeholder="Enter default template content..."
+                            className="min-h-[150px]"
+                          />
+                        </div>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

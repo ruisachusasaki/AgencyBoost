@@ -53,6 +53,19 @@ async function ensureClientBriefColumns() {
   }
 }
 
+async function ensureDefaultTemplateColumn() {
+  try {
+    log("Running startup migration: ensureDefaultTemplateColumn");
+    await db.execute(sql`
+      ALTER TABLE client_brief_sections
+      ADD COLUMN IF NOT EXISTS default_template text;
+    `);
+    log("Default template column migration completed successfully");
+  } catch (error: any) {
+    log(`Default template column migration error: ${error.message}`);
+  }
+}
+
 /**
  * Initialize default automation triggers
  * Creates sample automation triggers in the database for system functionality
@@ -2342,6 +2355,7 @@ async function runStartupMigrations() {
     await ensureTicketExternalSubmissionColumns();
     await ensureFormsTablesExist();
     await initializeCoreClientBriefSections();
+    await ensureDefaultTemplateColumn();
     await initializeDefaultAutomationTriggers();
     await initializeDefaultAutomationActions();
     await initializeDefaultCalendars();

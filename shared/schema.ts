@@ -637,6 +637,7 @@ export const clientBriefSections = pgTable("client_brief_sections", {
   isEnabled: boolean("is_enabled").notNull().default(true), // can be disabled without deletion
   scope: text("scope").notNull().default("custom"), // 'core' (existing 8 sections) or 'custom' (user-created)
   type: text("type").notNull().default("text"), // 'text' or 'rich_text'
+  defaultTemplate: text("default_template"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

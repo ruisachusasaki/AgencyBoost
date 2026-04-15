@@ -3618,11 +3618,12 @@ export default function EnhancedClientDetail() {
 
   // Initialize brief sections from client data
   // Initialize editing content when brief sections load
+  // If a section has no value but has a defaultTemplate, use the template as initial content
   useEffect(() => {
     if (briefSections.length > 0) {
       const contentMap: Record<string, string> = {};
       briefSections.forEach((section: any) => {
-        contentMap[section.id] = section.value || "";
+        contentMap[section.id] = section.value != null ? section.value : (section.defaultTemplate ?? "");
       });
       
       // Only update editingContent if it's actually different
@@ -6256,7 +6257,7 @@ export default function EnhancedClientDetail() {
                       .map((section: any) => {
                         const isEditing = editingSections.has(section.id);
                         const IconComponent = iconMap[section.icon] || FileText;
-                        const currentContent = editingContent[section.id] || section.value || "";
+                        const currentContent = editingContent[section.id] ?? section.value ?? "";
                         
                         return (
                           <AccordionItem key={section.id} value={section.id} data-testid={`accordion-item-${section.key}`}>
@@ -6300,10 +6301,9 @@ export default function EnhancedClientDetail() {
                                           next.delete(section.id);
                                           return next;
                                         });
-                                        // Reset to original content
                                         setEditingContent(prev => ({
                                           ...prev,
-                                          [section.id]: section.value || ""
+                                          [section.id]: section.value != null ? section.value : (section.defaultTemplate ?? "")
                                         }));
                                       }}
                                       data-testid={`button-cancel-${section.key}`}

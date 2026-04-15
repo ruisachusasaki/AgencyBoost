@@ -1066,6 +1066,7 @@ var init_schema = __esm({
       // 'core' (existing 8 sections) or 'custom' (user-created)
       type: text("type").notNull().default("text"),
       // 'text' or 'rich_text'
+      defaultTemplate: text("default_template"),
       createdAt: timestamp("created_at").defaultNow(),
       updatedAt: timestamp("updated_at").defaultNow()
     });
@@ -59670,6 +59671,18 @@ async function ensureClientBriefColumns() {
     log("WARNING: Client brief columns migration failed - server will continue but brief sections may not work correctly");
   }
 }
+async function ensureDefaultTemplateColumn() {
+  try {
+    log("Running startup migration: ensureDefaultTemplateColumn");
+    await db.execute(sql16`
+      ALTER TABLE client_brief_sections
+      ADD COLUMN IF NOT EXISTS default_template text;
+    `);
+    log("Default template column migration completed successfully");
+  } catch (error) {
+    log(`Default template column migration error: ${error.message}`);
+  }
+}
 async function initializeDefaultAutomationTriggers() {
   try {
     log("Running startup migration: initializeDefaultAutomationTriggers");
@@ -61692,6 +61705,7 @@ async function runStartupMigrations() {
     await ensureTicketExternalSubmissionColumns();
     await ensureFormsTablesExist();
     await initializeCoreClientBriefSections();
+    await ensureDefaultTemplateColumn();
     await initializeDefaultAutomationTriggers();
     await initializeDefaultAutomationActions();
     await initializeDefaultCalendars();
