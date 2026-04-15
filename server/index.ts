@@ -2354,8 +2354,8 @@ async function runStartupMigrations() {
     await ensureLeadProjectedCloseDate();
     await ensureTicketExternalSubmissionColumns();
     await ensureFormsTablesExist();
-    await initializeCoreClientBriefSections();
     await ensureDefaultTemplateColumn();
+    await initializeCoreClientBriefSections();
     await initializeDefaultAutomationTriggers();
     await initializeDefaultAutomationActions();
     await initializeDefaultCalendars();

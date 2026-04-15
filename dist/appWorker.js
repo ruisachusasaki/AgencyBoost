@@ -12414,7 +12414,7 @@ var init_storage = __esm({
         try {
           const section = await db.select().from(clientBriefSections).where(eq7(clientBriefSections.id, id)).limit(1);
           if (section.length === 0) return false;
-          if (section[0].isCoreSection) {
+          if (section[0].isCoreSection || section[0].scope === "core") {
             throw new Error("Cannot delete core client brief section");
           }
           await db.delete(clientBriefSections).where(eq7(clientBriefSections.id, id));
@@ -12442,7 +12442,7 @@ var init_storage = __esm({
           const customValues = await db.select().from(clientBriefValues).where(eq7(clientBriefValues.clientId, clientId));
           return sections.map((section) => {
             let value = void 0;
-            if (client && section.key && section.isCoreSection) {
+            if (client && section.key && (section.isCoreSection || section.scope === "core")) {
               switch (section.key) {
                 case "background":
                   value = client.briefBackground || void 0;
@@ -12490,7 +12490,7 @@ var init_storage = __esm({
           if (!section) {
             throw new Error("Section not found");
           }
-          if (section.key && section.isCoreSection) {
+          if (section.key && (section.isCoreSection || section.scope === "core")) {
             const updateData = {};
             switch (section.key) {
               case "background":
@@ -61749,8 +61749,8 @@ async function runStartupMigrations() {
     await ensureLeadProjectedCloseDate();
     await ensureTicketExternalSubmissionColumns();
     await ensureFormsTablesExist();
-    await initializeCoreClientBriefSections();
     await ensureDefaultTemplateColumn();
+    await initializeCoreClientBriefSections();
     await initializeDefaultAutomationTriggers();
     await initializeDefaultAutomationActions();
     await initializeDefaultCalendars();

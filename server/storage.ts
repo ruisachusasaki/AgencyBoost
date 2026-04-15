@@ -7994,7 +7994,7 @@ export class DbStorage implements IStorage {
       
       if (section.length === 0) return false;
       
-      if (section[0].isCoreSection) {
+      if (section[0].isCoreSection || section[0].scope === 'core') {
         throw new Error("Cannot delete core client brief section");
       }
       
@@ -8039,7 +8039,7 @@ export class DbStorage implements IStorage {
         let value = undefined;
         
         // Get value from core client data if it's a core section
-        if (client && section.key && section.isCoreSection) {
+        if (client && section.key && (section.isCoreSection || section.scope === 'core')) {
           switch (section.key) {
             case 'background':
               value = client.briefBackground || undefined;
@@ -8093,7 +8093,7 @@ export class DbStorage implements IStorage {
       }
 
       // If it's a core section, update client directly
-      if (section.key && section.isCoreSection) {
+      if (section.key && (section.isCoreSection || section.scope === 'core')) {
         const updateData: Partial<InsertClient> = {};
         
         switch (section.key) {
