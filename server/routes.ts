@@ -3088,9 +3088,13 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
       try {
         const briefSections = await appStorage.listBriefSections();
+        const clientBrief = await appStorage.getClientBrief(client.id);
         for (const section of briefSections) {
           if (section.defaultTemplate && section.isEnabled) {
-            await appStorage.setClientBriefValue(client.id, section.id, section.defaultTemplate);
+            const existing = clientBrief.find(b => b.id === section.id);
+            if (!existing?.value || existing.value.trim() === '') {
+              await appStorage.setClientBriefValue(client.id, section.id, section.defaultTemplate);
+            }
           }
         }
       } catch (templateError) {

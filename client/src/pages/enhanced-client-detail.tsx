@@ -3623,7 +3623,8 @@ export default function EnhancedClientDetail() {
     if (briefSections.length > 0) {
       const contentMap: Record<string, string> = {};
       briefSections.forEach((section: any) => {
-        contentMap[section.id] = section.value != null ? section.value : (section.defaultTemplate ?? "");
+        const val = section.value;
+        contentMap[section.id] = (val != null && val.trim() !== '') ? val : (section.defaultTemplate ?? "");
       });
       
       // Only update editingContent if it's actually different
@@ -6301,9 +6302,10 @@ export default function EnhancedClientDetail() {
                                           next.delete(section.id);
                                           return next;
                                         });
+                                        const resetVal = section.value;
                                         setEditingContent(prev => ({
                                           ...prev,
-                                          [section.id]: section.value != null ? section.value : (section.defaultTemplate ?? "")
+                                          [section.id]: (resetVal != null && resetVal.trim() !== '') ? resetVal : (section.defaultTemplate ?? "")
                                         }));
                                       }}
                                       data-testid={`button-cancel-${section.key}`}

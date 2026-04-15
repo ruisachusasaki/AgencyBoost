@@ -27032,9 +27032,13 @@ AgencyBoost CRM`
       }
       try {
         const briefSections = await storage2.listBriefSections();
+        const clientBrief = await storage2.getClientBrief(client.id);
         for (const section of briefSections) {
           if (section.defaultTemplate && section.isEnabled) {
-            await storage2.setClientBriefValue(client.id, section.id, section.defaultTemplate);
+            const existing = clientBrief.find((b) => b.id === section.id);
+            if (!existing?.value || existing.value.trim() === "") {
+              await storage2.setClientBriefValue(client.id, section.id, section.defaultTemplate);
+            }
           }
         }
       } catch (templateError) {
