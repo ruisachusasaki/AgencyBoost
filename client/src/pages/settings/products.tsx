@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { useCustomFieldMergeTags } from "@/hooks/use-custom-field-merge-tags";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -260,19 +261,11 @@ export default function ProductsSettings() {
     { tag: "{{unit.total}}", label: "Unit Total", description: "Total number of units (Per Unit modes)", group: "Native" },
   ];
 
-  const { data: customFieldsList = [] } = useQuery<{ id: string; name: string; type: string; folderId?: string }[]>({
-    queryKey: ["/api/custom-fields"],
-  });
+  const { customFieldTagOptions } = useCustomFieldMergeTags();
 
   const mergeTagOptions = useMemo(() => {
-    const customFieldTags = customFieldsList.map((field) => ({
-      tag: `{{custom.${field.name.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '').toLowerCase()}}}`,
-      label: field.name,
-      description: `Custom field (${field.type})`,
-      group: "Custom Fields",
-    }));
-    return [...nativeMergeTagOptions, ...customFieldTags];
-  }, [customFieldsList]);
+    return [...nativeMergeTagOptions, ...customFieldTagOptions];
+  }, [customFieldTagOptions]);
 
   const insertMergeTagToName = (isEdit: boolean, tag: string) => {
     if (isEdit) {

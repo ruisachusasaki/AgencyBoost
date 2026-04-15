@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useCustomFieldMergeTags } from "@/hooks/use-custom-field-merge-tags";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { RichTextEditor, type RichTextEditorHandle } from "@/components/rich-text-editor";
@@ -40,6 +41,7 @@ export default function SalesSettings() {
   const [termsContent, setTermsContent] = useState("");
   const termsEditorRef = useRef<RichTextEditorHandle | null>(null);
   const [showMergeTagDropdown, setShowMergeTagDropdown] = useState(false);
+  const { customFieldsList } = useCustomFieldMergeTags();
 
   const termsMergeTags = [
     { category: "Client", tags: [
@@ -78,6 +80,10 @@ export default function SalesSettings() {
       { tag: "{{signerIpAddress}}", label: "Signer IP Address" },
       { tag: "{{signatureDate}}", label: "Signature Date" },
     ]},
+    ...(customFieldsList.length > 0 ? [{ category: "Custom Fields", tags: customFieldsList.map((field) => ({
+      tag: `{{custom.${field.name.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '').toLowerCase()}}}`,
+      label: field.name,
+    }))}] : []),
   ];
 
   const [brandingLogo, setBrandingLogo] = useState("");

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useCustomFieldMergeTags } from "@/hooks/use-custom-field-merge-tags";
 import { insertLeadAppointmentSchema, type LeadAppointment, type InsertLeadAppointment } from "@shared/schema";
 import { Calendar as CalendarIcon, Clock, MapPin, FileText, Tag } from "lucide-react";
 import { format } from "date-fns";
@@ -73,6 +74,12 @@ export default function LeadAppointmentBooking({ leadId, editingAppointment, onS
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { customFieldTagGroup } = useCustomFieldMergeTags();
+
+  const allMergeTagGroups = useMemo(() => [
+    ...leadMergeTagGroups,
+    ...customFieldTagGroup,
+  ], [customFieldTagGroup]);
   
 
 
@@ -292,7 +299,7 @@ export default function LeadAppointmentBooking({ leadId, editingAppointment, onS
   const MergeTagsDropdown = ({ onInsert }: { onInsert: (tag: string) => void }) => {
     const [searchTerm, setSearchTerm] = useState("");
     
-    const filteredGroups = leadMergeTagGroups.map(group => ({
+    const filteredGroups = allMergeTagGroups.map(group => ({
       ...group,
       tags: group.tags.filter(tag => 
         tag.label.toLowerCase().includes(searchTerm.toLowerCase()) ||

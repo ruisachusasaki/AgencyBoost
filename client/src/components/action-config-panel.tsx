@@ -21,6 +21,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertTagSchema, type Tag as TagType, type InsertTag } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { useCustomFieldMergeTags } from "@/hooks/use-custom-field-merge-tags";
 
 interface ActionConfigPanelProps {
   action: {
@@ -105,9 +106,7 @@ export default function ActionConfigPanel({
     queryKey: ["/api/task-statuses"],
   });
 
-  const { data: customFields = [] } = useQuery<any[]>({
-    queryKey: ["/api/custom-fields"],
-  });
+  const { customFieldTagGroup, customFieldsList: customFields } = useCustomFieldMergeTags();
 
   const { data: tags = [] } = useQuery<any[]>({
     queryKey: ["/api/tags"],
@@ -249,15 +248,8 @@ export default function ActionConfigPanel({
         { label: "Contact Source", value: "{{contactSource}}" },
       ]
     },
-    // Dynamically add custom fields if they exist
-    ...(Array.isArray(customFields) && customFields.length > 0 ? [{
-      label: "Custom Fields",
-      tags: customFields.map((field: any) => ({
-        label: field.name,
-        value: `{{custom.${field.name.toLowerCase().replace(/\s+/g, '_')}}}`
-      }))
-    }] : [])
-  ], [customFields]);
+    ...customFieldTagGroup
+  ], [customFieldTagGroup]);
   
   // Function to insert merge tag into message
   const insertMergeTag = (tag: string) => {
@@ -1559,9 +1551,8 @@ export default function ActionConfigPanel({
                                   { tag: '{{projectName}}', desc: 'Associated project name', category: 'Project Info' },
                                   { tag: '{{projectStatus}}', desc: 'Project status', category: 'Project Info' },
                                   
-                                  // Custom Fields (if available)
                                   ...(customFields || []).map((cf: any) => ({
-                                    tag: `{{${cf.name.replace(/\s+/g, '')}}}`,
+                                    tag: `{{custom.${cf.name.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '').toLowerCase()}}}`,
                                     desc: `Custom field: ${cf.name}`,
                                     category: 'Custom Fields'
                                   }))

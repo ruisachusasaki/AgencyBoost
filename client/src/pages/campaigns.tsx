@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useCustomFieldMergeTags } from "@/hooks/use-custom-field-merge-tags";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 
@@ -89,10 +90,7 @@ export default function Campaigns() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch custom fields for dynamic merge tags
-  const { data: customFields = [] } = useQuery({
-    queryKey: ["/api/custom-fields"],
-  });
+  const { customFieldTagGroup } = useCustomFieldMergeTags();
 
   // Fetch forms for forms tab count (always load to show correct count)
   const { data: formsData = [] } = useQuery({
@@ -211,13 +209,7 @@ export default function Campaigns() {
         { label: "Onboarding Start Date", value: "{{onboardingStartDate}}" },
       ]
     },
-    ...(Array.isArray(customFields) && customFields.length > 0 ? [{
-      label: "Custom Fields",
-      tags: customFields.map((field: any) => ({
-        label: field.name,
-        value: `{{custom.${field.name.toLowerCase().replace(/\s+/g, '_')}}}`
-      }))
-    }] : [])
+    ...customFieldTagGroup
   ];
 
   // Fetch data
