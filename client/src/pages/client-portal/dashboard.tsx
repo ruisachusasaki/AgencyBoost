@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Calendar as CalendarIcon, CheckCircle2, Circle, Clock, Users, LogOut, BarChart3, Filter, X, ChevronLeft, ChevronRight, ThumbsUp, MessageCircle, Send, ArrowLeft, Paperclip, User } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle2, Circle, Clock, Users, LogOut, BarChart3, Filter, X, ChevronLeft, ChevronRight, ThumbsUp, MessageCircle, Send, ArrowLeft, Paperclip, User, Trophy, Sparkles, ChevronDown, ChevronUp, Rocket } from "lucide-react";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format, subDays, subMonths, startOfDay, endOfDay, addDays } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
@@ -961,83 +961,252 @@ export default function ClientPortalDashboard() {
         </div>
 
         {/* Onboarding Timeline */}
-        {showOnboardingTimeline && onboardingTimeline && (
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5" style={{ color: 'hsl(179, 100%, 39%)' }} />
-              Onboarding Timeline
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {Array.from({ length: onboardingTimeline.onboardingWeekReleased }, (_, i) => i + 1).map((weekNum) => {
-                const startDate = new Date(onboardingTimeline.onboardingStartDate!);
-                const weekStart = addDays(startDate, (weekNum - 1) * 7);
-                const weekEnd = addDays(weekStart, 6);
-                const weekTasks = onboardingTimeline.tasks.filter(t => t.onboardingWeek === weekNum);
-                const completedCount = weekTasks.filter(t => t.status === 'completed').length;
-                const totalCount = weekTasks.length;
-                const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-                const isAllComplete = totalCount > 0 && completedCount === totalCount;
-                const isCurrentWeek = weekNum === onboardingTimeline.onboardingWeekReleased;
+        {showOnboardingTimeline && onboardingTimeline && (() => {
+          const primaryColor = branding.primaryColor || 'hsl(179, 100%, 39%)';
+          const allOnboardingTasks = onboardingTimeline.tasks;
+          const totalOnboardingTasks = allOnboardingTasks.length;
+          const totalOnboardingCompleted = allOnboardingTasks.filter(t => t.status === 'completed').length;
+          const overallProgressPct = totalOnboardingTasks > 0 ? Math.round((totalOnboardingCompleted / totalOnboardingTasks) * 100) : 0;
+          const totalWeeks = onboardingTimeline.onboardingWeekReleased;
+          const completedWeeks = Array.from({ length: totalWeeks }, (_, i) => i + 1).filter(w => {
+            const wTasks = allOnboardingTasks.filter(t => t.onboardingWeek === w);
+            return wTasks.length > 0 && wTasks.every(t => t.status === 'completed');
+          }).length;
+          const isFullyComplete = totalOnboardingTasks > 0 && totalOnboardingCompleted === totalOnboardingTasks;
 
-                return (
-                  <Card 
-                    key={weekNum} 
-                    className={`relative overflow-hidden transition-shadow ${isCurrentWeek ? 'shadow-md ring-1' : ''}`}
-                    style={isCurrentWeek ? { borderLeftWidth: '3px', borderLeftColor: 'hsl(179, 100%, 39%)', ringColor: 'hsl(179, 100%, 39%)' } : undefined}
-                  >
-                    <CardHeader className="pb-2 pt-4 px-4">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm font-semibold">Week {weekNum}</CardTitle>
-                        {isAllComplete && (
-                          <CheckCircle2 className="h-4 w-4" style={{ color: 'hsl(179, 100%, 39%)' }} />
-                        )}
-                        {isCurrentWeek && !isAllComplete && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-teal-300 text-teal-700 bg-teal-50">Active</Badge>
-                        )}
+          return (
+          <div className="mb-8">
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <div className="relative" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}dd)` }}>
+                <div className="absolute inset-0 opacity-10">
+                  <div className="absolute top-4 right-8 w-32 h-32 rounded-full border-4 border-white/20" />
+                  <div className="absolute bottom-2 right-24 w-20 h-20 rounded-full border-4 border-white/10" />
+                  <div className="absolute top-8 right-48 w-12 h-12 rounded-full bg-white/10" />
+                </div>
+                <div className="relative px-6 py-6 md:px-8">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm">
+                        <Rocket className="h-6 w-6 text-white" />
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {format(weekStart, "MMM d")} – {format(weekEnd, "MMM d")}
-                      </p>
-                    </CardHeader>
-                    <CardContent className="px-4 pb-4 pt-0">
-                      <div className="mb-3">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                          <span>{completedCount} of {totalCount} complete</span>
-                          <span>{progressPct}%</span>
-                        </div>
-                        <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                      <div>
+                        <h2 className="text-xl font-bold text-white">Your Onboarding Journey</h2>
+                        <p className="text-white/80 text-sm mt-0.5">
+                          {isFullyComplete 
+                            ? "Congratulations! You've completed all onboarding tasks!" 
+                            : `Week ${totalWeeks} of onboarding — ${totalOnboardingTasks - totalOnboardingCompleted} tasks remaining`
+                          }
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-6">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-white">{overallProgressPct}%</p>
+                        <p className="text-white/70 text-xs">Complete</p>
+                      </div>
+                      <div className="hidden sm:block h-10 w-px bg-white/20" />
+                      <div className="hidden sm:block text-center">
+                        <p className="text-2xl font-bold text-white">{completedWeeks}/{totalWeeks}</p>
+                        <p className="text-white/70 text-xs">Weeks Done</p>
+                      </div>
+                      <div className="hidden sm:block h-10 w-px bg-white/20" />
+                      <div className="hidden sm:block text-center">
+                        <p className="text-2xl font-bold text-white">{totalOnboardingCompleted}/{totalOnboardingTasks}</p>
+                        <p className="text-white/70 text-xs">Tasks Done</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-5">
+                    <div className="flex items-center justify-between text-xs text-white/80 mb-1.5">
+                      <span>Overall Progress</span>
+                      <span>{overallProgressPct}%</span>
+                    </div>
+                    <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
+                      <div 
+                        className="h-full rounded-full transition-all duration-700 ease-out"
+                        style={{ 
+                          width: `${overallProgressPct}%`, 
+                          background: 'linear-gradient(90deg, rgba(255,255,255,0.9), rgba(255,255,255,1))',
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {isFullyComplete && (
+                <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30 border-b border-amber-200/50 px-6 py-3 flex items-center gap-3">
+                  <div className="p-1.5 bg-amber-100 dark:bg-amber-900/50 rounded-full">
+                    <Trophy className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                    All onboarding tasks are complete! You're all set to go.
+                  </p>
+                  <Sparkles className="h-4 w-4 text-amber-500 ml-auto" />
+                </div>
+              )}
+
+              <CardContent className="p-6 md:p-8">
+                <div className="relative">
+                  {Array.from({ length: totalWeeks }, (_, i) => i + 1).map((weekNum, idx) => {
+                    const startDate = new Date(onboardingTimeline.onboardingStartDate!);
+                    const weekStart = addDays(startDate, (weekNum - 1) * 7);
+                    const weekEnd = addDays(weekStart, 6);
+                    const weekTasks = allOnboardingTasks.filter(t => t.onboardingWeek === weekNum);
+                    const completedCount = weekTasks.filter(t => t.status === 'completed').length;
+                    const taskCount = weekTasks.length;
+                    const weekProgressPct = taskCount > 0 ? Math.round((completedCount / taskCount) * 100) : 0;
+                    const isWeekComplete = taskCount > 0 && completedCount === taskCount;
+                    const isActiveWeek = weekNum === totalWeeks && !isWeekComplete;
+                    const isPastWeek = weekNum < totalWeeks || isWeekComplete;
+                    const isLast = idx === totalWeeks - 1;
+
+                    return (
+                      <div key={weekNum} className="relative flex gap-4 md:gap-6">
+                        <div className="flex flex-col items-center">
                           <div 
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{ width: `${progressPct}%`, backgroundColor: 'hsl(179, 100%, 39%)' }}
-                          />
+                            className={`relative z-10 flex items-center justify-center w-10 h-10 rounded-full border-2 shrink-0 transition-all duration-300 ${
+                              isWeekComplete
+                                ? 'border-transparent shadow-md'
+                                : isActiveWeek
+                                  ? 'border-transparent shadow-lg shadow-teal-200/50 dark:shadow-teal-900/50'
+                                  : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900'
+                            }`}
+                            style={
+                              isWeekComplete
+                                ? { backgroundColor: primaryColor }
+                                : isActiveWeek
+                                  ? { backgroundColor: `${primaryColor}15`, borderColor: primaryColor }
+                                  : undefined
+                            }
+                          >
+                            {isWeekComplete ? (
+                              <CheckCircle2 className="h-5 w-5 text-white" />
+                            ) : isActiveWeek ? (
+                              <span className="relative flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: primaryColor }} />
+                                <span className="relative inline-flex rounded-full h-3 w-3" style={{ backgroundColor: primaryColor }} />
+                              </span>
+                            ) : (
+                              <Circle className="h-5 w-5 text-gray-300 dark:text-gray-600" />
+                            )}
+                          </div>
+                          {!isLast && (
+                            <div className="w-0.5 flex-1 min-h-[16px] -mt-px -mb-px" style={{ backgroundColor: isPastWeek ? primaryColor : 'rgb(229 231 235)' }} />
+                          )}
+                        </div>
+
+                        <div className={`flex-1 pb-6 ${isLast ? 'pb-0' : ''}`}>
+                          <div 
+                            className={`rounded-xl border transition-all duration-300 overflow-hidden ${
+                              isActiveWeek 
+                                ? 'shadow-md border-teal-200 dark:border-teal-800 bg-gradient-to-br from-teal-50/50 to-white dark:from-teal-950/20 dark:to-gray-900' 
+                                : isWeekComplete
+                                  ? 'border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50'
+                                  : 'border-gray-200 dark:border-gray-800'
+                            }`}
+                          >
+                            <div className="px-4 py-3 md:px-5 md:py-4">
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-2.5">
+                                  <h3 className={`text-base font-semibold ${isActiveWeek ? '' : isWeekComplete ? 'text-muted-foreground' : ''}`}>
+                                    Week {weekNum}
+                                  </h3>
+                                  {isWeekComplete && (
+                                    <Badge className="text-[10px] px-2 py-0 bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400 border-0">
+                                      Complete
+                                    </Badge>
+                                  )}
+                                  {isActiveWeek && (
+                                    <Badge className="text-[10px] px-2 py-0 border-0 text-white" style={{ backgroundColor: primaryColor }}>
+                                      Current Week
+                                    </Badge>
+                                  )}
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                  {format(weekStart, "MMM d")} – {format(weekEnd, "MMM d, yyyy")}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-3 mt-3">
+                                <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full rounded-full transition-all duration-700 ease-out"
+                                    style={{ 
+                                      width: `${weekProgressPct}%`, 
+                                      backgroundColor: isWeekComplete ? '#22c55e' : primaryColor 
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                                  {completedCount}/{taskCount}
+                                </span>
+                              </div>
+
+                              {weekTasks.length > 0 && (
+                                <div className="mt-3 space-y-1">
+                                  {weekTasks.map(task => (
+                                    <div 
+                                      key={task.id} 
+                                      className={`flex items-center gap-2.5 py-1.5 px-2 rounded-lg transition-colors ${
+                                        task.status === 'completed' 
+                                          ? 'bg-transparent' 
+                                          : 'hover:bg-white/80 dark:hover:bg-gray-800/50'
+                                      }`}
+                                    >
+                                      {task.status === 'completed' ? (
+                                        <div className="p-0.5 rounded-full bg-green-100 dark:bg-green-900/50">
+                                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400 shrink-0" />
+                                        </div>
+                                      ) : task.status === 'in_progress' ? (
+                                        <div className="p-0.5 rounded-full" style={{ backgroundColor: `${primaryColor}15` }}>
+                                          <Clock className="h-3.5 w-3.5 shrink-0" style={{ color: primaryColor }} />
+                                        </div>
+                                      ) : (
+                                        <div className="p-0.5">
+                                          <Circle className="h-3.5 w-3.5 shrink-0 text-gray-300 dark:text-gray-600" />
+                                        </div>
+                                      )}
+                                      <span className={`text-sm flex-1 ${
+                                        task.status === 'completed' 
+                                          ? 'text-muted-foreground line-through' 
+                                          : task.status === 'in_progress'
+                                            ? 'font-medium'
+                                            : ''
+                                      }`}>
+                                        {task.title}
+                                      </span>
+                                      {task.status === 'in_progress' && (
+                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-200 text-blue-600 bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:bg-blue-950/50">
+                                          In Progress
+                                        </Badge>
+                                      )}
+                                      {task.dueDate && task.status !== 'completed' && (
+                                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                          Due {format(new Date(task.dueDate), "MMM d")}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {weekTasks.length === 0 && (
+                                <p className="text-xs text-muted-foreground text-center py-3 italic">No tasks scheduled for this week</p>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      {weekTasks.length > 0 && (
-                        <div className="space-y-1.5">
-                          {weekTasks.map(task => (
-                            <div key={task.id} className="flex items-center gap-2 text-sm">
-                              {task.status === 'completed' ? (
-                                <CheckCircle2 className="h-3.5 w-3.5 shrink-0" style={{ color: 'hsl(179, 100%, 39%)' }} />
-                              ) : (
-                                <Circle className="h-3.5 w-3.5 shrink-0 text-gray-300 dark:text-gray-600" />
-                              )}
-                              <span className={`truncate ${task.status === 'completed' ? 'text-muted-foreground line-through' : ''}`}>
-                                {task.title}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {weekTasks.length === 0 && (
-                        <p className="text-xs text-muted-foreground text-center py-2">No tasks for this week</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        )}
+          );
+        })()}
 
         {/* Filters Section */}
         <Card className="mb-6">
