@@ -935,7 +935,10 @@ export default function CustomFields() {
                                         <GripVertical className="h-4 w-4 text-gray-400" />
                                       </TableCell>
                                       <TableCell className="font-medium">
-                                        <div className="flex items-center gap-2">
+                                        <div
+                                          className="flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
+                                          onClick={() => setLocation(`/settings/custom-fields/${folder.id}/edit`)}
+                                        >
                                           <FolderOpen className="h-4 w-4 text-primary" />
                                           {folder.name}
                                         </div>
