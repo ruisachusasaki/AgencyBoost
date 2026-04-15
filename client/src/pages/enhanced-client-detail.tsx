@@ -6225,6 +6225,64 @@ export default function EnhancedClientDetail() {
               </CardContent>
             </Card>
 
+            {/* Onboarding Settings */}
+            {isAdmin && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Rocket className="h-5 w-5 text-primary" />
+                    Onboarding Settings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Onboarding Start Date</Label>
+                    <Input
+                      type="date"
+                      value={client.onboardingStartDate ? new Date(client.onboardingStartDate).toISOString().split('T')[0] : ''}
+                      onChange={async (e) => {
+                        try {
+                          const value = e.target.value ? new Date(e.target.value + 'T00:00:00').toISOString() : null;
+                          await apiRequest('PUT', `/api/clients/${clientId}`, { onboardingStartDate: value });
+                          queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
+                          toast({ title: value ? "Onboarding start date set" : "Onboarding start date cleared", variant: "default" });
+                        } catch (error) {
+                          toast({ title: "Failed to update onboarding start date", variant: "destructive" });
+                        }
+                      }}
+                      className="h-9"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">When onboarding tasks begin for this client</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Weeks Released</Label>
+                    <Select
+                      value={String(client.onboardingWeekReleased || 0)}
+                      onValueChange={async (val) => {
+                        try {
+                          await apiRequest('PUT', `/api/clients/${clientId}`, { onboardingWeekReleased: parseInt(val) });
+                          queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
+                          toast({ title: `Onboarding weeks released: ${val}`, variant: "default" });
+                        } catch (error) {
+                          toast({ title: "Failed to update weeks released", variant: "destructive" });
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 13 }, (_, i) => (
+                          <SelectItem key={i} value={String(i)}>{i === 0 ? '0 (Not started)' : `${i} week${i > 1 ? 's' : ''}`}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">How many weeks of onboarding tasks are visible in the client portal</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
 
           </div>
 
