@@ -5587,6 +5587,7 @@ export const productTaskTemplates = pgTable("product_task_templates", {
   sortOrder: integer("sort_order").notNull().default(0),
   dependsOnTemplateId: varchar("depends_on_template_id"),
   onboardingWeek: integer("onboarding_week"),
+  visibleToClient: boolean("visible_to_client").default(false),
   status: varchar("status").notNull().default("active"), // 'active' | 'inactive'
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

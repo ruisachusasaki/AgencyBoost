@@ -5183,6 +5183,7 @@ var init_schema = __esm({
       sortOrder: integer("sort_order").notNull().default(0),
       dependsOnTemplateId: varchar("depends_on_template_id"),
       onboardingWeek: integer("onboarding_week"),
+      visibleToClient: boolean("visible_to_client").default(false),
       status: varchar("status").notNull().default("active"),
       // 'active' | 'inactive'
       createdAt: timestamp("created_at").defaultNow(),
@@ -5830,7 +5831,8 @@ async function generateTasksFromTemplates(params) {
               dueDate,
               timeEstimate: template.estimatedHours ? Math.round(parseFloat(template.estimatedHours) * 60) : void 0,
               sourceTemplateId: template.id,
-              onboardingWeek: generationType === "onboarding" ? templateOnboardingWeek : void 0
+              onboardingWeek: generationType === "onboarding" ? templateOnboardingWeek : void 0,
+              visibleToClient: template.visibleToClient ?? false
             }).returning({ id: tasks.id });
             createdTaskIds.push(newTask.id);
             summary.totalTasksCreated++;
@@ -61651,6 +61653,7 @@ async function ensureOnboardingWeekColumns() {
     await db.execute(sql16`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
     await db.execute(sql16`ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
     await db.execute(sql16`ALTER TABLE product_task_templates ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
+    await db.execute(sql16`ALTER TABLE product_task_templates ADD COLUMN IF NOT EXISTS visible_to_client BOOLEAN DEFAULT false`);
     log("Onboarding week columns migration completed successfully");
   } catch (error) {
     log(`Onboarding week columns migration error: ${error.message}`);

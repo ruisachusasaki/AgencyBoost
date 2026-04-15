@@ -144,6 +144,7 @@ interface TaskTemplate {
   sortOrder: number;
   dependsOnTemplateId?: string;
   onboardingWeek?: number | null;
+  visibleToClient?: boolean;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -906,6 +907,7 @@ export default function ProductsSettings() {
       dueDateOffset: parseInt(formData.get("dueDateOffset") as string) || 7,
       estimatedHours: formData.get("estimatedHours") as string || null,
       priority: formData.get("priority") as string || "medium",
+      visibleToClient: formData.get("visibleToClient") === "on",
       status: "active",
     };
     if (templateParentType === 'product') data.productId = templateParentId;
@@ -1004,6 +1006,7 @@ export default function ProductsSettings() {
       dueDateOffset: parseInt(formData.get("dueDateOffset") as string) || 7,
       estimatedHours: formData.get("estimatedHours") as string || null,
       priority: formData.get("priority") as string || "medium",
+      visibleToClient: formData.get("visibleToClient") === "on",
       productId: editingTemplate.productId || null,
       bundleId: editingTemplate.bundleId || null,
       packageId: editingTemplate.packageId || null,
@@ -3725,6 +3728,10 @@ export default function ProductsSettings() {
                 </select>
               </div>
             </div>
+            <div className="flex items-center gap-2 pt-1">
+              <input type="checkbox" name="visibleToClient" id="template-visibleToClient" className="h-4 w-4 rounded border-gray-300" />
+              <Label htmlFor="template-visibleToClient" className="text-sm font-normal cursor-pointer">Visible to Client in Portal</Label>
+            </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setIsCreateTemplateOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={createTemplateMutation.isPending}>
@@ -3995,6 +4002,10 @@ export default function ProductsSettings() {
                     <option value="urgent">Urgent</option>
                   </select>
                 </div>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <input type="checkbox" name="visibleToClient" id="edit-template-visibleToClient" className="h-4 w-4 rounded border-gray-300" defaultChecked={editingTemplate.visibleToClient ?? false} />
+                <Label htmlFor="edit-template-visibleToClient" className="text-sm font-normal cursor-pointer">Visible to Client in Portal</Label>
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="outline" onClick={() => { setIsEditTemplateOpen(false); setEditingTemplate(null); }}>Cancel</Button>

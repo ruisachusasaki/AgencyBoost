@@ -2293,6 +2293,7 @@ async function ensureOnboardingWeekColumns() {
     await db.execute(sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
     await db.execute(sql`ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
     await db.execute(sql`ALTER TABLE product_task_templates ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
+    await db.execute(sql`ALTER TABLE product_task_templates ADD COLUMN IF NOT EXISTS visible_to_client BOOLEAN DEFAULT false`);
     log("Onboarding week columns migration completed successfully");
   } catch (error: any) {
     log(`Onboarding week columns migration error: ${error.message}`);

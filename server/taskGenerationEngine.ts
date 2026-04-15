@@ -301,6 +301,7 @@ export async function generateTasksFromTemplates(
                   : undefined,
                 sourceTemplateId: template.id,
                 onboardingWeek: generationType === "onboarding" ? templateOnboardingWeek : undefined,
+                visibleToClient: template.visibleToClient ?? false,
               })
               .returning({ id: tasks.id });
 
