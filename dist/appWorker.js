@@ -21470,23 +21470,34 @@ async function runRecurringTaskCheck() {
     const today = /* @__PURE__ */ new Date();
     let totalGenerated = 0;
     let clientsProcessed = 0;
+    console.log(`[RecurringTasks] Evaluating ${configs.length} active configs...`);
     for (const config of configs) {
       try {
         if (!config.cycleStartDate) {
+          console.log(`[RecurringTasks] Client ${config.clientId}: skipped \u2014 no cycleStartDate`);
           continue;
         }
         const cycleStartMs = new Date(config.cycleStartDate).getTime();
         const cycleLengthMs = (config.cycleLengthDays || 30) * 24 * 60 * 60 * 1e3;
         const elapsedMs = today.getTime() - cycleStartMs;
-        if (elapsedMs < 0) continue;
+        if (elapsedMs < 0) {
+          console.log(`[RecurringTasks] Client ${config.clientId}: skipped \u2014 cycleStartDate is in the future`);
+          continue;
+        }
         const currentCycleNumber = Math.floor(elapsedMs / cycleLengthMs) + 1;
         const lastGenerated = config.lastGeneratedCycle || 0;
-        if (lastGenerated >= currentCycleNumber) continue;
+        if (lastGenerated >= currentCycleNumber) {
+          console.log(`[RecurringTasks] Client ${config.clientId}: skipped \u2014 already generated cycle ${lastGenerated} (current cycle: ${currentCycleNumber})`);
+          continue;
+        }
         const nextCycleToGenerate = lastGenerated + 1;
         const nextCycleStartDate = new Date(cycleStartMs + (nextCycleToGenerate - 1) * cycleLengthMs);
         const advanceDays = config.advanceGenerationDays || 3;
         const generateByDate = new Date(nextCycleStartDate.getTime() - advanceDays * 24 * 60 * 60 * 1e3);
-        if (today < generateByDate) continue;
+        if (today < generateByDate) {
+          console.log(`[RecurringTasks] Client ${config.clientId}: skipped \u2014 too early for advance window (generate by: ${generateByDate.toISOString().slice(0, 10)}, next cycle: ${nextCycleStartDate.toISOString().slice(0, 10)})`);
+          continue;
+        }
         const existingGenerations = await db.select({ id: clientTaskGenerations.id }).from(clientTaskGenerations).where(
           and25(
             eq28(clientTaskGenerations.clientId, config.clientId),
@@ -21495,6 +21506,7 @@ async function runRecurringTaskCheck() {
           )
         ).limit(1);
         if (existingGenerations.length > 0) {
+          console.log(`[RecurringTasks] Client ${config.clientId}: skipped \u2014 generation record already exists for cycle ${nextCycleToGenerate}, syncing lastGeneratedCycle`);
           await db.update(clientRecurringConfig).set({ lastGeneratedCycle: nextCycleToGenerate, updatedAt: /* @__PURE__ */ new Date() }).where(eq28(clientRecurringConfig.id, config.id));
           continue;
         }
@@ -21505,7 +21517,10 @@ async function runRecurringTaskCheck() {
         for (const cp of assignedProducts) items.push({ productId: cp.productId, quantity: 1 });
         for (const cb of assignedBundles) items.push({ bundleId: cb.bundleId, quantity: 1 });
         for (const cpkg of assignedPkgs) items.push({ packageId: cpkg.packageId, quantity: 1 });
-        if (items.length === 0) continue;
+        if (items.length === 0) {
+          console.log(`[RecurringTasks] Client ${config.clientId}: skipped \u2014 no products/bundles/packages assigned`);
+          continue;
+        }
         const [clientRow] = await db.select({ name: clients.name, company: clients.company }).from(clients).where(eq28(clients.id, config.clientId));
         const clientName = clientRow?.company || clientRow?.name || config.clientId;
         const summary = await generateTasksFromTemplates({

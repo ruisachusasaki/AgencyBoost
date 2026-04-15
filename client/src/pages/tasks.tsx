@@ -1280,9 +1280,8 @@ export default function Tasks() {
         matchesTime = false; // Tasks without due dates don't match time filters
       }
 
-      // Show/hide completed and cancelled tasks based on toggle settings
-      const shouldShowCompleted = showCompleted || task.status !== "completed";
-      const shouldShowCancelled = showCancelled || task.status !== "cancelled";
+      const shouldShowCompleted = showCompleted || statusFilter.includes("completed") || task.status !== "completed";
+      const shouldShowCancelled = showCancelled || statusFilter.includes("cancelled") || task.status !== "cancelled";
       
       return matchesSearch && matchesStatus && matchesAssignee && matchesPriority && matchesClient && matchesProject && matchesCategory && matchesOverdue && matchesTime && shouldShowCompleted && shouldShowCancelled;
     })
