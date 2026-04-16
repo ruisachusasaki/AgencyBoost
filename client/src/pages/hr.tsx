@@ -411,7 +411,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
   const canManageStaff = isAdmin || hrPermissions['hr.staff.edit'];
   const canViewTimeOffRequests = isAdmin || hrPermissions['hr.time_off.view_all'];
   const canManageTimeOffRequests = isAdmin || hrPermissions['hr.time_off.approve'];
-  const canViewJobApplications = isAdmin || hrPermissions['hr.applications.view'] || jobApplications.length > 0;
+  const canViewJobApplications = isAdmin || hrPermissions['hr.applications.view'];
   const canManageJobApplications = isAdmin || hrPermissions['hr.applications.manage'];
   const canViewJobOpenings = isAdmin || hrPermissions['hr.job_openings.view'];
   const canManageJobOpeningsPermission = isAdmin || hrPermissions['hr.job_openings.edit'];
@@ -1263,7 +1263,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
               { id: "time-off-calendar", name: "Who's Off", icon: Calendar, count: 0, overflowOnly: false },
               ...(canManageTimeOffRequests ? [{ id: "approvals", name: "Approvals", icon: CheckCircle, count: pendingTimeOffRequests.length, overflowOnly: false }] : []),
               ...(canViewJobOpenings ? [{ id: "job-openings", name: "Job Openings", icon: FileText, count: activeJobOpenings.length, overflowOnly: false }] : []),
-              ...(canViewJobApplications ? [{ id: "applications", name: "Applications", icon: UserPlus, count: recentApplications.length, overflowOnly: false }] : []),
+              ...(canViewJobApplications || jobApplications.length > 0 ? [{ id: "applications", name: "Applications", icon: UserPlus, count: recentApplications.length, overflowOnly: false }] : []),
               ...(canManageJobApplications || isManager || isAdmin ? [{ id: "onboarding-submissions", name: "Onboarding Submissions", icon: UserCheck, count: onboardingSubmissions?.length || 0, overflowOnly: false }] : []),
               { id: "expense-report", name: "Expense Report", icon: DollarSign, count: 0, overflowOnly: true },
               ...(canViewExpenseReports ? [{ id: "expense-submissions", name: "Expense Submissions", icon: Receipt, count: 0, overflowOnly: true }] : []),
