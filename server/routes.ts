@@ -36791,14 +36791,19 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     try {
       const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!authenticatedUserId) return;
-      
-      // Search all tasks for a running time entry that belongs to the current user
-      const allTasks = await appStorage.getTasks();
-      
-      for (const task of allTasks) {
+
+      // Use a JSONB containment query to fetch only tasks that have a running
+      // time entry belonging to the current user, instead of scanning every task.
+      const matchPattern = JSON.stringify([{ isRunning: true, userId: authenticatedUserId }]);
+      const candidateTasks = await db
+        .select({ id: tasks.id, title: tasks.title, timeEntries: tasks.timeEntries })
+        .from(tasks)
+        .where(sql`${tasks.timeEntries} @> ${matchPattern}::jsonb`)
+        .limit(5);
+
+      for (const task of candidateTasks) {
         if (task.timeEntries && Array.isArray(task.timeEntries)) {
-          // Find running entry for the CURRENT USER only
-          const runningEntry = task.timeEntries.find((entry: any) => 
+          const runningEntry = (task.timeEntries as any[]).find((entry: any) =>
             entry.isRunning && entry.userId === authenticatedUserId
           );
           if (runningEntry) {
@@ -36811,7 +36816,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           }
         }
       }
-      
+
       res.json(null); // No running timer found for this user
     } catch (error) {
       console.error("Error checking for running timer:", error);

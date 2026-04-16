@@ -138,7 +138,20 @@ export function TimerProvider({ children }: TimerProviderProps) {
     };
 
     const interval = setInterval(syncWithServer, 5000);
-    return () => clearInterval(interval);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncWithServer();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', syncWithServer);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', syncWithServer);
+    };
   }, [currentTimer?.id, currentUser?.id]);
 
   useEffect(() => {
@@ -170,18 +183,31 @@ export function TimerProvider({ children }: TimerProviderProps) {
   }, [currentUser?.id]);
 
   const checkForRunningTimer = async (userId: string) => {
+    let serverChecked = false;
+    let serverRunningEntry: TimeEntry | null = null;
     try {
       const response = await fetch('/api/time-entries/running', { credentials: 'include' });
       if (response.ok) {
+        serverChecked = true;
         const runningEntry = await response.json();
         if (runningEntry && runningEntry.userId === userId) {
-          setCurrentTimer(runningEntry);
-          localStorage.setItem(`activeTimer_${userId}`, JSON.stringify(runningEntry));
-          return;
+          serverRunningEntry = runningEntry;
         }
       }
     } catch (error) {
       console.error('Error checking server for running timer:', error);
+    }
+
+    if (serverChecked) {
+      if (serverRunningEntry) {
+        setCurrentTimer(serverRunningEntry);
+        localStorage.setItem(`activeTimer_${userId}`, JSON.stringify(serverRunningEntry));
+      } else {
+        localStorage.removeItem(`activeTimer_${userId}`);
+        setCurrentTimer(null);
+        setElapsedTime(0);
+      }
+      return;
     }
 
     const savedTimer = localStorage.getItem(`activeTimer_${userId}`);
