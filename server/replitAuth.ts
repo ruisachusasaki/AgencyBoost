@@ -44,8 +44,8 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true, // Always use secure since Replit serves over HTTPS
-      sameSite: 'none', // Required for cookies to work in iframe contexts
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: sessionTtl,
     },
   });

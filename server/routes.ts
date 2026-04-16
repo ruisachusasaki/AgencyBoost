@@ -36830,7 +36830,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         return res.status(404).json({ error: "Task not found" });
       }
 
-      const user = await appStorage.getUser(authenticatedUserId);
+      const staffMember = await appStorage.getStaffMember(authenticatedUserId);
       const now = new Date().toISOString();
       const newEntry = {
         id: Date.now().toString(),
@@ -36838,7 +36838,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         taskTitle: taskTitle || task.title,
         startTime: now,
         userId: authenticatedUserId,
-        userName: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+        userName: staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown",
         isRunning: true,
       };
 

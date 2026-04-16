@@ -52511,7 +52511,7 @@ ${appointment.description || ""}
       if (!task) {
         return res.status(404).json({ error: "Task not found" });
       }
-      const user = await storage2.getUser(authenticatedUserId);
+      const staffMember = await storage2.getStaffMember(authenticatedUserId);
       const now = (/* @__PURE__ */ new Date()).toISOString();
       const newEntry = {
         id: Date.now().toString(),
@@ -52519,7 +52519,7 @@ ${appointment.description || ""}
         taskTitle: taskTitle || task.title,
         startTime: now,
         userId: authenticatedUserId,
-        userName: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+        userName: staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown",
         isRunning: true
       };
       const existingEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
@@ -59122,6 +59122,7 @@ function getSession() {
     ttl: sessionTtl,
     tableName: "sessions"
   });
+  const isProduction = process.env.NODE_ENV === "production";
   return session({
     secret: process.env.SESSION_SECRET,
     store: sessionStore,
@@ -59129,8 +59130,8 @@ function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: sessionTtl
     }
   });
