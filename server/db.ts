@@ -10,8 +10,8 @@ if (!process.env.DATABASE_URL) {
 
 export const pool = new pg.Pool({ 
   connectionString: process.env.DATABASE_URL,
-  max: 5,
-  idleTimeoutMillis: 10000,
-  connectionTimeoutMillis: 5000,
+  max: 25,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
 });
 export const db = drizzle({ client: pool, schema });

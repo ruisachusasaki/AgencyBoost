@@ -5484,9 +5484,9 @@ var init_db = __esm({
     }
     pool = new pg.Pool({
       connectionString: process.env.DATABASE_URL,
-      max: 5,
-      idleTimeoutMillis: 1e4,
-      connectionTimeoutMillis: 5e3
+      max: 25,
+      idleTimeoutMillis: 3e4,
+      connectionTimeoutMillis: 1e4
     });
     db = drizzle({ client: pool, schema: schema_exports });
   }
@@ -52471,8 +52471,9 @@ ${appointment.description || ""}
     try {
       const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!authenticatedUserId) return;
-      const allTasks = await storage2.getTasks();
-      for (const task of allTasks) {
+      const matchPattern = JSON.stringify([{ isRunning: true, userId: authenticatedUserId }]);
+      const candidateTasks = await db.select({ id: tasks.id, title: tasks.title, timeEntries: tasks.timeEntries }).from(tasks).where(sql11`${tasks.timeEntries} @> ${matchPattern}::jsonb`).limit(5);
+      for (const task of candidateTasks) {
         if (task.timeEntries && Array.isArray(task.timeEntries)) {
           const runningEntry = task.timeEntries.find(
             (entry) => entry.isRunning && entry.userId === authenticatedUserId
