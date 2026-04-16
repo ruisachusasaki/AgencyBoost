@@ -219,25 +219,11 @@ export function TimerProvider({ children }: TimerProviderProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
     } catch (error: any) {
       console.error('Error stopping timer:', error);
-
-      if (error?.message?.includes('404') || error?.status === 404) {
-        if (currentUser?.id) {
-          localStorage.removeItem(`activeTimer_${currentUser.id}`);
-        }
-        setCurrentTimer(null);
-        setElapsedTime(0);
-        toast({
-          title: "Timer Cleared",
-          variant: "default",
-          description: "No running timer was found on the server. It may have been stopped from another tab.",
-        });
-      } else {
-        toast({
-          title: "Failed to Stop Timer",
-          description: "Could not stop the timer. Please try again.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Failed to Stop Timer",
+        description: "Failed to stop timer — please try again",
+        variant: "destructive",
+      });
     } finally {
       setIsStopping(false);
     }
