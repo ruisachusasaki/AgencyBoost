@@ -49081,36 +49081,27 @@ ${appointment.description || ""}
       if (isAdmin) {
         applications = await db.select().from(jobApplications).orderBy(desc5(jobApplications.appliedAt));
       } else {
-        const hiringManagerApps = await db.select({
+        const nonAdminFields = {
           id: jobApplications.id,
           applicantName: jobApplications.applicantName,
           applicantEmail: jobApplications.applicantEmail,
           applicantPhone: jobApplications.applicantPhone,
           positionTitle: jobApplications.positionTitle,
+          positionId: jobApplications.positionId,
           stage: jobApplications.stage,
           rating: jobApplications.rating,
           appliedAt: jobApplications.appliedAt,
+          lastUpdated: jobApplications.lastUpdated,
           resumeUrl: jobApplications.resumeUrl,
-          coverLetter: jobApplications.coverLetter,
+          coverLetterUrl: jobApplications.coverLetterUrl,
+          portfolioUrl: jobApplications.portfolioUrl,
           notes: jobApplications.notes,
-          customFields: jobApplications.customFields,
-          jobOpeningId: jobApplications.jobOpeningId
-        }).from(jobApplications).innerJoin(jobOpenings, eq20(jobApplications.jobOpeningId, jobOpenings.id)).where(eq20(jobOpenings.hiringManagerId, currentUserId2)).orderBy(desc5(jobApplications.appliedAt));
-        const watchedApps = await db.select({
-          id: jobApplications.id,
-          applicantName: jobApplications.applicantName,
-          applicantEmail: jobApplications.applicantEmail,
-          applicantPhone: jobApplications.applicantPhone,
-          positionTitle: jobApplications.positionTitle,
-          stage: jobApplications.stage,
-          rating: jobApplications.rating,
-          appliedAt: jobApplications.appliedAt,
-          resumeUrl: jobApplications.resumeUrl,
-          coverLetter: jobApplications.coverLetter,
-          notes: jobApplications.notes,
-          customFields: jobApplications.customFields,
-          jobOpeningId: jobApplications.jobOpeningId
-        }).from(jobApplications).innerJoin(jobApplicationWatchers, eq20(jobApplications.id, jobApplicationWatchers.applicationId)).where(eq20(jobApplicationWatchers.staffId, currentUserId2)).orderBy(desc5(jobApplications.appliedAt));
+          customFieldData: jobApplications.customFieldData,
+          experience: jobApplications.experience,
+          source: jobApplications.source
+        };
+        const hiringManagerApps = await db.select(nonAdminFields).from(jobApplications).innerJoin(jobOpenings, eq20(jobApplications.positionId, jobOpenings.id)).where(eq20(jobOpenings.hiringManagerId, currentUserId2)).orderBy(desc5(jobApplications.appliedAt));
+        const watchedApps = await db.select(nonAdminFields).from(jobApplications).innerJoin(jobApplicationWatchers, eq20(jobApplications.id, jobApplicationWatchers.applicationId)).where(eq20(jobApplicationWatchers.staffId, currentUserId2)).orderBy(desc5(jobApplications.appliedAt));
         const applicationMap = /* @__PURE__ */ new Map();
         [...hiringManagerApps, ...watchedApps].forEach((app3) => {
           applicationMap.set(app3.id, app3);

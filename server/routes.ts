@@ -32345,43 +32345,35 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         // 1. Applications for job openings where they are the hiring manager
         // 2. Applications where they are added as a watcher
         
-        // Get applications where user is hiring manager
-        const hiringManagerApps = await db.select({
+        const nonAdminFields = {
           id: jobApplications.id,
           applicantName: jobApplications.applicantName,
           applicantEmail: jobApplications.applicantEmail,
           applicantPhone: jobApplications.applicantPhone,
           positionTitle: jobApplications.positionTitle,
+          positionId: jobApplications.positionId,
           stage: jobApplications.stage,
           rating: jobApplications.rating,
           appliedAt: jobApplications.appliedAt,
+          lastUpdated: jobApplications.lastUpdated,
           resumeUrl: jobApplications.resumeUrl,
-          coverLetter: jobApplications.coverLetter,
+          coverLetterUrl: jobApplications.coverLetterUrl,
+          portfolioUrl: jobApplications.portfolioUrl,
           notes: jobApplications.notes,
-          customFields: jobApplications.customFields,
-          jobOpeningId: jobApplications.jobOpeningId
-        })
+          customFieldData: jobApplications.customFieldData,
+          experience: jobApplications.experience,
+          source: jobApplications.source,
+        };
+
+        // Get applications where user is hiring manager (linked via position_id -> job_openings.id)
+        const hiringManagerApps = await db.select(nonAdminFields)
         .from(jobApplications)
-        .innerJoin(jobOpenings, eq(jobApplications.jobOpeningId, jobOpenings.id))
+        .innerJoin(jobOpenings, eq(jobApplications.positionId, jobOpenings.id))
         .where(eq(jobOpenings.hiringManagerId, currentUserId))
         .orderBy(desc(jobApplications.appliedAt));
-        
+
         // Get applications where user is a watcher
-        const watchedApps = await db.select({
-          id: jobApplications.id,
-          applicantName: jobApplications.applicantName,
-          applicantEmail: jobApplications.applicantEmail,
-          applicantPhone: jobApplications.applicantPhone,
-          positionTitle: jobApplications.positionTitle,
-          stage: jobApplications.stage,
-          rating: jobApplications.rating,
-          appliedAt: jobApplications.appliedAt,
-          resumeUrl: jobApplications.resumeUrl,
-          coverLetter: jobApplications.coverLetter,
-          notes: jobApplications.notes,
-          customFields: jobApplications.customFields,
-          jobOpeningId: jobApplications.jobOpeningId
-        })
+        const watchedApps = await db.select(nonAdminFields)
         .from(jobApplications)
         .innerJoin(jobApplicationWatchers, eq(jobApplications.id, jobApplicationWatchers.applicationId))
         .where(eq(jobApplicationWatchers.staffId, currentUserId))
