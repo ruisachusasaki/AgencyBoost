@@ -36795,6 +36795,128 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  const timerLocks = new Map<string, Promise<void>>();
+  const acquireTimerLock = (userId: string): Promise<() => void> => {
+    const prev = timerLocks.get(userId) || Promise.resolve();
+    let release: () => void;
+    const lock = new Promise<void>((resolve) => { release = resolve; });
+    timerLocks.set(userId, prev.then(() => lock));
+    return prev.then(() => release!);
+  };
+
+  app.post("/api/time-entries/start", requireAuth(), async (req, res) => {
+    const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
+    if (!authenticatedUserId) return;
+
+    const releaseLock = await acquireTimerLock(authenticatedUserId);
+    try {
+      const { taskId, taskTitle } = req.body;
+      if (!taskId) {
+        return res.status(400).json({ error: "taskId is required" });
+      }
+
+      const allTasks = await appStorage.getTasks();
+      for (const t of allTasks) {
+        if (t.timeEntries && Array.isArray(t.timeEntries)) {
+          const running = (t.timeEntries as any[]).find((e: any) => e.isRunning && e.userId === authenticatedUserId);
+          if (running) {
+            return res.status(409).json({ error: "Timer already running", existingTimer: { ...running, taskId: t.id, taskTitle: t.title } });
+          }
+        }
+      }
+
+      const task = await appStorage.getTask(taskId);
+      if (!task) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+
+      const user = await appStorage.getUser(authenticatedUserId);
+      const now = new Date().toISOString();
+      const newEntry = {
+        id: Date.now().toString(),
+        taskId,
+        taskTitle: taskTitle || task.title,
+        startTime: now,
+        userId: authenticatedUserId,
+        userName: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+        isRunning: true,
+      };
+
+      const existingEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
+      const updatedEntries = [...existingEntries, newEntry];
+
+      await appStorage.updateTask(taskId, { timeEntries: updatedEntries });
+
+      console.log(`[TimeTracker] Timer started for user ${authenticatedUserId} on task ${taskId}`);
+      res.json(newEntry);
+    } catch (error) {
+      console.error("Error starting timer:", error);
+      res.status(500).json({ error: "Failed to start timer" });
+    } finally {
+      releaseLock();
+    }
+  });
+
+  app.post("/api/time-entries/stop", requireAuth(), async (req, res) => {
+    const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
+    if (!authenticatedUserId) return;
+
+    const releaseLock = await acquireTimerLock(authenticatedUserId);
+    try {
+      const allTasks = await appStorage.getTasks();
+      let foundTask: any = null;
+      let foundEntryIndex = -1;
+
+      for (const t of allTasks) {
+        if (t.timeEntries && Array.isArray(t.timeEntries)) {
+          const idx = (t.timeEntries as any[]).findIndex((e: any) => e.isRunning && e.userId === authenticatedUserId);
+          if (idx !== -1) {
+            foundTask = t;
+            foundEntryIndex = idx;
+            break;
+          }
+        }
+      }
+
+      if (!foundTask || foundEntryIndex === -1) {
+        return res.status(404).json({ error: "No running timer found" });
+      }
+
+      const entries = [...(foundTask.timeEntries as any[])];
+      const runningEntry = entries[foundEntryIndex];
+      const now = new Date().toISOString();
+      const duration = Math.floor((new Date(now).getTime() - new Date(runningEntry.startTime).getTime()) / 1000 / 60);
+
+      const stoppedEntry = {
+        ...runningEntry,
+        endTime: now,
+        isRunning: false,
+        duration,
+      };
+      entries[foundEntryIndex] = stoppedEntry;
+
+      const totalTracked = entries.reduce((total: number, entry: any) => total + (entry.duration || 0), 0);
+
+      await appStorage.updateTask(foundTask.id, {
+        timeEntries: entries,
+        timeTracked: totalTracked,
+      });
+
+      console.log(`[TimeTracker] Timer stopped for user ${authenticatedUserId} on task ${foundTask.id} — ${duration} minutes`);
+      res.json({
+        ...stoppedEntry,
+        taskId: foundTask.id,
+        taskTitle: foundTask.title,
+        totalTracked,
+      });
+    } catch (error) {
+      console.error("Error stopping timer:", error);
+      res.status(500).json({ error: "Failed to stop timer" });
+    } finally {
+      releaseLock();
+    }
+  });
+
   // Get time entries by date range with optional filters - SECURED
   app.get("/api/reports/time-entries", requireAuth(), requirePermission('reporting', 'canView'), async (req, res) => {
     try {

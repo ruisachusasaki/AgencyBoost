@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
@@ -38,11 +38,11 @@ interface TimerProviderProps {
 export function TimerProvider({ children }: TimerProviderProps) {
   const [currentTimer, setCurrentTimer] = useState<TimeEntry | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [isStopping, setIsStopping] = useState(false);
   const { toast } = useToast();
 
   const isClientPortal = typeof window !== 'undefined' && window.location.pathname.startsWith('/client-portal');
 
-  // Fetch current user data for proper user ID association
   const { data: currentUser } = useQuery<{ id: string; firstName: string; lastName: string }>({
     queryKey: ['/api/auth/current-user'],
     enabled: !isClientPortal,
@@ -50,14 +50,12 @@ export function TimerProvider({ children }: TimerProviderProps) {
 
   const isTimerRunning = !!currentTimer;
 
-  // Check for existing running timers when user data is loaded
   useEffect(() => {
     if (currentUser?.id) {
       checkForRunningTimer(currentUser.id);
     }
   }, [currentUser?.id]);
 
-  // Update elapsed time every second when timer is running
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
@@ -65,11 +63,11 @@ export function TimerProvider({ children }: TimerProviderProps) {
       const updateElapsed = () => {
         const now = new Date().getTime();
         const startTime = new Date(currentTimer.startTime).getTime();
-        const elapsed = Math.floor((now - startTime) / 1000); // seconds
+        const elapsed = Math.floor((now - startTime) / 1000);
         setElapsedTime(elapsed);
       };
       
-      updateElapsed(); // Update immediately
+      updateElapsed();
       interval = setInterval(updateElapsed, 1000);
     }
     
@@ -78,7 +76,6 @@ export function TimerProvider({ children }: TimerProviderProps) {
     };
   }, [currentTimer]);
 
-  // Save timer state to localStorage (user-specific key)
   useEffect(() => {
     if (currentTimer && currentUser?.id) {
       localStorage.setItem(`activeTimer_${currentUser.id}`, JSON.stringify(currentTimer));
@@ -90,18 +87,10 @@ export function TimerProvider({ children }: TimerProviderProps) {
 
     const syncWithServer = async () => {
       try {
-        const taskResponse = await fetch(`/api/tasks/${currentTimer.taskId}`);
-        if (taskResponse.status === 404) {
-          localStorage.removeItem(`activeTimer_${currentUser.id}`);
-          setCurrentTimer(null);
-          setElapsedTime(0);
-          return;
-        }
-        if (!taskResponse.ok) return;
-        const task = await taskResponse.json();
-        const entries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
-        const serverEntry = entries.find((e: any) => e.id === currentTimer.id);
-        if (!serverEntry || !serverEntry.isRunning) {
+        const response = await fetch('/api/time-entries/running', { credentials: 'include' });
+        if (!response.ok) return;
+        const runningEntry = await response.json();
+        if (!runningEntry || runningEntry.id !== currentTimer.id) {
           localStorage.removeItem(`activeTimer_${currentUser.id}`);
           setCurrentTimer(null);
           setElapsedTime(0);
@@ -110,48 +99,43 @@ export function TimerProvider({ children }: TimerProviderProps) {
       }
     };
 
-    const interval = setInterval(syncWithServer, 15000);
+    const interval = setInterval(syncWithServer, 5000);
     return () => clearInterval(interval);
   }, [currentTimer?.id, currentUser?.id]);
 
-  // Clear old non-user-specific timer on first load (migration cleanup)
   useEffect(() => {
     localStorage.removeItem('activeTimer');
   }, []);
 
   const checkForRunningTimer = async (userId: string) => {
-    // First check user-specific localStorage for persisted timer
+    try {
+      const response = await fetch('/api/time-entries/running', { credentials: 'include' });
+      if (response.ok) {
+        const runningEntry = await response.json();
+        if (runningEntry && runningEntry.userId === userId) {
+          setCurrentTimer(runningEntry);
+          localStorage.setItem(`activeTimer_${userId}`, JSON.stringify(runningEntry));
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error checking server for running timer:', error);
+    }
+
     const savedTimer = localStorage.getItem(`activeTimer_${userId}`);
     if (savedTimer) {
       try {
         const timer = JSON.parse(savedTimer);
-        // Verify the timer belongs to this user
         if (timer.userId === userId) {
           setCurrentTimer(timer);
           return;
         } else {
-          // Timer belongs to different user, remove it
           localStorage.removeItem(`activeTimer_${userId}`);
         }
       } catch (error) {
         console.error('Error parsing saved timer:', error);
         localStorage.removeItem(`activeTimer_${userId}`);
       }
-    }
-
-    // Also check database for incomplete time entries
-    try {
-      const response = await fetch('/api/time-entries/running');
-      if (response.ok) {
-        const runningEntry = await response.json();
-        if (runningEntry && runningEntry.userId === userId) {
-          setCurrentTimer(runningEntry);
-          // Save to user-specific localStorage
-          localStorage.setItem(`activeTimer_${userId}`, JSON.stringify(runningEntry));
-        }
-      }
-    } catch (error) {
-      console.error('Error checking for running timer:', error);
     }
   };
 
@@ -165,7 +149,6 @@ export function TimerProvider({ children }: TimerProviderProps) {
       return;
     }
 
-    // Don't start timer if user data isn't loaded yet
     if (!currentUser?.id) {
       toast({
         title: "Please Wait",
@@ -175,114 +158,88 @@ export function TimerProvider({ children }: TimerProviderProps) {
       return;
     }
 
-    const now = new Date().toISOString();
-    const timeEntry: TimeEntry = {
-      id: Date.now().toString(),
-      taskId,
-      taskTitle,
-      startTime: now,
-      userId: currentUser.id,
-      userName: `${currentUser.firstName} ${currentUser.lastName}`,
-      isRunning: true
-    };
-
-    setCurrentTimer(timeEntry);
-    setElapsedTime(0);
-
     try {
-      // Fetch existing task to get current time entries
-      const taskResponse = await fetch(`/api/tasks/${taskId}`);
-      const task = await taskResponse.json();
-      
-      // Merge new time entry with existing ones (don't overwrite!)
-      const existingEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
-      const mergedTimeEntries = [...existingEntries, timeEntry];
+      const response = await apiRequest("POST", "/api/time-entries/start", { taskId, taskTitle });
+      const newEntry: TimeEntry = await response.json();
 
-      // Save the time entry to the database with proper merge
-      await apiRequest("PUT", `/api/tasks/${taskId}`, {
-        timeEntries: mergedTimeEntries // Now properly appending instead of overwriting
-      });
+      setCurrentTimer(newEntry);
+      setElapsedTime(0);
 
       toast({
         title: "Timer Started",
         variant: "default",
         description: `Started tracking time for "${taskTitle}"`,
       });
-    } catch (error) {
+
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+    } catch (error: any) {
       console.error('Error starting timer:', error);
-      setCurrentTimer(null);
-      toast({
-        title: "Error",
-        description: "Failed to start timer",
-        variant: "destructive",
-      });
+      if (error?.message?.includes('409') || error?.status === 409) {
+        toast({
+          title: "Timer Already Running",
+          description: "You already have a timer running on another task. Stop it first.",
+          variant: "destructive",
+        });
+        if (currentUser?.id) {
+          checkForRunningTimer(currentUser.id);
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to start timer. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const stopTimer = async () => {
-    if (!currentTimer) return;
+    if (!currentTimer || isStopping) return;
 
-    const now = new Date().toISOString();
-    const duration = Math.floor((new Date(now).getTime() - new Date(currentTimer.startTime).getTime()) / 1000 / 60); // minutes
-
-    const updatedEntry = {
-      ...currentTimer,
-      endTime: now,
-      isRunning: false,
-      duration
-    };
+    setIsStopping(true);
 
     try {
-      const taskResponse = await fetch(`/api/tasks/${currentTimer.taskId}`);
+      const response = await apiRequest("POST", "/api/time-entries/stop", {});
+      const result = await response.json();
 
-      if (taskResponse.ok) {
-        const task = await taskResponse.json();
-        const currentEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
-        const updatedEntries = currentEntries.map((entry: any) => 
-          entry.id === currentTimer.id ? updatedEntry : entry
-        );
-        const totalTracked = updatedEntries.reduce((total: number, entry: any) => 
-          total + (entry.duration || 0), 0
-        );
+      const duration = result.duration || 0;
 
-        await apiRequest("PUT", `/api/tasks/${currentTimer.taskId}`, {
-          timeEntries: updatedEntries,
-          timeTracked: totalTracked
-        });
-
-        toast({
-          title: "Timer Stopped",
-          variant: "default",
-          description: `Logged ${duration} minutes for "${currentTimer.taskTitle}"`,
-        });
-      } else {
-        toast({
-          title: "Timer Stopped",
-          variant: "default",
-          description: `Timer cleared — the task "${currentTimer.taskTitle}" was deleted. ${duration} minutes were not saved.`,
-        });
-      }
-
-      if (currentUser?.id) {
-        localStorage.removeItem(`activeTimer_${currentUser.id}`);
-      }
-      
-      setCurrentTimer(null);
-      setElapsedTime(0);
-
-      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
-    } catch (error) {
-      console.error('Error stopping timer:', error);
       if (currentUser?.id) {
         localStorage.removeItem(`activeTimer_${currentUser.id}`);
       }
       setCurrentTimer(null);
       setElapsedTime(0);
+
       toast({
         title: "Timer Stopped",
         variant: "default",
-        description: `Timer cleared. Time entry for "${currentTimer.taskTitle}" may not have been saved.`,
+        description: `Logged ${duration} minutes for "${result.taskTitle || currentTimer.taskTitle}"`,
       });
+
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+    } catch (error: any) {
+      console.error('Error stopping timer:', error);
+
+      if (error?.message?.includes('404') || error?.status === 404) {
+        if (currentUser?.id) {
+          localStorage.removeItem(`activeTimer_${currentUser.id}`);
+        }
+        setCurrentTimer(null);
+        setElapsedTime(0);
+        toast({
+          title: "Timer Cleared",
+          variant: "default",
+          description: "No running timer was found on the server. It may have been stopped from another tab.",
+        });
+      } else {
+        toast({
+          title: "Failed to Stop Timer",
+          description: "Could not stop the timer. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsStopping(false);
     }
   };
 
