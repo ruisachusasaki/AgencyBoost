@@ -40,6 +40,44 @@ export function TimerProvider({ children }: TimerProviderProps) {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isStopping, setIsStopping] = useState(false);
   const { toast } = useToast();
+  const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
+  const currentTimerRef = useRef<TimeEntry | null>(null);
+
+  useEffect(() => {
+    currentTimerRef.current = currentTimer;
+  }, [currentTimer]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') return;
+    const channel = new BroadcastChannel('timer-sync');
+    broadcastChannelRef.current = channel;
+
+    channel.onmessage = (event) => {
+      const msg = event.data;
+      if (!msg || typeof msg !== 'object') return;
+      if (msg.type === 'timer-started' && msg.timer) {
+        setCurrentTimer(msg.timer as TimeEntry);
+        setElapsedTime(0);
+        try {
+          if (msg.timer.userId) {
+            localStorage.setItem(`activeTimer_${msg.timer.userId}`, JSON.stringify(msg.timer));
+          }
+        } catch {}
+      } else if (msg.type === 'timer-stopped') {
+        const userId = msg.userId || currentTimerRef.current?.userId;
+        setCurrentTimer(null);
+        setElapsedTime(0);
+        if (userId) {
+          try { localStorage.removeItem(`activeTimer_${userId}`); } catch {}
+        }
+      }
+    };
+
+    return () => {
+      channel.close();
+      broadcastChannelRef.current = null;
+    };
+  }, []);
 
   const isClientPortal = typeof window !== 'undefined' && window.location.pathname.startsWith('/client-portal');
 
@@ -107,6 +145,30 @@ export function TimerProvider({ children }: TimerProviderProps) {
     localStorage.removeItem('activeTimer');
   }, []);
 
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const key = `activeTimer_${currentUser.id}`;
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key !== key) return;
+      if (e.newValue === null) {
+        setCurrentTimer(null);
+        setElapsedTime(0);
+      } else {
+        try {
+          const timer = JSON.parse(e.newValue) as TimeEntry;
+          if (timer && timer.userId === currentUser.id) {
+            setCurrentTimer(timer);
+            setElapsedTime(0);
+          }
+        } catch {}
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [currentUser?.id]);
+
   const checkForRunningTimer = async (userId: string) => {
     try {
       const response = await fetch('/api/time-entries/running', { credentials: 'include' });
@@ -165,6 +227,10 @@ export function TimerProvider({ children }: TimerProviderProps) {
       setCurrentTimer(newEntry);
       setElapsedTime(0);
 
+      try {
+        broadcastChannelRef.current?.postMessage({ type: 'timer-started', timer: newEntry });
+      } catch {}
+
       toast({
         title: "Timer Started",
         variant: "default",
@@ -196,6 +262,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
   const stopTimer = async () => {
     if (!currentTimer || isStopping) return;
 
+    const timerSnapshot = currentTimer;
     setIsStopping(true);
 
     try {
@@ -204,16 +271,21 @@ export function TimerProvider({ children }: TimerProviderProps) {
 
       const duration = result.duration || 0;
 
-      if (currentUser?.id) {
-        localStorage.removeItem(`activeTimer_${currentUser.id}`);
+      const userId = currentUser?.id || timerSnapshot.userId;
+      if (userId) {
+        localStorage.removeItem(`activeTimer_${userId}`);
       }
       setCurrentTimer(null);
       setElapsedTime(0);
 
+      try {
+        broadcastChannelRef.current?.postMessage({ type: 'timer-stopped', userId });
+      } catch {}
+
       toast({
         title: "Timer Stopped",
         variant: "default",
-        description: `Logged ${duration} minutes for "${result.taskTitle || currentTimer.taskTitle}"`,
+        description: `Logged ${duration} minutes for "${result.taskTitle || timerSnapshot.taskTitle}"`,
       });
 
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
