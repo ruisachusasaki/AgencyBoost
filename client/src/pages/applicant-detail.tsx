@@ -67,7 +67,7 @@ export default function ApplicantDetailPage() {
   const { toast } = useToast();
 
   // Fetch applicant details
-  const { data: application, isLoading, error } = useQuery<JobApplication>({
+  const { data: application, isLoading, error } = useQuery<JobApplication & { salaryHidden?: boolean }>({
     queryKey: ["/api/hr/job-applications", id],
     queryFn: async () => {
       const response = await fetch(`/api/hr/job-applications/${id}`);
@@ -571,10 +571,14 @@ export default function ApplicantDetailPage() {
                   </div>
                 )}
 
-                {application?.salaryExpectation && (
+                {(application?.salaryExpectation || application?.salaryHidden) && (
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Salary Expectation</p>
-                    <p className="font-medium">${Number(application?.salaryExpectation || 0).toLocaleString()}</p>
+                    <p className="font-medium" data-testid="text-salary-expectation">
+                      {application?.salaryHidden
+                        ? '$*****'
+                        : `$${Number(application?.salaryExpectation || 0).toLocaleString()}`}
+                    </p>
                   </div>
                 )}
               </CardContent>

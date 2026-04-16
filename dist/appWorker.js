@@ -49448,14 +49448,21 @@ ${appointment.description || ""}
   if (!httpServer) {
     httpServer = createServer(app2);
   }
-  app2.get("/api/hr/job-applications/:id", async (req, res) => {
+  app2.get("/api/hr/job-applications/:id", requireAuth(), async (req, res) => {
     try {
       const { id } = req.params;
+      const userId2 = req.session?.userId;
       const [application] = await db.select().from(jobApplications).where(eq20(jobApplications.id, id));
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
       }
-      res.json(application);
+      const canManageApplications = userId2 ? await hasGranularPermission(userId2, "hr.applications.manage") : false;
+      const responseData = { ...application };
+      if (!canManageApplications && application.salaryExpectation != null && application.salaryExpectation !== "") {
+        responseData.salaryExpectation = null;
+        responseData.salaryHidden = true;
+      }
+      res.json(responseData);
     } catch (error) {
       console.error("Error fetching job application:", error);
       res.status(500).json({ message: "Failed to fetch application" });
@@ -49535,7 +49542,14 @@ ${appointment.description || ""}
           (err) => console.error("Hired notification error:", err)
         );
       }
-      res.json(updatedApplication);
+      const userIdForPerm = req.session?.userId;
+      const canManageApplications = userIdForPerm ? await hasGranularPermission(userIdForPerm, "hr.applications.manage") : false;
+      const responseData = { ...updatedApplication };
+      if (!canManageApplications && updatedApplication.salaryExpectation != null && updatedApplication.salaryExpectation !== "") {
+        responseData.salaryExpectation = null;
+        responseData.salaryHidden = true;
+      }
+      res.json(responseData);
     } catch (error) {
       console.error("Error updating job application:", error);
       res.status(500).json({ message: "Failed to update application" });

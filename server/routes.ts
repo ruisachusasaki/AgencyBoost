@@ -32824,20 +32824,33 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   if (!httpServer) { httpServer = createServer(app); }
 
   // Get single job application by ID
-  app.get('/api/hr/job-applications/:id', async (req, res) => {
+  app.get('/api/hr/job-applications/:id', requireAuth(), async (req, res) => {
     try {
       const { id } = req.params;
-      
+      const userId = req.session?.userId;
+
       const [application] = await db
         .select()
         .from(jobApplications)
         .where(eq(jobApplications.id, id));
-      
+
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
       }
-      
-      res.json(application);
+
+      // Mask salary expectation for users who don't have HR application management
+      // permission (e.g. people who only have access because they were added as a
+      // watcher/follower, or have generic HR view-only access).
+      const canManageApplications = userId
+        ? await hasGranularPermission(userId, 'hr.applications.manage')
+        : false;
+      const responseData: any = { ...application };
+      if (!canManageApplications && application.salaryExpectation != null && application.salaryExpectation !== '') {
+        responseData.salaryExpectation = null;
+        responseData.salaryHidden = true;
+      }
+
+      res.json(responseData);
     } catch (error) {
       console.error("Error fetching job application:", error);
       res.status(500).json({ message: "Failed to fetch application" });
@@ -32953,8 +32966,19 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           console.error("Hired notification error:", err)
         );
       }
-      
-      res.json(updatedApplication);
+
+      // Mask salary expectation in response for users without HR application management permission
+      const userIdForPerm = req.session?.userId;
+      const canManageApplications = userIdForPerm
+        ? await hasGranularPermission(userIdForPerm, 'hr.applications.manage')
+        : false;
+      const responseData: any = { ...updatedApplication };
+      if (!canManageApplications && updatedApplication.salaryExpectation != null && updatedApplication.salaryExpectation !== '') {
+        responseData.salaryExpectation = null;
+        responseData.salaryHidden = true;
+      }
+
+      res.json(responseData);
     } catch (error) {
       console.error("Error updating job application:", error);
       res.status(500).json({ message: "Failed to update application" });
