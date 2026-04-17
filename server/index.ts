@@ -2344,6 +2344,29 @@ async function fixJoeEmailInProduction() {
   }
 }
 
+async function ensureCallCenterTimeEditPermissions() {
+  try {
+    await db.execute(sql`
+      INSERT INTO granular_permissions (role_id, permission_key, module, enabled)
+      SELECT DISTINCT gp.role_id, key, 'call_center', true
+      FROM granular_permissions gp
+      CROSS JOIN (VALUES
+        ('call_center.time_tracking.add_time'),
+        ('call_center.time_tracking.edit_time')
+      ) AS keys(key)
+      WHERE gp.permission_key = 'call_center.time_tracking.view_all'
+        AND gp.enabled = true
+        AND NOT EXISTS (
+          SELECT 1 FROM granular_permissions gp2
+          WHERE gp2.role_id = gp.role_id AND gp2.permission_key = keys.key
+        )
+    `);
+    log("✅ Call center time add/edit permissions seeded for view_all roles");
+  } catch (error) {
+    log(`⚠️ ensureCallCenterTimeEditPermissions error: ${error}`);
+  }
+}
+
 async function runStartupMigrations() {
   log("Starting background migrations...");
   try {
@@ -2374,6 +2397,7 @@ async function runStartupMigrations() {
     await ensurePxMeetingsObjectivesColumn();
     await ensureScheduledHiredEmailsTable();
     await ensureOnboardingWeekColumns();
+    await ensureCallCenterTimeEditPermissions();
     log("✅ All startup migrations completed successfully");
   } catch (error) {
     log(`⚠️ Startup migrations encountered an error: ${error}`);
