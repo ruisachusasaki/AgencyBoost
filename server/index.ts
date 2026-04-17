@@ -2344,6 +2344,27 @@ async function fixJoeEmailInProduction() {
   }
 }
 
+async function ensureStickyNotesTable() {
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS sticky_notes (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR NOT NULL,
+        title VARCHAR(255) NOT NULL DEFAULT '',
+        content TEXT NOT NULL DEFAULT '',
+        color VARCHAR(32) NOT NULL DEFAULT 'yellow',
+        position INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS sticky_notes_user_id_idx ON sticky_notes(user_id)`);
+    log("✅ Sticky notes table ensured");
+  } catch (error) {
+    log(`⚠️ ensureStickyNotesTable error: ${error}`);
+  }
+}
+
 async function ensureCallCenterTimeEditPermissions() {
   try {
     await db.execute(sql`
@@ -2398,6 +2419,7 @@ async function runStartupMigrations() {
     await ensureScheduledHiredEmailsTable();
     await ensureOnboardingWeekColumns();
     await ensureCallCenterTimeEditPermissions();
+    await ensureStickyNotesTable();
     log("✅ All startup migrations completed successfully");
   } catch (error) {
     log(`⚠️ Startup migrations encountered an error: ${error}`);

@@ -78,6 +78,7 @@ import {
   aiAssistantSettings,
   slackWorkspaces,
   callCenterTimeEntries,
+  stickyNotes, insertStickyNoteSchema,
   emailTemplates, smsTemplates,
   toolDirectoryCategories, toolDirectoryTools,
   pxMeetings, pxMeetingAttendees,
@@ -45476,6 +45477,89 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     } catch (error: any) {
       console.error("Error fetching signed document:", error);
       res.status(500).json({ error: "Failed to load signed document." });
+    }
+  });
+
+  // ============== Sticky Notes (per user) ==============
+  app.get("/api/sticky-notes", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      const rows = await db
+        .select()
+        .from(stickyNotes)
+        .where(eq(stickyNotes.userId, userId))
+        .orderBy(asc(stickyNotes.position), desc(stickyNotes.updatedAt));
+      res.json(rows);
+    } catch (err: any) {
+      console.error("GET /api/sticky-notes error:", err);
+      res.status(500).json({ error: "Failed to load sticky notes" });
+    }
+  });
+
+  app.post("/api/sticky-notes", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      const parsed = insertStickyNoteSchema.omit({ userId: true }).safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+      }
+      const [maxRow] = await db
+        .select({ max: sql<number>`COALESCE(MAX(${stickyNotes.position}), -1)` })
+        .from(stickyNotes)
+        .where(eq(stickyNotes.userId, userId));
+      const nextPosition = (maxRow?.max ?? -1) + 1;
+      const [created] = await db
+        .insert(stickyNotes)
+        .values({ ...parsed.data, userId, position: nextPosition })
+        .returning();
+      res.json(created);
+    } catch (err: any) {
+      console.error("POST /api/sticky-notes error:", err);
+      res.status(500).json({ error: "Failed to create sticky note" });
+    }
+  });
+
+  app.patch("/api/sticky-notes/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      const { id } = req.params;
+      const existing = await db.select().from(stickyNotes).where(eq(stickyNotes.id, id)).limit(1);
+      if (existing.length === 0 || existing[0].userId !== userId) {
+        return res.status(404).json({ error: "Sticky note not found" });
+      }
+      const parsed = insertStickyNoteSchema.omit({ userId: true }).partial().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+      }
+      const [updated] = await db
+        .update(stickyNotes)
+        .set({ ...parsed.data, updatedAt: new Date() })
+        .where(eq(stickyNotes.id, id))
+        .returning();
+      res.json(updated);
+    } catch (err: any) {
+      console.error("PATCH /api/sticky-notes/:id error:", err);
+      res.status(500).json({ error: "Failed to update sticky note" });
+    }
+  });
+
+  app.delete("/api/sticky-notes/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      const { id } = req.params;
+      const existing = await db.select().from(stickyNotes).where(eq(stickyNotes.id, id)).limit(1);
+      if (existing.length === 0 || existing[0].userId !== userId) {
+        return res.status(404).json({ error: "Sticky note not found" });
+      }
+      await db.delete(stickyNotes).where(eq(stickyNotes.id, id));
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("DELETE /api/sticky-notes/:id error:", err);
+      res.status(500).json({ error: "Failed to delete sticky note" });
     }
   });
 

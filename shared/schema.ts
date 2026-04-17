@@ -5950,3 +5950,24 @@ export type InsertOfferSignature = z.infer<typeof insertOfferSignatureSchema>;
 export const insertOfferStatusLogSchema = createInsertSchema(offerStatusLog).omit({ id: true, createdAt: true });
 export type OfferStatusLog = typeof offerStatusLog.$inferSelect;
 export type InsertOfferStatusLog = z.infer<typeof insertOfferStatusLogSchema>;
+
+// =================== Sticky Notes ===================
+// Personal sticky notes per user
+export const stickyNotes = pgTable("sticky_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  title: varchar("title", { length: 255 }).notNull().default(""),
+  content: text("content").notNull().default(""),
+  color: varchar("color", { length: 32 }).notNull().default("yellow"),
+  position: integer("position").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertStickyNoteSchema = createInsertSchema(stickyNotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type StickyNote = typeof stickyNotes.$inferSelect;
+export type InsertStickyNote = z.infer<typeof insertStickyNoteSchema>;

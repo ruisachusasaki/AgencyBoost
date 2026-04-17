@@ -22,6 +22,7 @@ import TimerIndicator from "@/components/timer-indicator";
 import MeetingTimerIndicator from "@/components/meeting-timer-indicator";
 import LoginAsDropdown from "@/components/admin/login-as-dropdown";
 import { ThemeToggleButton } from "@/components/theme-toggle";
+import { StickyNotesButton } from "@/components/sticky-notes-button";
 import { GlobalPhoneDialer } from "@/components/voip/global-phone-dialer";
 import { TaskIntakeDialog } from "@/components/task-intake-dialog";
 import type { Staff } from "@shared/schema";
@@ -468,7 +469,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
               queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
             }}
           />
-          
+
+          <StickyNotesButton />
+
           <ThemeToggleButton />
           
           <NotificationButton />
