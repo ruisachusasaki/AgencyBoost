@@ -462,8 +462,13 @@ export default function Reports() {
       toast({ title: "Missing fields", description: "Please fill in all fields.", variant: "destructive" });
       return;
     }
-    const startISO = `${date}T${startTime}:00`;
-    const endISO = `${date}T${endTime}:00`;
+    const toLocalISO = (d: string, t: string) => {
+      const [y, mo, da] = d.split('-').map(Number);
+      const [hh, mm] = t.split(':').map(Number);
+      return new Date(y, (mo || 1) - 1, da || 1, hh || 0, mm || 0, 0).toISOString();
+    };
+    const startISO = toLocalISO(date, startTime);
+    const endISO = toLocalISO(date, endTime);
     if (new Date(endISO) <= new Date(startISO)) {
       toast({ title: "Invalid times", description: "End time must be after start time.", variant: "destructive" });
       return;
@@ -476,11 +481,16 @@ export default function Reports() {
     const updates: any = { id: ccEditingEntry.id };
     if (ccEditingEntry.editUserId !== ccEditingEntry.userId) updates.userId = ccEditingEntry.editUserId;
     if (ccEditingEntry.editClientId !== ccEditingEntry.clientId) updates.clientId = ccEditingEntry.editClientId;
+    const toLocalISO = (d: string, t: string) => {
+      const [y, mo, da] = d.split('-').map(Number);
+      const [hh, mm] = t.split(':').map(Number);
+      return new Date(y, (mo || 1) - 1, da || 1, hh || 0, mm || 0, 0).toISOString();
+    };
     if (ccEditingEntry.editDate && ccEditingEntry.editStartTime) {
-      updates.startTime = `${ccEditingEntry.editDate}T${ccEditingEntry.editStartTime}:00`;
+      updates.startTime = toLocalISO(ccEditingEntry.editDate, ccEditingEntry.editStartTime);
     }
     if (ccEditingEntry.editDate && ccEditingEntry.editEndTime) {
-      updates.endTime = `${ccEditingEntry.editDate}T${ccEditingEntry.editEndTime}:00`;
+      updates.endTime = toLocalISO(ccEditingEntry.editDate, ccEditingEntry.editEndTime);
     }
     ccEditTimeMutation.mutate(updates);
   };
@@ -6292,7 +6302,32 @@ export default function Reports() {
               </div>
               <div className="space-y-2">
                 <Label>Date</Label>
-                <Input type="date" value={ccEditingEntry.editDate} onChange={(e) => setCcEditingEntry((prev: any) => ({ ...prev, editDate: e.target.value }))} />
+                <Popover modal={true}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={`w-full justify-start text-left font-normal ${!ccEditingEntry.editDate ? "text-muted-foreground" : ""}`}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {ccEditingEntry.editDate ? format(new Date(ccEditingEntry.editDate + "T00:00:00"), "MMM d, yyyy") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 z-[9999]" align="start" sideOffset={4} onOpenAutoFocus={(e) => e.preventDefault()}>
+                    <CalendarComponent
+                      mode="single"
+                      selected={ccEditingEntry.editDate ? new Date(ccEditingEntry.editDate + "T00:00:00") : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          const y = date.getFullYear();
+                          const m = String(date.getMonth() + 1).padStart(2, '0');
+                          const d = String(date.getDate()).padStart(2, '0');
+                          setCcEditingEntry((prev: any) => ({ ...prev, editDate: `${y}-${m}-${d}` }));
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
