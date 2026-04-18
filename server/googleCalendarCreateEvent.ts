@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto';
 import { EncryptionService } from './encryption';
 import { createOAuth2Client } from './googleCalendarUtils';
 import { findFathomRecording } from './fathomService';
+import { storage as appStorage } from './storage';
 
 interface Guest {
   id: string;
@@ -441,13 +442,27 @@ export async function updateCalendarEventStatus(req: Request, res: Response) {
             startDate: startTime,
             timeEstimate: durationMinutes,
             timeTracked: durationMinutes,
-            timeEntries: [timeEntry],
             visibleToClient: false,
             fathomRecordingUrl: fathomRecordingUrl,
             calendarEventId: eventId,
             oneOnOneMeetingId: linkedMeetingId,
           } as any)
           .returning();
+
+        // Insert per-row time entry into normalized task_time_entries table.
+        await appStorage.appendTaskTimeEntry({
+          id: timeEntry.id,
+          taskId,
+          userId,
+          taskTitle: `Meeting: ${eventTitle}`,
+          userName: timeEntry.userName,
+          startTime,
+          endTime,
+          duration: durationMinutes,
+          isRunning: false,
+          source: 'auto',
+          notes: timeEntry.description,
+        });
 
         // Also create an event_time_entries record for backup/tracking
         await db

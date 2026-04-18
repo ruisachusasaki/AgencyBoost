@@ -2365,6 +2365,59 @@ async function ensureStickyNotesTable() {
   }
 }
 
+async function ensureTaskTimeEntriesTable() {
+  try {
+    log("Running startup migration: ensureTaskTimeEntriesTable");
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS task_time_entries (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        task_id VARCHAR NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        user_id VARCHAR NOT NULL,
+        task_title TEXT,
+        user_name TEXT,
+        start_time TIMESTAMP NOT NULL,
+        end_time TIMESTAMP,
+        duration INTEGER,
+        is_running BOOLEAN NOT NULL DEFAULT false,
+        source TEXT NOT NULL DEFAULT 'timer',
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_task_time_entries_task ON task_time_entries(task_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_task_time_entries_user ON task_time_entries(user_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_task_time_entries_start ON task_time_entries(start_time)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_task_time_entries_user_running ON task_time_entries(user_id, is_running)`);
+
+    // Backfill from legacy tasks.time_entries jsonb (idempotent via id PK).
+    const result: any = await db.execute(sql`
+      INSERT INTO task_time_entries (id, task_id, user_id, task_title, user_name, start_time, end_time, duration, is_running, source, notes)
+      SELECT
+        COALESCE(NULLIF(entry->>'id', ''), gen_random_uuid()::varchar),
+        t.id,
+        entry->>'userId',
+        COALESCE(entry->>'taskTitle', t.title),
+        entry->>'userName',
+        (entry->>'startTime')::timestamp,
+        CASE WHEN (entry->>'endTime') IS NOT NULL AND (entry->>'endTime') <> '' THEN (entry->>'endTime')::timestamp ELSE NULL END,
+        CASE WHEN (entry->>'duration') IS NOT NULL AND (entry->>'duration') <> '' THEN (entry->>'duration')::int ELSE NULL END,
+        COALESCE((entry->>'isRunning')::boolean, false),
+        COALESCE(NULLIF(entry->>'source', ''), 'legacy'),
+        entry->>'notes'
+      FROM tasks t,
+           LATERAL jsonb_array_elements(COALESCE(t.time_entries, '[]'::jsonb)) AS entry
+      WHERE entry->>'userId' IS NOT NULL
+        AND entry->>'startTime' IS NOT NULL
+        AND entry->>'startTime' <> ''
+      ON CONFLICT (id) DO NOTHING
+    `);
+    log(`✅ task_time_entries table ensured (backfill rows inserted: ${(result as any)?.rowCount ?? 'n/a'})`);
+  } catch (error) {
+    log(`⚠️ ensureTaskTimeEntriesTable error: ${error}`);
+  }
+}
+
 async function ensureCallCenterTimeEditPermissions() {
   try {
     await db.execute(sql`
@@ -2420,6 +2473,7 @@ async function runStartupMigrations() {
     await ensureOnboardingWeekColumns();
     await ensureCallCenterTimeEditPermissions();
     await ensureStickyNotesTable();
+    await ensureTaskTimeEntriesTable();
     log("✅ All startup migrations completed successfully");
   } catch (error) {
     log(`⚠️ Startup migrations encountered an error: ${error}`);

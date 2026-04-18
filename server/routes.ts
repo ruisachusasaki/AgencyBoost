@@ -2323,17 +2323,21 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       
       const { taskId, entryId } = req.params;
       const { duration, startTime, endTime } = req.body;
-      
-      console.log("[TIME_ENTRY_PATCH] calling updateTimeEntry:", JSON.stringify({ taskId, entryId, duration }));
-      
-      const updatedTask = await appStorage.updateTimeEntry(taskId, entryId, { duration, startTime, endTime });
-      
-      console.log("[TIME_ENTRY_PATCH] updatedTask result:", updatedTask ? "FOUND" : "NOT FOUND");
-      
-      if (!updatedTask) {
+
+      console.log("[TIME_ENTRY_PATCH] calling updateTaskTimeEntryById:", JSON.stringify({ taskId, entryId, duration }));
+
+      // Single-row UPDATE on task_time_entries scoped by (taskId, entryId) — never
+      // read-modifies a shared array, so concurrent edits cannot collide, and we
+      // enforce that the entry actually belongs to the route's task.
+      const result = await appStorage.updateTaskTimeEntryById(taskId, entryId, { duration, startTime, endTime });
+
+      console.log("[TIME_ENTRY_PATCH] update result:", result ? "FOUND" : "NOT FOUND");
+
+      if (!result) {
         console.log("[TIME_ENTRY_PATCH] ERROR: time entry not found - taskId:", taskId, "entryId:", entryId);
         return res.status(404).json({ error: "Time entry not found" });
       }
+      const updatedTask = result.task;
       
       // Log the action
       await appStorage.createAuditLog({
@@ -2354,7 +2358,89 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       res.status(500).json({ error: "Failed to update time entry" });
     }
   });
-  
+
+  // DELETE a single task time entry (managers/admins only). Single-row DELETE on
+  // task_time_entries scoped by (taskId, entryId) and recomputes tasks.timeTracked.
+  app.delete("/api/reports/time-entries/:taskId/:entryId", requireAuth(), async (req, res) => {
+    try {
+      const user = (req as any).session?.user;
+      const userId = (req as any).session?.userId || user?.id || user?.staffId;
+
+      let userRoleName: string | null = null;
+      if (userId) {
+        const staffWithRole = await db.select({
+          id: staff.id,
+          roleId: staff.roleId,
+          roleName: roles.name,
+        })
+          .from(staff)
+          .leftJoin(roles, eq(staff.roleId, roles.id))
+          .where(eq(staff.id, userId))
+          .limit(1);
+
+        if (staffWithRole.length > 0 && staffWithRole[0].roleName) {
+          userRoleName = staffWithRole[0].roleName;
+        }
+      }
+
+      const isAdminOrManager = !!(userRoleName && (userRoleName.toLowerCase() === 'admin' || userRoleName.toLowerCase() === 'manager'));
+      let hasTimesheetEditPermission = isAdminOrManager;
+
+      if (!hasTimesheetEditPermission && userId) {
+        const userRolesList = await db
+          .select({ roleId: userRoles.roleId })
+          .from(userRoles)
+          .where(eq(userRoles.userId, userId));
+        const roleIds = userRolesList.map(ur => ur.roleId).filter(Boolean);
+
+        const staffRecord = await db.select({ roleId: staff.roleId }).from(staff).where(eq(staff.id, userId)).limit(1);
+        if (staffRecord.length > 0 && staffRecord[0].roleId && !roleIds.includes(staffRecord[0].roleId)) {
+          roleIds.push(staffRecord[0].roleId);
+        }
+
+        if (roleIds.length > 0) {
+          const perms = await db
+            .select({ permissionKey: granularPermissions.permissionKey })
+            .from(granularPermissions)
+            .where(
+              and(
+                inArray(granularPermissions.roleId, roleIds),
+                eq(granularPermissions.permissionKey, 'reports.timesheet.edit_all'),
+                eq(granularPermissions.enabled, true),
+              ),
+            );
+          hasTimesheetEditPermission = perms.length > 0;
+        }
+      }
+
+      if (!hasTimesheetEditPermission) {
+        return res.status(403).json({ error: "Only admins and managers can delete time entries" });
+      }
+
+      const { taskId, entryId } = req.params;
+      const result = await appStorage.deleteTaskTimeEntryById(taskId, entryId);
+      if (!result) {
+        return res.status(404).json({ error: "Time entry not found" });
+      }
+
+      await appStorage.createAuditLog({
+        userId: userId || 'unknown',
+        userName: user?.email || 'Unknown',
+        action: 'delete',
+        entityType: 'task',
+        entityId: taskId,
+        entityName: result.task?.title || 'Time Entry',
+        details: `Deleted time entry ${entryId}`,
+        timestamp: new Date(),
+      });
+
+      res.json({ success: true, task: result.task, totalTracked: result.totalTracked });
+    } catch (error) {
+      console.error("[TIME_ENTRY_DELETE] EXCEPTION:", error);
+      res.status(500).json({ error: "Failed to delete time entry" });
+    }
+  });
+
 
   // Task Stage Analytics Report API endpoint
   app.post("/api/reports/stage-analytics", requireAuth(), requirePermission('reporting', 'canView'), async (req, res) => {
@@ -20853,13 +20939,27 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
               startDate: startTime,
               timeEstimate: durationMinutes,
               timeTracked: durationMinutes,
-              timeEntries: [timeEntry],
               visibleToClient: false,
               fathomRecordingUrl: fathomRecordingUrl,
               calendarEventId: id,
               oneOnOneMeetingId: linkedMeetingId,
             } as any)
             .returning();
+
+          // Insert per-row time entry into normalized table.
+          await appStorage.appendTaskTimeEntry({
+            id: timeEntry.id,
+            taskId,
+            userId,
+            taskTitle: `Meeting: ${eventTitle}`,
+            userName: timeEntry.userName,
+            startTime,
+            endTime,
+            duration: durationMinutes,
+            isRunning: false,
+            source: 'auto',
+            notes: timeEntry.description,
+          });
 
           await db
             .insert(eventTimeEntries)
@@ -30929,11 +31029,9 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           );
         
         let taskId: string;
-        let existingEntries: any[] = [];
-        
+
         if (existingTasks.length > 0) {
           taskId = existingTasks[0].id;
-          existingEntries = (existingTasks[0].timeEntries as any[]) || [];
         } else {
           const [newTask] = await db.insert(tasks).values({
             title: taskTitle,
@@ -30946,27 +31044,19 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           }).returning();
           taskId = newTask.id;
         }
-        
-        const timeEntry = {
+
+        // Atomic single-row INSERT into the normalized table; total is recomputed via SUM().
+        await appStorage.appendTaskTimeEntry({
           id: `1on1-${meetingId}-${staffId}-${Date.now()}`,
-          taskId: taskId,
-          taskTitle: taskTitle,
-          startTime: startTime.toISOString(),
-          endTime: now.toISOString(),
+          taskId,
           userId: staffId,
-          isRunning: false,
+          taskTitle,
+          startTime,
+          endTime: now,
           duration: durationMinutes,
-        };
-        
-        const updatedEntries = [...existingEntries, timeEntry];
-        const totalTracked = updatedEntries.reduce((sum: number, e: any) => sum + (e.duration || 0), 0);
-        
-        await db.update(tasks)
-          .set({ 
-            timeEntries: updatedEntries,
-            timeTracked: totalTracked,
-          })
-          .where(eq(tasks.id, taskId));
+          isRunning: false,
+          source: 'auto',
+        });
       }
       
       // Generate next recurring meeting instance if this is a recurring meeting
@@ -36785,32 +36875,22 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!authenticatedUserId) return;
 
-      // Use a JSONB containment query to fetch only tasks that have a running
-      // time entry belonging to the current user, instead of scanning every task.
-      const matchPattern = JSON.stringify([{ isRunning: true, userId: authenticatedUserId }]);
-      const candidateTasks = await db
-        .select({ id: tasks.id, title: tasks.title, timeEntries: tasks.timeEntries })
-        .from(tasks)
-        .where(sql`${tasks.timeEntries} @> ${matchPattern}::jsonb`)
-        .limit(5);
-
-      for (const task of candidateTasks) {
-        if (task.timeEntries && Array.isArray(task.timeEntries)) {
-          const runningEntry = (task.timeEntries as any[]).find((entry: any) =>
-            entry.isRunning && entry.userId === authenticatedUserId
-          );
-          if (runningEntry) {
-            res.json({
-              ...runningEntry,
-              taskId: task.id,
-              taskTitle: task.title
-            });
-            return;
-          }
-        }
+      // Single-row lookup against the normalized task_time_entries table.
+      const running = await appStorage.getRunningTaskTimerForUser(authenticatedUserId);
+      if (!running) {
+        return res.json(null);
       }
 
-      res.json(null); // No running timer found for this user
+      const startTimeIso = running.startTime instanceof Date ? running.startTime.toISOString() : String(running.startTime);
+      res.json({
+        id: running.id,
+        taskId: running.taskId,
+        taskTitle: running.taskTitle || running.task?.title || '',
+        startTime: startTimeIso,
+        userId: running.userId,
+        userName: running.userName || undefined,
+        isRunning: true,
+      });
     } catch (error) {
       console.error("Error checking for running timer:", error);
       res.status(500).json({ error: "Failed to check for running timer" });
@@ -36837,14 +36917,20 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         return res.status(400).json({ error: "taskId is required" });
       }
 
-      const allTasks = await appStorage.getTasks();
-      for (const t of allTasks) {
-        if (t.timeEntries && Array.isArray(t.timeEntries)) {
-          const running = (t.timeEntries as any[]).find((e: any) => e.isRunning && e.userId === authenticatedUserId);
-          if (running) {
-            return res.status(409).json({ error: "Timer already running", existingTimer: { ...running, taskId: t.id, taskTitle: t.title } });
-          }
-        }
+      // Reject if this user already has a running timer (single-row lookup).
+      const existing = await appStorage.getRunningTaskTimerForUser(authenticatedUserId);
+      if (existing) {
+        return res.status(409).json({
+          error: "Timer already running",
+          existingTimer: {
+            id: existing.id,
+            taskId: existing.taskId,
+            taskTitle: existing.taskTitle || existing.task?.title || '',
+            startTime: existing.startTime instanceof Date ? existing.startTime.toISOString() : String(existing.startTime),
+            userId: existing.userId,
+            isRunning: true,
+          },
+        });
       }
 
       const task = await appStorage.getTask(taskId);
@@ -36853,24 +36939,26 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       }
 
       const staffMember = await appStorage.getStaffMember(authenticatedUserId);
-      const now = new Date().toISOString();
-      const newEntry = {
-        id: Date.now().toString(),
+      const userName = staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown";
+
+      // Atomic single-row INSERT — concurrent writes can no longer clobber each other.
+      const newEntry = await appStorage.startTaskTimer({
         taskId,
-        taskTitle: taskTitle || task.title,
-        startTime: now,
         userId: authenticatedUserId,
-        userName: staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown",
-        isRunning: true,
-      };
-
-      const existingEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
-      const updatedEntries = [...existingEntries, newEntry];
-
-      await appStorage.updateTask(taskId, { timeEntries: updatedEntries });
+        taskTitle: taskTitle || task.title,
+        userName,
+      });
 
       console.log(`[TimeTracker] Timer started for user ${authenticatedUserId} on task ${taskId}`);
-      res.json(newEntry);
+      res.json({
+        id: newEntry.id,
+        taskId: newEntry.taskId,
+        taskTitle: newEntry.taskTitle,
+        startTime: newEntry.startTime instanceof Date ? newEntry.startTime.toISOString() : String(newEntry.startTime),
+        userId: newEntry.userId,
+        userName: newEntry.userName,
+        isRunning: true,
+      });
     } catch (error) {
       console.error("Error starting timer:", error);
       res.status(500).json({ error: "Failed to start timer" });
@@ -36885,57 +36973,24 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
     const releaseLock = await acquireTimerLock(authenticatedUserId);
     try {
-      // Use a JSONB containment query to fetch only tasks that have a running
-      // time entry belonging to the current user, rather than scanning all tasks.
-      const matchPattern = JSON.stringify([{ isRunning: true, userId: authenticatedUserId }]);
-      const candidates = await db
-        .select({ id: tasks.id, title: tasks.title, timeEntries: tasks.timeEntries })
-        .from(tasks)
-        .where(sql`${tasks.timeEntries} @> ${matchPattern}::jsonb`)
-        .limit(5);
-
-      let foundTask: any = null;
-      let foundEntryIndex = -1;
-      for (const t of candidates) {
-        if (t.timeEntries && Array.isArray(t.timeEntries)) {
-          const idx = (t.timeEntries as any[]).findIndex((e: any) => e.isRunning && e.userId === authenticatedUserId);
-          if (idx !== -1) {
-            foundTask = t;
-            foundEntryIndex = idx;
-            break;
-          }
-        }
-      }
-
-      if (!foundTask || foundEntryIndex === -1) {
+      // Atomic single-row UPDATE — task.timeTracked is recomputed by SUM().
+      const result = await appStorage.stopTaskTimerForUser(authenticatedUserId);
+      if (!result) {
         return res.status(404).json({ error: "No running timer found" });
       }
+      const { entry, task, totalTracked } = result;
 
-      const entries = [...(foundTask.timeEntries as any[])];
-      const runningEntry = entries[foundEntryIndex];
-      const now = new Date().toISOString();
-      const duration = Math.floor((new Date(now).getTime() - new Date(runningEntry.startTime).getTime()) / 1000 / 60);
-
-      const stoppedEntry = {
-        ...runningEntry,
-        endTime: now,
-        isRunning: false,
-        duration,
-      };
-      entries[foundEntryIndex] = stoppedEntry;
-
-      const totalTracked = entries.reduce((total: number, entry: any) => total + (entry.duration || 0), 0);
-
-      await appStorage.updateTask(foundTask.id, {
-        timeEntries: entries,
-        timeTracked: totalTracked,
-      });
-
-      console.log(`[TimeTracker] Timer stopped for user ${authenticatedUserId} on task ${foundTask.id} — ${duration} minutes`);
+      console.log(`[TimeTracker] Timer stopped for user ${authenticatedUserId} on task ${task.id} — ${entry.duration} minutes`);
       res.json({
-        ...stoppedEntry,
-        taskId: foundTask.id,
-        taskTitle: foundTask.title,
+        id: entry.id,
+        taskId: task.id,
+        taskTitle: entry.taskTitle || task.title,
+        startTime: entry.startTime instanceof Date ? entry.startTime.toISOString() : String(entry.startTime),
+        endTime: entry.endTime instanceof Date ? entry.endTime?.toISOString() : entry.endTime,
+        userId: entry.userId,
+        userName: entry.userName,
+        isRunning: false,
+        duration: entry.duration,
         totalTracked,
       });
     } catch (error) {
@@ -36946,14 +37001,13 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  // Atomically append a manual (already-completed) time entry to a task.
-  // Replaces the legacy client read-modify-write PUT /api/tasks pattern that
-  // could clobber concurrent timer writes.
+  // Atomically append a manual (already-completed) time entry to a task as a
+  // single INSERT. Concurrent writes against the same task no longer race —
+  // each manual entry is its own row.
   app.post("/api/time-entries/manual", requireAuth(), async (req, res) => {
     const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
     if (!authenticatedUserId) return;
 
-    const releaseLock = await acquireTimerLock(authenticatedUserId);
     try {
       const { taskId, durationMinutes, entryDate, notes } = req.body || {};
       if (!taskId || typeof durationMinutes !== 'number' || durationMinutes <= 0) {
@@ -36966,32 +37020,36 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       }
 
       const staffMember = await appStorage.getStaffMember(authenticatedUserId);
-      const dateIso = entryDate ? new Date(entryDate).toISOString() : new Date().toISOString();
-      const newEntry = {
-        id: Date.now().toString(),
+      const userName = staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown";
+      const date = entryDate ? new Date(entryDate) : new Date();
+
+      const { entry, totalTracked } = await appStorage.addManualTaskTimeEntry({
         taskId,
-        taskTitle: task.title,
-        startTime: dateIso,
-        endTime: dateIso,
         userId: authenticatedUserId,
-        userName: staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown",
-        isRunning: false,
-        duration: durationMinutes,
-        source: 'manual',
+        userName,
+        taskTitle: task.title,
+        entryDate: date,
+        durationMinutes,
         notes: notes || undefined,
-      };
+      });
 
-      const existingEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
-      const updatedEntries = [...existingEntries, newEntry];
-      const totalTracked = updatedEntries.reduce((sum: number, e: any) => sum + (e.duration || 0), 0);
-
-      await appStorage.updateTask(taskId, { timeEntries: updatedEntries, timeTracked: totalTracked });
-      res.json({ ...newEntry, totalTracked });
+      res.json({
+        id: entry.id,
+        taskId: entry.taskId,
+        taskTitle: entry.taskTitle,
+        startTime: entry.startTime instanceof Date ? entry.startTime.toISOString() : String(entry.startTime),
+        endTime: entry.endTime instanceof Date ? entry.endTime?.toISOString() : entry.endTime,
+        userId: entry.userId,
+        userName: entry.userName,
+        isRunning: false,
+        duration: entry.duration,
+        source: entry.source,
+        notes: entry.notes,
+        totalTracked,
+      });
     } catch (error) {
       console.error("Error adding manual time entry:", error);
       res.status(500).json({ error: "Failed to add manual time entry" });
-    } finally {
-      releaseLock();
     }
   });
 
@@ -41225,7 +41283,6 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         
         if (existingTasks.length > 0) {
           taskId = existingTasks[0].id;
-          existingEntries = (existingTasks[0].timeEntries as any[]) || [];
         } else {
           const [newTask] = await db.insert(tasks).values({
             title: taskTitle,
@@ -41239,27 +41296,19 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           }).returning();
           taskId = newTask.id;
         }
-        
-        const timeEntry = {
+
+        // Atomic single-row INSERT into the normalized table.
+        await appStorage.appendTaskTimeEntry({
           id: `px-${meetingId}-${staffId}-${Date.now()}`,
-          taskId: taskId,
-          taskTitle: taskTitle,
-          startTime: startTime.toISOString(),
-          endTime: now.toISOString(),
+          taskId,
           userId: staffId,
-          isRunning: false,
+          taskTitle,
+          startTime,
+          endTime: now,
           duration: Math.floor(durationSeconds / 60),
-        };
-        
-        const updatedEntries = [...existingEntries, timeEntry];
-        const totalTracked = updatedEntries.reduce((sum, e) => sum + (e.duration || 0), 0);
-        
-        await db.update(tasks)
-          .set({ 
-            timeEntries: updatedEntries,
-            timeTracked: totalTracked,
-          })
-          .where(eq(tasks.id, taskId));
+          isRunning: false,
+          source: 'auto',
+        });
       }
       
       // Generate next recurring meeting instance if this is a recurring meeting

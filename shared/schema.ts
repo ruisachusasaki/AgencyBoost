@@ -975,6 +975,37 @@ export const tasks = pgTable("tasks", {
   generationId: varchar("generation_id"),
 });
 
+// Task Time Entries - normalized one-row-per-entry storage to replace
+// the legacy tasks.time_entries jsonb array. Per-entry inserts/updates
+// avoid concurrent read-modify-write races that previously erased entries.
+export const taskTimeEntries = pgTable("task_time_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull(),
+  taskTitle: text("task_title"),
+  userName: text("user_name"),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  duration: integer("duration"), // minutes
+  isRunning: boolean("is_running").default(false).notNull(),
+  source: text("source").default("timer").notNull(), // 'timer' | 'manual' | 'auto' | 'legacy'
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_task_time_entries_task").on(table.taskId),
+  index("idx_task_time_entries_user").on(table.userId),
+  index("idx_task_time_entries_start").on(table.startTime),
+  index("idx_task_time_entries_user_running").on(table.userId, table.isRunning),
+]);
+
+export const insertTaskTimeEntrySchema = createInsertSchema(taskTimeEntries).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertTaskTimeEntry = z.infer<typeof insertTaskTimeEntrySchema>;
+export type TaskTimeEntry = typeof taskTimeEntries.$inferSelect;
+
 // Task Dependencies - Define prerequisite relationships between tasks
 export const taskDependencies = pgTable("task_dependencies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -4368,8 +4399,11 @@ export interface TimeEntry {
   startTime: string;
   endTime?: string;
   userId: string;
+  userName?: string;
   isRunning: boolean;
   duration?: number; // in minutes
+  source?: string;
+  notes?: string;
 }
 
 export interface UserSummary {
