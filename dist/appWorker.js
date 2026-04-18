@@ -52562,10 +52562,11 @@ ${appointment.description || ""}
     if (!authenticatedUserId) return;
     const releaseLock = await acquireTimerLock(authenticatedUserId);
     try {
-      const allTasks = await storage2.getTasks();
+      const matchPattern = JSON.stringify([{ isRunning: true, userId: authenticatedUserId }]);
+      const candidates = await db.select({ id: tasks.id, title: tasks.title, timeEntries: tasks.timeEntries }).from(tasks).where(sql11`${tasks.timeEntries} @> ${matchPattern}::jsonb`).limit(5);
       let foundTask = null;
       let foundEntryIndex = -1;
-      for (const t of allTasks) {
+      for (const t of candidates) {
         if (t.timeEntries && Array.isArray(t.timeEntries)) {
           const idx = t.timeEntries.findIndex((e) => e.isRunning && e.userId === authenticatedUserId);
           if (idx !== -1) {
@@ -52604,6 +52605,46 @@ ${appointment.description || ""}
     } catch (error) {
       console.error("Error stopping timer:", error);
       res.status(500).json({ error: "Failed to stop timer" });
+    } finally {
+      releaseLock();
+    }
+  });
+  app2.post("/api/time-entries/manual", requireAuth(), async (req, res) => {
+    const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
+    if (!authenticatedUserId) return;
+    const releaseLock = await acquireTimerLock(authenticatedUserId);
+    try {
+      const { taskId, durationMinutes, entryDate, notes: notes2 } = req.body || {};
+      if (!taskId || typeof durationMinutes !== "number" || durationMinutes <= 0) {
+        return res.status(400).json({ error: "taskId and positive durationMinutes are required" });
+      }
+      const task = await storage2.getTask(taskId);
+      if (!task) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      const staffMember = await storage2.getStaffMember(authenticatedUserId);
+      const dateIso = entryDate ? new Date(entryDate).toISOString() : (/* @__PURE__ */ new Date()).toISOString();
+      const newEntry = {
+        id: Date.now().toString(),
+        taskId,
+        taskTitle: task.title,
+        startTime: dateIso,
+        endTime: dateIso,
+        userId: authenticatedUserId,
+        userName: staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown",
+        isRunning: false,
+        duration: durationMinutes,
+        source: "manual",
+        notes: notes2 || void 0
+      };
+      const existingEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
+      const updatedEntries = [...existingEntries, newEntry];
+      const totalTracked = updatedEntries.reduce((sum, e) => sum + (e.duration || 0), 0);
+      await storage2.updateTask(taskId, { timeEntries: updatedEntries, timeTracked: totalTracked });
+      res.json({ ...newEntry, totalTracked });
+    } catch (error) {
+      console.error("Error adding manual time entry:", error);
+      res.status(500).json({ error: "Failed to add manual time entry" });
     } finally {
       releaseLock();
     }

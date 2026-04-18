@@ -42,6 +42,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
   const { toast } = useToast();
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const currentTimerRef = useRef<TimeEntry | null>(null);
+  const currentUserRef = useRef<{ id: string; firstName: string; lastName: string } | null>(null);
 
   useEffect(() => {
     currentTimerRef.current = currentTimer;
@@ -55,7 +56,9 @@ export function TimerProvider({ children }: TimerProviderProps) {
     channel.onmessage = (event) => {
       const msg = event.data;
       if (!msg || typeof msg !== 'object') return;
+      const localUserId = currentUserRef.current?.id;
       if (msg.type === 'timer-started' && msg.timer) {
+        if (localUserId && msg.timer.userId !== localUserId) return;
         setCurrentTimer(msg.timer as TimeEntry);
         setElapsedTime(0);
         try {
@@ -65,6 +68,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
         } catch {}
       } else if (msg.type === 'timer-stopped') {
         const userId = msg.userId || currentTimerRef.current?.userId;
+        if (localUserId && userId && userId !== localUserId) return;
         setCurrentTimer(null);
         setElapsedTime(0);
         if (userId) {
@@ -85,6 +89,10 @@ export function TimerProvider({ children }: TimerProviderProps) {
     queryKey: ['/api/auth/current-user'],
     enabled: !isClientPortal,
   });
+
+  useEffect(() => {
+    currentUserRef.current = currentUser ?? null;
+  }, [currentUser]);
 
   const isTimerRunning = !!currentTimer;
 
@@ -128,10 +136,16 @@ export function TimerProvider({ children }: TimerProviderProps) {
         const response = await fetch('/api/time-entries/running', { credentials: 'include' });
         if (!response.ok) return;
         const runningEntry = await response.json();
-        if (!runningEntry || runningEntry.id !== currentTimer.id) {
+        if (!runningEntry) {
           localStorage.removeItem(`activeTimer_${currentUser.id}`);
           setCurrentTimer(null);
           setElapsedTime(0);
+        } else if (runningEntry.userId === currentUser.id && runningEntry.id !== currentTimer.id) {
+          setCurrentTimer(runningEntry as TimeEntry);
+          setElapsedTime(0);
+          try {
+            localStorage.setItem(`activeTimer_${currentUser.id}`, JSON.stringify(runningEntry));
+          } catch {}
         }
       } catch {
       }

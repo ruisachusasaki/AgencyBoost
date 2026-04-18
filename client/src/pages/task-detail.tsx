@@ -540,18 +540,13 @@ export default function TaskDetail() {
         notes: data.notes || undefined
       };
       
-      // Merge with existing entries
-      const existingEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
-      const mergedEntries = [...existingEntries, newEntry];
-      
-      // Calculate new total
-      const totalTracked = mergedEntries.reduce((total: number, entry: any) => 
-        total + (entry.duration || 0), 0
-      );
-      
-      await apiRequest("PUT", `/api/tasks/${task.id}`, {
-        timeEntries: mergedEntries,
-        timeTracked: totalTracked
+      // Use atomic server endpoint to append the manual entry — avoids the
+      // read-modify-write clobber that the legacy PUT /api/tasks pattern caused.
+      await apiRequest("POST", `/api/time-entries/manual`, {
+        taskId: task.id,
+        durationMinutes: totalMinutes,
+        entryDate: entryDate.toISOString(),
+        notes: data.notes || undefined,
       });
     },
     onSuccess: () => {

@@ -36885,11 +36885,18 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
     const releaseLock = await acquireTimerLock(authenticatedUserId);
     try {
-      const allTasks = await appStorage.getTasks();
+      // Use a JSONB containment query to fetch only tasks that have a running
+      // time entry belonging to the current user, rather than scanning all tasks.
+      const matchPattern = JSON.stringify([{ isRunning: true, userId: authenticatedUserId }]);
+      const candidates = await db
+        .select({ id: tasks.id, title: tasks.title, timeEntries: tasks.timeEntries })
+        .from(tasks)
+        .where(sql`${tasks.timeEntries} @> ${matchPattern}::jsonb`)
+        .limit(5);
+
       let foundTask: any = null;
       let foundEntryIndex = -1;
-
-      for (const t of allTasks) {
+      for (const t of candidates) {
         if (t.timeEntries && Array.isArray(t.timeEntries)) {
           const idx = (t.timeEntries as any[]).findIndex((e: any) => e.isRunning && e.userId === authenticatedUserId);
           if (idx !== -1) {
@@ -36934,6 +36941,55 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     } catch (error) {
       console.error("Error stopping timer:", error);
       res.status(500).json({ error: "Failed to stop timer" });
+    } finally {
+      releaseLock();
+    }
+  });
+
+  // Atomically append a manual (already-completed) time entry to a task.
+  // Replaces the legacy client read-modify-write PUT /api/tasks pattern that
+  // could clobber concurrent timer writes.
+  app.post("/api/time-entries/manual", requireAuth(), async (req, res) => {
+    const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
+    if (!authenticatedUserId) return;
+
+    const releaseLock = await acquireTimerLock(authenticatedUserId);
+    try {
+      const { taskId, durationMinutes, entryDate, notes } = req.body || {};
+      if (!taskId || typeof durationMinutes !== 'number' || durationMinutes <= 0) {
+        return res.status(400).json({ error: "taskId and positive durationMinutes are required" });
+      }
+
+      const task = await appStorage.getTask(taskId);
+      if (!task) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+
+      const staffMember = await appStorage.getStaffMember(authenticatedUserId);
+      const dateIso = entryDate ? new Date(entryDate).toISOString() : new Date().toISOString();
+      const newEntry = {
+        id: Date.now().toString(),
+        taskId,
+        taskTitle: task.title,
+        startTime: dateIso,
+        endTime: dateIso,
+        userId: authenticatedUserId,
+        userName: staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown",
+        isRunning: false,
+        duration: durationMinutes,
+        source: 'manual',
+        notes: notes || undefined,
+      };
+
+      const existingEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
+      const updatedEntries = [...existingEntries, newEntry];
+      const totalTracked = updatedEntries.reduce((sum: number, e: any) => sum + (e.duration || 0), 0);
+
+      await appStorage.updateTask(taskId, { timeEntries: updatedEntries, timeTracked: totalTracked });
+      res.json({ ...newEntry, totalTracked });
+    } catch (error) {
+      console.error("Error adding manual time entry:", error);
+      res.status(500).json({ error: "Failed to add manual time entry" });
     } finally {
       releaseLock();
     }
