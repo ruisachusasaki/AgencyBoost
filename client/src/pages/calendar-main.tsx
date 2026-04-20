@@ -34,6 +34,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { 
   Calendar as CalendarIcon, 
   ChevronLeft,
@@ -50,7 +54,8 @@ import {
   ChevronUp,
   Edit2,
   Trash2,
-  ChevronDown
+  ChevronDown,
+  X
 } from "lucide-react";
 
 // Types
@@ -361,6 +366,12 @@ export default function CalendarMain() {
   
   // Appointments table state
   const [appointmentsTab, setAppointmentsTab] = useState<"upcoming" | "cancelled" | "all">("upcoming");
+  const [dateRangeStart, setDateRangeStart] = useState<Date | null>(null);
+  const [dateRangeEnd, setDateRangeEnd] = useState<Date | null>(null);
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
+  const [appointmentsCurrentPage, setAppointmentsCurrentPage] = useState(1);
+  const [appointmentsPageSize, setAppointmentsPageSize] = useState(20);
   
   // State for appointment modal
   const [showEditModal, setShowEditModal] = useState(false);
@@ -1055,8 +1066,34 @@ export default function CalendarMain() {
       }
     }
 
+    // Filter by date range (inclusive on both ends)
+    if (dateRangeStart) {
+      const startBoundary = new Date(dateRangeStart);
+      startBoundary.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(apt => new Date(apt.startTime) >= startBoundary);
+    }
+    if (dateRangeEnd) {
+      const endBoundary = new Date(dateRangeEnd);
+      endBoundary.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(apt => new Date(apt.startTime) <= endBoundary);
+    }
+
     return filtered;
-  }, [appointments, appointmentsTab, statusFilter, calendarFilter, userFilter, clientFilter, appointmentTypeFilter, sortField, sortDirection, calendars]);
+  }, [appointments, appointmentsTab, statusFilter, calendarFilter, userFilter, clientFilter, appointmentTypeFilter, dateRangeStart, dateRangeEnd, sortField, sortDirection, calendars]);
+
+  // Pagination derived values for appointments list
+  const appointmentsTotal = filteredAndSortedAppointments.length;
+  const appointmentsTotalPages = Math.max(1, Math.ceil(appointmentsTotal / appointmentsPageSize));
+  const safeAppointmentsPage = Math.min(appointmentsCurrentPage, appointmentsTotalPages);
+  const paginatedAppointments = useMemo(() => {
+    const startIdx = (safeAppointmentsPage - 1) * appointmentsPageSize;
+    return filteredAndSortedAppointments.slice(startIdx, startIdx + appointmentsPageSize);
+  }, [filteredAndSortedAppointments, safeAppointmentsPage, appointmentsPageSize]);
+
+  // Reset to page 1 whenever filters/sort change
+  useEffect(() => {
+    setAppointmentsCurrentPage(1);
+  }, [appointmentsTab, statusFilter, calendarFilter, userFilter, clientFilter, appointmentTypeFilter, dateRangeStart, dateRangeEnd, appointmentsPageSize]);
 
   // Sort handler
   const handleSort = (field: string) => {
@@ -2053,7 +2090,84 @@ export default function CalendarMain() {
                   className="w-48"
                 />
 
-                {(statusFilter !== "all" || calendarFilter !== "all" || userFilter !== "all" || clientFilter !== "all") && (
+                {/* Date Range Filter */}
+                <div className="flex items-center gap-2">
+                  <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "w-40 justify-start text-left font-normal",
+                          !dateRangeStart && "text-muted-foreground"
+                        )}
+                        data-testid="button-date-range-start"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateRangeStart ? format(dateRangeStart, "MMM d, yyyy") : "From date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarPicker
+                        mode="single"
+                        selected={dateRangeStart || undefined}
+                        onSelect={(date) => {
+                          setDateRangeStart(date || null);
+                          setStartDateOpen(false);
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+
+                  <span className="text-sm text-gray-500">to</span>
+
+                  <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "w-40 justify-start text-left font-normal",
+                          !dateRangeEnd && "text-muted-foreground"
+                        )}
+                        data-testid="button-date-range-end"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateRangeEnd ? format(dateRangeEnd, "MMM d, yyyy") : "To date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarPicker
+                        mode="single"
+                        selected={dateRangeEnd || undefined}
+                        onSelect={(date) => {
+                          setDateRangeEnd(date || null);
+                          setEndDateOpen(false);
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+
+                  {(dateRangeStart || dateRangeEnd) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => {
+                        setDateRangeStart(null);
+                        setDateRangeEnd(null);
+                      }}
+                      data-testid="button-clear-date-range"
+                      title="Clear date range"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+
+                {(statusFilter !== "all" || calendarFilter !== "all" || userFilter !== "all" || clientFilter !== "all" || dateRangeStart || dateRangeEnd) && (
                   <Button 
                     variant="outline" 
                     size="sm"
@@ -2062,6 +2176,8 @@ export default function CalendarMain() {
                       setCalendarFilter("all");
                       setUserFilter("all");
                       setClientFilter("all");
+                      setDateRangeStart(null);
+                      setDateRangeEnd(null);
                     }}
                   >
                     Clear Filters
@@ -2125,14 +2241,14 @@ export default function CalendarMain() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAndSortedAppointments.length === 0 ? (
+                    {paginatedAppointments.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">
                           No appointments found
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredAndSortedAppointments.map((appointment) => {
+                      paginatedAppointments.map((appointment) => {
                         const calendar = calendars.find(cal => cal.id === appointment.calendarId);
                         const owner = calendar?.createdBy ? staff.find(member => member.id === calendar.createdBy) : null;
                         const startTime = new Date(appointment.startTime);
@@ -2320,10 +2436,85 @@ export default function CalendarMain() {
                 </Table>
               </div>
               
-              {filteredAndSortedAppointments.length > 0 && (
-                <div className="px-6 py-4 border-t bg-gray-50 dark:bg-gray-800/50 text-sm text-gray-600 dark:text-gray-400">
-                  Showing {filteredAndSortedAppointments.length} appointment{filteredAndSortedAppointments.length !== 1 ? 's' : ''} 
-                  {appointmentsTab !== "all" && ` in ${appointmentsTab}`}
+              {appointmentsTotal > 0 && (
+                <div className="px-6 py-4 border-t bg-gray-50 dark:bg-gray-800/50 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
+                      <Select
+                        value={appointmentsPageSize.toString()}
+                        onValueChange={(value) => {
+                          setAppointmentsPageSize(Number(value));
+                          setAppointmentsCurrentPage(1);
+                        }}
+                      >
+                        <SelectTrigger className="w-20 h-8" data-testid="select-appointments-page-size">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="20">20</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      Showing {((safeAppointmentsPage - 1) * appointmentsPageSize) + 1} to {Math.min(safeAppointmentsPage * appointmentsPageSize, appointmentsTotal)} of {appointmentsTotal} appointment{appointmentsTotal !== 1 ? 's' : ''}
+                      {appointmentsTab !== "all" && ` in ${appointmentsTab}`}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAppointmentsCurrentPage(Math.max(1, safeAppointmentsPage - 1))}
+                      disabled={safeAppointmentsPage <= 1}
+                      data-testid="button-appointments-prev-page"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: Math.min(5, appointmentsTotalPages) }, (_, i) => {
+                        let pageNum;
+                        if (appointmentsTotalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (safeAppointmentsPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (safeAppointmentsPage >= appointmentsTotalPages - 2) {
+                          pageNum = appointmentsTotalPages - 4 + i;
+                        } else {
+                          pageNum = safeAppointmentsPage - 2 + i;
+                        }
+
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={pageNum === safeAppointmentsPage ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setAppointmentsCurrentPage(pageNum)}
+                            className="w-8 h-8 p-0"
+                            data-testid={`button-appointments-page-${pageNum}`}
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAppointmentsCurrentPage(Math.min(appointmentsTotalPages, safeAppointmentsPage + 1))}
+                      disabled={safeAppointmentsPage >= appointmentsTotalPages}
+                      data-testid="button-appointments-next-page"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
