@@ -3348,6 +3348,7 @@ export default function EnhancedClientDetail() {
     status: "confirmed"
   });
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
+  const [onboardingStartDateOpen, setOnboardingStartDateOpen] = useState(false);
   const [clientTasks, setClientTasks] = useState<Task[]>([]);
   const [newTask, setNewTask] = useState<NewTask>({
     title: "",
@@ -6237,21 +6238,43 @@ export default function EnhancedClientDetail() {
                 <CardContent className="space-y-4">
                   <div>
                     <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Onboarding Start Date</Label>
-                    <Input
-                      type="date"
-                      value={client.onboardingStartDate ? new Date(client.onboardingStartDate).toISOString().split('T')[0] : ''}
-                      onChange={async (e) => {
-                        try {
-                          const value = e.target.value ? new Date(e.target.value + 'T00:00:00').toISOString() : null;
-                          await apiRequest('PUT', `/api/clients/${clientId}`, { onboardingStartDate: value });
-                          queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
-                          toast({ title: value ? "Onboarding start date set" : "Onboarding start date cleared", variant: "default" });
-                        } catch (error) {
-                          toast({ title: "Failed to update onboarding start date", variant: "destructive" });
-                        }
-                      }}
-                      className="h-9"
-                    />
+                    <Popover open={onboardingStartDateOpen} onOpenChange={setOnboardingStartDateOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !client.onboardingStartDate && "text-muted-foreground"
+                          )}
+                          data-testid="button-onboarding-start-date"
+                        >
+                          {client.onboardingStartDate ? (
+                            format(new Date(client.onboardingStartDate), "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <Calendar className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarUI
+                          mode="single"
+                          selected={client.onboardingStartDate ? new Date(client.onboardingStartDate) : undefined}
+                          onSelect={async (date) => {
+                            setOnboardingStartDateOpen(false);
+                            try {
+                              const value = date ? date.toISOString() : null;
+                              await apiRequest('PUT', `/api/clients/${clientId}`, { onboardingStartDate: value });
+                              queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
+                              toast({ title: value ? "Onboarding start date set" : "Onboarding start date cleared", variant: "default" });
+                            } catch (error) {
+                              toast({ title: "Failed to update onboarding start date", variant: "destructive" });
+                            }
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <p className="text-xs text-muted-foreground mt-1">When onboarding tasks begin for this client</p>
                   </div>
                   <div>
