@@ -16,13 +16,22 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
 
 // Helper function to get redirect URI
 function getRedirectUri(): string {
+  const path = '/api/google-calendar/oauth/callback';
+  if (process.env.GOOGLE_REDIRECT_URI) {
+    return process.env.GOOGLE_REDIRECT_URI;
+  }
   if (process.env.NODE_ENV === 'production') {
-    return process.env.GOOGLE_REDIRECT_URI || 'https://your-domain.com/api/google-calendar/oauth/callback';
+    if (process.env.BASE_URL) {
+      return `${process.env.BASE_URL.replace(/\/$/, '')}${path}`;
+    }
+    if (process.env.REPLIT_DOMAINS) {
+      return `https://${process.env.REPLIT_DOMAINS.split(',')[0]}${path}`;
+    }
   }
   if (process.env.REPLIT_DEV_DOMAIN) {
-    return `https://${process.env.REPLIT_DEV_DOMAIN}/api/google-calendar/oauth/callback`;
+    return `https://${process.env.REPLIT_DEV_DOMAIN}${path}`;
   }
-  return process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/google-calendar/oauth/callback';
+  return `http://localhost:5000${path}`;
 }
 
 // Create OAuth2 client

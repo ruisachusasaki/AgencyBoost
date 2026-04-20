@@ -5617,13 +5617,22 @@ import { OAuth2Client } from "google-auth-library";
 import { google } from "googleapis";
 import { eq as eq2, and } from "drizzle-orm";
 function getRedirectUri() {
+  const path3 = "/api/google-calendar/oauth/callback";
+  if (process.env.GOOGLE_REDIRECT_URI) {
+    return process.env.GOOGLE_REDIRECT_URI;
+  }
   if (process.env.NODE_ENV === "production") {
-    return process.env.GOOGLE_REDIRECT_URI || "https://your-domain.com/api/google-calendar/oauth/callback";
+    if (process.env.BASE_URL) {
+      return `${process.env.BASE_URL.replace(/\/$/, "")}${path3}`;
+    }
+    if (process.env.REPLIT_DOMAINS) {
+      return `https://${process.env.REPLIT_DOMAINS.split(",")[0]}${path3}`;
+    }
   }
   if (process.env.REPLIT_DEV_DOMAIN) {
-    return `https://${process.env.REPLIT_DEV_DOMAIN}/api/google-calendar/oauth/callback`;
+    return `https://${process.env.REPLIT_DEV_DOMAIN}${path3}`;
   }
-  return process.env.GOOGLE_REDIRECT_URI || "http://localhost:5000/api/google-calendar/oauth/callback";
+  return `http://localhost:5000${path3}`;
 }
 function createOAuth2Client() {
   return new OAuth2Client(
