@@ -1464,7 +1464,7 @@ export default function CalendarMain() {
                       })()}
 
                       {/* Week time grid with events - scrollable */}
-                      <div ref={weekScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ maxHeight: '560px' }}>
+                      <div ref={weekScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100vh - 280px)' }}>
                         <div className="flex relative">
                           {/* Time column */}
                           <div className="w-12 flex-shrink-0">
@@ -1663,7 +1663,7 @@ export default function CalendarMain() {
                       })()}
 
                       {/* Day time grid with events - scrollable */}
-                      <div ref={dayScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ maxHeight: '560px' }}>
+                      <div ref={dayScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100vh - 280px)' }}>
                         {(() => {
                           const PIXELS_PER_HOUR = 80;
                           const dayLayouts = computeEventLayouts(calendarViewFilteredAppointments, currentDate, PIXELS_PER_HOUR);
