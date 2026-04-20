@@ -241,6 +241,7 @@ __export(schema_exports, {
   insertStaffIncidentSchema: () => insertStaffIncidentSchema,
   insertStaffLinkedEmailSchema: () => insertStaffLinkedEmailSchema,
   insertStaffSchema: () => insertStaffSchema,
+  insertStickyNoteSchema: () => insertStickyNoteSchema,
   insertStripeIntegrationSchema: () => insertStripeIntegrationSchema,
   insertSurveyFieldSchema: () => insertSurveyFieldSchema,
   insertSurveyFolderSchema: () => insertSurveyFolderSchema,
@@ -271,6 +272,7 @@ __export(schema_exports, {
   insertTaskSettingsSchema: () => insertTaskSettingsSchema,
   insertTaskStatusSchema: () => insertTaskStatusSchema,
   insertTaskTemplateSchema: () => insertTaskTemplateSchema,
+  insertTaskTimeEntrySchema: () => insertTaskTimeEntrySchema,
   insertTeamPositionSchema: () => insertTeamPositionSchema,
   insertTeamWorkflowSchema: () => insertTeamWorkflowSchema,
   insertTeamWorkflowStatusSchema: () => insertTeamWorkflowStatusSchema,
@@ -396,6 +398,7 @@ __export(schema_exports, {
   staff: () => staff,
   staffIncidents: () => staffIncidents,
   staffLinkedEmails: () => staffLinkedEmails,
+  stickyNotes: () => stickyNotes,
   stripeIntegrations: () => stripeIntegrations,
   surveyFields: () => surveyFields,
   surveyFolders: () => surveyFolders,
@@ -424,6 +427,7 @@ __export(schema_exports, {
   taskSettings: () => taskSettings,
   taskStatuses: () => taskStatuses,
   taskTemplates: () => taskTemplates,
+  taskTimeEntries: () => taskTimeEntries,
   tasks: () => tasks,
   teamPositions: () => teamPositions,
   teamWorkflowStatuses: () => teamWorkflowStatuses,
@@ -472,7 +476,7 @@ import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb, uuid, date, serial, unique, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-var sessions, uuidDefault, users, businessProfile, customFieldFolders, customFields, clientNotes, clientTasks, clientAppointments, clientDocuments, clientContacts, clientTransactions, tags, clientGroups, productCategories, products, productBundles, bundleProducts, productPackages, packageItems, clientProducts, clientBundles, clientPackages, quotes, quoteItems, salesSettings, salesTargets, capacitySettings, notes, appointments, documents, activities, clients, clientRoadmapEntries, insertClientRoadmapEntrySchema, clientRoadmapComments, insertClientRoadmapCommentSchema, clientPortalUsers, clientHealthScores, clientBriefSections, clientBriefValues, projects, campaigns, templateFolders, emailTemplates, smsTemplates, scheduledEmails, scheduledHiredEmails, leadPipelineStages, leadSources, leadNoteTemplates, leads, leadStageTransitions, salesActivities, deals, smartLists, tasks, taskDependencies, taskComments, taskCommentReactions, commentFiles, imageAnnotations, timeOffPolicies, timeOffTypes, timeOffRequests, timeOffRequestDays, jobApplications, applicationStageHistory, jobApplicationComments, jobApplicationWatchers, timeOffBalances, taskActivities, invoices, socialMediaAccounts, socialMediaPosts, socialMediaTemplates, socialMediaAnalytics, insertUserSchema, insertCustomFieldFolderSchema, insertCustomFieldSchema, insertClientGroupSchema, insertClientProductSchema, insertClientBundleSchema, insertClientAppointmentSchema, insertNoteSchema, insertDocumentSchema, insertActivitySchema, insertClientSchema, inputClientHealthScoreSchema, insertClientHealthScoreSchema, insertClientBriefSectionSchema, insertClientBriefValueSchema, insertCampaignSchema, insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema, insertScheduledEmailSchema, insertSmartListSchema, insertLeadPipelineStagSchema, insertLeadSourceSchema, insertLeadNoteTemplateSchema, insertLeadSchema, insertLeadStageTransitionSchema, insertSalesActivitySchema, insertDealSchema, insertTaskSchema, insertTaskSchemaValidated, insertTaskActivitySchema, insertInvoiceSchema, insertSocialMediaAccountSchema, insertSocialMediaPostSchema, insertSocialMediaTemplateSchema, insertSocialMediaAnalyticsSchema, insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema, insertImageAnnotationSchema, insertTimeOffRequestSchema, insertJobApplicationSchema, insertApplicationStageHistorySchema, insertJobApplicationWatcherSchema, insertTimeOffBalanceSchema, insertTimeOffRequestDaySchema, workflows, workflowExecutions, workflowActionAnalytics, workflowTemplates, taskCategories, taskTemplates, enhancedTasks, taskHistory, automationTriggers, automationActions, notifications, roles, permissions, userRoles, granularPermissions, permissionAuditLogs, permissionChangeHistory, insertWorkflowSchema, insertWorkflowExecutionSchema, insertWorkflowActionAnalyticsSchema, insertWorkflowTemplateSchema, insertTaskCategorySchema, insertTaskTemplateSchema, insertEnhancedTaskSchema, insertTaskHistorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema, insertNotificationSchema, insertClientNoteSchema, insertClientTaskSchema, insertClientDocumentSchema, insertClientContactSchema, insertClientTransactionSchema, healthScoreFilterSchema, departments, positions, positionKpis2, insertPositionKpiSchema, staff, salaryHistory, insertStaffSchema, authUsers, insertAuthUserSchema, staffLinkedEmails, insertStaffLinkedEmailSchema, jobOpenings, insertJobOpeningSchema, insertDepartmentSchema, insertPositionSchema, insertTagSchema, insertProductCategorySchema, insertProductSchema, insertProductBundleSchema, insertBundleProductSchema, insertProductPackageSchema, insertPackageItemSchema, insertClientPackageSchema, auditLogs, insertAuditLogSchema, insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertGranularPermissionSchema, insertPermissionAuditLogSchema, insertPermissionChangeHistorySchema, notificationSettings, insertNotificationSettingsSchema, calendars, calendarStaff, calendarAvailability, calendarDateOverrides, calendarIntegrations, smsIntegrations, emailIntegrations, aiIntegrations, insertAiIntegrationSchema, stripeIntegrations, insertStripeIntegrationSchema, aiAssistantSettings, insertAiAssistantSettingsSchema, goHighLevelIntegration, insertGoHighLevelIntegrationSchema, slackWorkspaces, insertSlackWorkspaceSchema, leadNotes, leadAppointments, insertLeadNoteSchema, insertLeadAppointmentSchema, calendarAppointments, appointmentReminders, roundRobinTracking, insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema, insertCalendarDateOverrideSchema, insertCalendarIntegrationSchema, insertSmsIntegrationSchema, insertEmailIntegrationSchema, insertCalendarAppointmentSchema, insertAppointmentReminderSchema, insertRoundRobinTrackingSchema, customFieldFileUploads, insertCustomFieldFileUploadSchema, taskAttachments, insertTaskAttachmentSchema, taskStatuses, teamWorkflows, teamWorkflowStatuses, taskPriorities, taskSettings, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema, insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema, formFolders, forms, formFields, formSubmissions, insertFormSchema, jobApplicationFormConfig, insertJobApplicationFormConfigSchema, newHireOnboardingFormConfig, insertNewHireOnboardingFormConfigSchema, clientOnboardingFormConfig, insertClientOnboardingFormConfigSchema, newHireOnboardingSubmissions, insertNewHireOnboardingSubmissionSchema, expenseReportFormConfig, insertExpenseReportFormConfigSchema, expenseReportSubmissions, insertExpenseReportSubmissionSchema, offboardingFormConfig, insertOffboardingFormConfigSchema, offboardingSubmissions, insertOffboardingSubmissionSchema, insertFormFieldSchema, insertFormSubmissionSchema, insertFormFolderSchema, insertTaskDependencySchema, teamPositions, clientTeamAssignments, positionDescriptionVersions, insertTeamPositionSchema, reorderTeamPositionsSchema, insertClientTeamAssignmentSchema, knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBasePermissions, knowledgeBaseBookmarks, knowledgeBaseLikes, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseSettings, knowledgeBaseArticleVersions, insertKnowledgeBaseCategorySchema, insertKnowledgeBaseArticleSchema, insertKnowledgeBasePermissionSchema, insertKnowledgeBaseBookmarkSchema, insertKnowledgeBaseLikeSchema, insertKnowledgeBaseCommentSchema, insertKnowledgeBaseViewSchema, insertKnowledgeBaseSettingSchema, insertKnowledgeBaseArticleVersionSchema, trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress, trainingCoursePermissions, trainingQuizzes, trainingQuizQuestions, trainingLessonResources, trainingQuizAttempts, trainingAssignments, trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, userViewPreferences, dashboards, dashboardWidgets, userDashboardWidgets, insertTrainingCategorySchema, insertTrainingCourseSchema, insertTrainingModuleSchema, insertTrainingLessonSchema, insertTrainingEnrollmentSchema, insertTrainingProgressSchema, insertTrainingCoursePermissionSchema, insertTrainingQuizSchema, insertTrainingQuizQuestionSchema, insertTrainingQuizAttemptSchema, insertTrainingAssignmentSchema, insertTrainingAssignmentSubmissionSchema, insertTrainingDiscussionSchema, insertTrainingDiscussionLikeSchema, insertTrainingLessonResourceSchema, insertUserViewPreferenceSchema, insertDashboardSchema, insertDashboardWidgetSchema, insertUserDashboardWidgetSchema, insertQuoteSchema, insertQuoteItemSchema, insertSalesSettingsSchema, updateSalesSettingsSchema, insertSalesTargetSchema, updateSalesTargetSchema, insertCapacitySettingsSchema, updateCapacitySettingsSchema, timeTrackingReportFiltersSchema, oneOnOneMeetings, insertOneOnOneMeetingSchema, oneOnOneTalkingPoints, insertOneOnOneTalkingPointSchema, oneOnOneWins, insertOneOnOneWinSchema, oneOnOneObjectives, insertOneOnOneObjectiveSchema, oneOnOneActionItems, insertOneOnOneActionItemSchema, oneOnOneGoals, insertOneOnOneGoalSchema, oneOnOneMeetingKpiStatuses, insertOneOnOneMeetingKpiStatusSchema, oneOnOneComments, insertOneOnOneCommentSchema, oneOnOneProgressionStatuses, insertOneOnOneProgressionStatusSchema, orgChartStructures, insertOrgChartStructureSchema, orgChartNodes, insertOrgChartNodeSchema, orgChartNodeAssignments, insertOrgChartNodeAssignmentSchema, insertTimeOffTypeSchema, calendarConnections, calendarSyncState, calendarEvents, calendarEventCache, insertCalendarConnectionSchema, insertCalendarSyncStateSchema, insertCalendarEventSchema, eventTimeEntries, insertEventTimeEntrySchema, surveyFolders, surveys, surveySlides, surveyFields, surveyLogicRules, surveySubmissions, surveySubmissionAnswers, insertSurveyFolderSchema, PX_MEETING_SEGMENTS, pxMeetings, pxMeetingAttendees, insertPxMeetingSchema, insertPxMeetingAttendeeSchema, staffIncidents, insertStaffIncidentSchema, insertSurveySchema, insertSurveySlideSchema, insertSurveyFieldSchema, insertSurveyLogicRuleSchema, insertSurveySubmissionSchema, insertSurveySubmissionAnswerSchema, taskIntakeForms, taskIntakeSections, taskIntakeQuestions, taskIntakeOptions, taskIntakeLogicRules, taskIntakeAssignmentRules, insertTaskIntakeFormSchema, insertTaskIntakeSectionSchema, insertTaskIntakeQuestionSchema, insertTaskIntakeOptionSchema, insertTaskIntakeLogicRuleSchema, insertTaskIntakeAssignmentRuleSchema, taskIntakeSubmissions, taskIntakeAnswers, insertTaskIntakeSubmissionSchema, insertTaskIntakeAnswerSchema, toolDirectoryCategories, toolDirectoryTools, insertToolDirectoryCategorySchema, insertToolDirectoryToolSchema, tickets, ticketRoutingRules, ticketComments, ticketAttachments, insertTicketSchema, insertTicketCommentSchema, insertTicketAttachmentSchema, insertTicketRoutingRuleSchema, callCenterTimeEntries, insertCallCenterTimeEntrySchema, productTaskTemplates, insertProductTaskTemplateSchema, clientTaskGenerations, insertClientTaskGenerationSchema, clientRecurringConfig, insertClientRecurringConfigSchema, proposals, insertProposalSchema, proposalTerms, insertProposalTermsSchema, customForms, customFormFields, customFormSubmissions, insertCustomFormSchema, insertCustomFormFieldSchema, insertCustomFormSubmissionSchema, onboardingTemplates, onboardingTemplateItems, onboardingInstances, onboardingInstanceItems, insertOnboardingTemplateSchema, insertOnboardingTemplateItemSchema, insertOnboardingInstanceSchema, insertOnboardingInstanceItemSchema, icAgreementTemplates, jobOffers, offerSignatures, offerStatusLog, insertIcAgreementTemplateSchema, insertJobOfferSchema, insertOfferSignatureSchema, insertOfferStatusLogSchema;
+var sessions, uuidDefault, users, businessProfile, customFieldFolders, customFields, clientNotes, clientTasks, clientAppointments, clientDocuments, clientContacts, clientTransactions, tags, clientGroups, productCategories, products, productBundles, bundleProducts, productPackages, packageItems, clientProducts, clientBundles, clientPackages, quotes, quoteItems, salesSettings, salesTargets, capacitySettings, notes, appointments, documents, activities, clients, clientRoadmapEntries, insertClientRoadmapEntrySchema, clientRoadmapComments, insertClientRoadmapCommentSchema, clientPortalUsers, clientHealthScores, clientBriefSections, clientBriefValues, projects, campaigns, templateFolders, emailTemplates, smsTemplates, scheduledEmails, scheduledHiredEmails, leadPipelineStages, leadSources, leadNoteTemplates, leads, leadStageTransitions, salesActivities, deals, smartLists, tasks, taskTimeEntries, insertTaskTimeEntrySchema, taskDependencies, taskComments, taskCommentReactions, commentFiles, imageAnnotations, timeOffPolicies, timeOffTypes, timeOffRequests, timeOffRequestDays, jobApplications, applicationStageHistory, jobApplicationComments, jobApplicationWatchers, timeOffBalances, taskActivities, invoices, socialMediaAccounts, socialMediaPosts, socialMediaTemplates, socialMediaAnalytics, insertUserSchema, insertCustomFieldFolderSchema, insertCustomFieldSchema, insertClientGroupSchema, insertClientProductSchema, insertClientBundleSchema, insertClientAppointmentSchema, insertNoteSchema, insertDocumentSchema, insertActivitySchema, insertClientSchema, inputClientHealthScoreSchema, insertClientHealthScoreSchema, insertClientBriefSectionSchema, insertClientBriefValueSchema, insertCampaignSchema, insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema, insertScheduledEmailSchema, insertSmartListSchema, insertLeadPipelineStagSchema, insertLeadSourceSchema, insertLeadNoteTemplateSchema, insertLeadSchema, insertLeadStageTransitionSchema, insertSalesActivitySchema, insertDealSchema, insertTaskSchema, insertTaskSchemaValidated, insertTaskActivitySchema, insertInvoiceSchema, insertSocialMediaAccountSchema, insertSocialMediaPostSchema, insertSocialMediaTemplateSchema, insertSocialMediaAnalyticsSchema, insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema, insertImageAnnotationSchema, insertTimeOffRequestSchema, insertJobApplicationSchema, insertApplicationStageHistorySchema, insertJobApplicationWatcherSchema, insertTimeOffBalanceSchema, insertTimeOffRequestDaySchema, workflows, workflowExecutions, workflowActionAnalytics, workflowTemplates, taskCategories, taskTemplates, enhancedTasks, taskHistory, automationTriggers, automationActions, notifications, roles, permissions, userRoles, granularPermissions, permissionAuditLogs, permissionChangeHistory, insertWorkflowSchema, insertWorkflowExecutionSchema, insertWorkflowActionAnalyticsSchema, insertWorkflowTemplateSchema, insertTaskCategorySchema, insertTaskTemplateSchema, insertEnhancedTaskSchema, insertTaskHistorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema, insertNotificationSchema, insertClientNoteSchema, insertClientTaskSchema, insertClientDocumentSchema, insertClientContactSchema, insertClientTransactionSchema, healthScoreFilterSchema, departments, positions, positionKpis2, insertPositionKpiSchema, staff, salaryHistory, insertStaffSchema, authUsers, insertAuthUserSchema, staffLinkedEmails, insertStaffLinkedEmailSchema, jobOpenings, insertJobOpeningSchema, insertDepartmentSchema, insertPositionSchema, insertTagSchema, insertProductCategorySchema, insertProductSchema, insertProductBundleSchema, insertBundleProductSchema, insertProductPackageSchema, insertPackageItemSchema, insertClientPackageSchema, auditLogs, insertAuditLogSchema, insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertGranularPermissionSchema, insertPermissionAuditLogSchema, insertPermissionChangeHistorySchema, notificationSettings, insertNotificationSettingsSchema, calendars, calendarStaff, calendarAvailability, calendarDateOverrides, calendarIntegrations, smsIntegrations, emailIntegrations, aiIntegrations, insertAiIntegrationSchema, stripeIntegrations, insertStripeIntegrationSchema, aiAssistantSettings, insertAiAssistantSettingsSchema, goHighLevelIntegration, insertGoHighLevelIntegrationSchema, slackWorkspaces, insertSlackWorkspaceSchema, leadNotes, leadAppointments, insertLeadNoteSchema, insertLeadAppointmentSchema, calendarAppointments, appointmentReminders, roundRobinTracking, insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema, insertCalendarDateOverrideSchema, insertCalendarIntegrationSchema, insertSmsIntegrationSchema, insertEmailIntegrationSchema, insertCalendarAppointmentSchema, insertAppointmentReminderSchema, insertRoundRobinTrackingSchema, customFieldFileUploads, insertCustomFieldFileUploadSchema, taskAttachments, insertTaskAttachmentSchema, taskStatuses, teamWorkflows, teamWorkflowStatuses, taskPriorities, taskSettings, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema, insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema, formFolders, forms, formFields, formSubmissions, insertFormSchema, jobApplicationFormConfig, insertJobApplicationFormConfigSchema, newHireOnboardingFormConfig, insertNewHireOnboardingFormConfigSchema, clientOnboardingFormConfig, insertClientOnboardingFormConfigSchema, newHireOnboardingSubmissions, insertNewHireOnboardingSubmissionSchema, expenseReportFormConfig, insertExpenseReportFormConfigSchema, expenseReportSubmissions, insertExpenseReportSubmissionSchema, offboardingFormConfig, insertOffboardingFormConfigSchema, offboardingSubmissions, insertOffboardingSubmissionSchema, insertFormFieldSchema, insertFormSubmissionSchema, insertFormFolderSchema, insertTaskDependencySchema, teamPositions, clientTeamAssignments, positionDescriptionVersions, insertTeamPositionSchema, reorderTeamPositionsSchema, insertClientTeamAssignmentSchema, knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBasePermissions, knowledgeBaseBookmarks, knowledgeBaseLikes, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseSettings, knowledgeBaseArticleVersions, insertKnowledgeBaseCategorySchema, insertKnowledgeBaseArticleSchema, insertKnowledgeBasePermissionSchema, insertKnowledgeBaseBookmarkSchema, insertKnowledgeBaseLikeSchema, insertKnowledgeBaseCommentSchema, insertKnowledgeBaseViewSchema, insertKnowledgeBaseSettingSchema, insertKnowledgeBaseArticleVersionSchema, trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress, trainingCoursePermissions, trainingQuizzes, trainingQuizQuestions, trainingLessonResources, trainingQuizAttempts, trainingAssignments, trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, userViewPreferences, dashboards, dashboardWidgets, userDashboardWidgets, insertTrainingCategorySchema, insertTrainingCourseSchema, insertTrainingModuleSchema, insertTrainingLessonSchema, insertTrainingEnrollmentSchema, insertTrainingProgressSchema, insertTrainingCoursePermissionSchema, insertTrainingQuizSchema, insertTrainingQuizQuestionSchema, insertTrainingQuizAttemptSchema, insertTrainingAssignmentSchema, insertTrainingAssignmentSubmissionSchema, insertTrainingDiscussionSchema, insertTrainingDiscussionLikeSchema, insertTrainingLessonResourceSchema, insertUserViewPreferenceSchema, insertDashboardSchema, insertDashboardWidgetSchema, insertUserDashboardWidgetSchema, insertQuoteSchema, insertQuoteItemSchema, insertSalesSettingsSchema, updateSalesSettingsSchema, insertSalesTargetSchema, updateSalesTargetSchema, insertCapacitySettingsSchema, updateCapacitySettingsSchema, timeTrackingReportFiltersSchema, oneOnOneMeetings, insertOneOnOneMeetingSchema, oneOnOneTalkingPoints, insertOneOnOneTalkingPointSchema, oneOnOneWins, insertOneOnOneWinSchema, oneOnOneObjectives, insertOneOnOneObjectiveSchema, oneOnOneActionItems, insertOneOnOneActionItemSchema, oneOnOneGoals, insertOneOnOneGoalSchema, oneOnOneMeetingKpiStatuses, insertOneOnOneMeetingKpiStatusSchema, oneOnOneComments, insertOneOnOneCommentSchema, oneOnOneProgressionStatuses, insertOneOnOneProgressionStatusSchema, orgChartStructures, insertOrgChartStructureSchema, orgChartNodes, insertOrgChartNodeSchema, orgChartNodeAssignments, insertOrgChartNodeAssignmentSchema, insertTimeOffTypeSchema, calendarConnections, calendarSyncState, calendarEvents, calendarEventCache, insertCalendarConnectionSchema, insertCalendarSyncStateSchema, insertCalendarEventSchema, eventTimeEntries, insertEventTimeEntrySchema, surveyFolders, surveys, surveySlides, surveyFields, surveyLogicRules, surveySubmissions, surveySubmissionAnswers, insertSurveyFolderSchema, PX_MEETING_SEGMENTS, pxMeetings, pxMeetingAttendees, insertPxMeetingSchema, insertPxMeetingAttendeeSchema, staffIncidents, insertStaffIncidentSchema, insertSurveySchema, insertSurveySlideSchema, insertSurveyFieldSchema, insertSurveyLogicRuleSchema, insertSurveySubmissionSchema, insertSurveySubmissionAnswerSchema, taskIntakeForms, taskIntakeSections, taskIntakeQuestions, taskIntakeOptions, taskIntakeLogicRules, taskIntakeAssignmentRules, insertTaskIntakeFormSchema, insertTaskIntakeSectionSchema, insertTaskIntakeQuestionSchema, insertTaskIntakeOptionSchema, insertTaskIntakeLogicRuleSchema, insertTaskIntakeAssignmentRuleSchema, taskIntakeSubmissions, taskIntakeAnswers, insertTaskIntakeSubmissionSchema, insertTaskIntakeAnswerSchema, toolDirectoryCategories, toolDirectoryTools, insertToolDirectoryCategorySchema, insertToolDirectoryToolSchema, tickets, ticketRoutingRules, ticketComments, ticketAttachments, insertTicketSchema, insertTicketCommentSchema, insertTicketAttachmentSchema, insertTicketRoutingRuleSchema, callCenterTimeEntries, insertCallCenterTimeEntrySchema, productTaskTemplates, insertProductTaskTemplateSchema, clientTaskGenerations, insertClientTaskGenerationSchema, clientRecurringConfig, insertClientRecurringConfigSchema, proposals, insertProposalSchema, proposalTerms, insertProposalTermsSchema, customForms, customFormFields, customFormSubmissions, insertCustomFormSchema, insertCustomFormFieldSchema, insertCustomFormSubmissionSchema, onboardingTemplates, onboardingTemplateItems, onboardingInstances, onboardingInstanceItems, insertOnboardingTemplateSchema, insertOnboardingTemplateItemSchema, insertOnboardingInstanceSchema, insertOnboardingInstanceItemSchema, icAgreementTemplates, jobOffers, offerSignatures, offerStatusLog, insertIcAgreementTemplateSchema, insertJobOfferSchema, insertOfferSignatureSchema, insertOfferStatusLogSchema, stickyNotes, insertStickyNoteSchema;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -1066,6 +1070,7 @@ var init_schema = __esm({
       // 'core' (existing 8 sections) or 'custom' (user-created)
       type: text("type").notNull().default("text"),
       // 'text' or 'rich_text'
+      defaultTemplate: text("default_template"),
       createdAt: timestamp("created_at").defaultNow(),
       updatedAt: timestamp("updated_at").defaultNow()
     });
@@ -1409,6 +1414,32 @@ var init_schema = __esm({
       onboardingWeek: integer("onboarding_week"),
       sourceTemplateId: varchar("source_template_id"),
       generationId: varchar("generation_id")
+    });
+    taskTimeEntries = pgTable("task_time_entries", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+      userId: varchar("user_id").notNull(),
+      taskTitle: text("task_title"),
+      userName: text("user_name"),
+      startTime: timestamp("start_time").notNull(),
+      endTime: timestamp("end_time"),
+      duration: integer("duration"),
+      // minutes
+      isRunning: boolean("is_running").default(false).notNull(),
+      source: text("source").default("timer").notNull(),
+      // 'timer' | 'manual' | 'auto' | 'legacy'
+      notes: text("notes"),
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
+    }, (table) => [
+      index("idx_task_time_entries_task").on(table.taskId),
+      index("idx_task_time_entries_user").on(table.userId),
+      index("idx_task_time_entries_start").on(table.startTime),
+      index("idx_task_time_entries_user_running").on(table.userId, table.isRunning)
+    ]);
+    insertTaskTimeEntrySchema = createInsertSchema(taskTimeEntries).omit({
+      createdAt: true,
+      updatedAt: true
     });
     taskDependencies = pgTable("task_dependencies", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -5183,6 +5214,7 @@ var init_schema = __esm({
       sortOrder: integer("sort_order").notNull().default(0),
       dependsOnTemplateId: varchar("depends_on_template_id"),
       onboardingWeek: integer("onboarding_week"),
+      visibleToClient: boolean("visible_to_client").default(false),
       status: varchar("status").notNull().default("active"),
       // 'active' | 'inactive'
       createdAt: timestamp("created_at").defaultNow(),
@@ -5459,6 +5491,21 @@ var init_schema = __esm({
     insertJobOfferSchema = createInsertSchema(jobOffers).omit({ id: true, createdAt: true, sentAt: true });
     insertOfferSignatureSchema = createInsertSchema(offerSignatures).omit({ id: true, signedAt: true });
     insertOfferStatusLogSchema = createInsertSchema(offerStatusLog).omit({ id: true, createdAt: true });
+    stickyNotes = pgTable("sticky_notes", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      userId: varchar("user_id").notNull(),
+      title: varchar("title", { length: 255 }).notNull().default(""),
+      content: text("content").notNull().default(""),
+      color: varchar("color", { length: 32 }).notNull().default("yellow"),
+      position: integer("position").notNull().default(0),
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
+    });
+    insertStickyNoteSchema = createInsertSchema(stickyNotes).omit({
+      id: true,
+      createdAt: true,
+      updatedAt: true
+    });
   }
 });
 
@@ -5482,9 +5529,9 @@ var init_db = __esm({
     }
     pool = new pg.Pool({
       connectionString: process.env.DATABASE_URL,
-      max: 5,
-      idleTimeoutMillis: 1e4,
-      connectionTimeoutMillis: 5e3
+      max: 25,
+      idleTimeoutMillis: 3e4,
+      connectionTimeoutMillis: 1e4
     });
     db = drizzle({ client: pool, schema: schema_exports });
   }
@@ -5632,626 +5679,62 @@ var init_googleCalendarUtils = __esm({
   }
 });
 
-// server/taskGenerationEngine.ts
-import { eq as eq5, and as and4, asc, inArray as inArray3 } from "drizzle-orm";
-import { format } from "date-fns";
-async function generateTasksFromTemplates(params) {
-  const {
-    clientId,
-    items,
-    generationType,
-    cycleNumber,
-    cycleStartDate = /* @__PURE__ */ new Date(),
-    targetWeek
-  } = params;
-  const summary = {
-    totalTasksCreated: 0,
-    onboardingTasks: 0,
-    recurringTasks: 0,
-    errors: [],
-    generationIds: []
-  };
-  const [clientRow] = await db.select({ name: clients.name, company: clients.company, website: clients.website, email: clients.email, customFieldValues: clients.customFieldValues }).from(clients).where(eq5(clients.id, clientId));
-  if (!clientRow) {
-    summary.errors.push(`Client ${clientId} not found`);
-    return summary;
-  }
-  const allCustomFields = await db.select({ id: customFields.id, name: customFields.name }).from(customFields);
-  const customFieldMap = {};
-  if (clientRow.customFieldValues && typeof clientRow.customFieldValues === "object") {
-    const cfValues = clientRow.customFieldValues;
-    for (const field of allCustomFields) {
-      const key = `custom.${field.name.replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_|_$/g, "").toLowerCase()}`;
-      const value = cfValues[field.id];
-      if (value !== void 0 && value !== null) {
-        customFieldMap[key] = Array.isArray(value) ? value.join(", ") : String(value);
-      }
-    }
-  }
-  const validStaffIds = /* @__PURE__ */ new Set();
-  const activeStaff = await db.select({ id: staff.id }).from(staff).where(eq5(staff.isActive, true));
-  activeStaff.forEach((s) => validStaffIds.add(s.id));
-  const productNameCache = {};
-  const lookupProductName = async (productId) => {
-    if (productNameCache[productId]) return productNameCache[productId];
-    const [row] = await db.select({ name: products.name }).from(products).where(eq5(products.id, productId));
-    const name = row?.name || "Unknown Product";
-    productNameCache[productId] = name;
-    return name;
-  };
-  const bundleNameCache = {};
-  const lookupBundleName = async (bundleId) => {
-    if (bundleNameCache[bundleId]) return bundleNameCache[bundleId];
-    const [row] = await db.select({ name: productBundles.name }).from(productBundles).where(eq5(productBundles.id, bundleId));
-    const name = row?.name || "Unknown Bundle";
-    bundleNameCache[bundleId] = name;
-    return name;
-  };
-  const packageNameCache = {};
-  const lookupPackageName = async (packageId) => {
-    if (packageNameCache[packageId]) return packageNameCache[packageId];
-    const [row] = await db.select({ name: productPackages.name }).from(productPackages).where(eq5(productPackages.id, packageId));
-    const name = row?.name || "Unknown Package";
-    packageNameCache[packageId] = name;
-    return name;
-  };
-  const resolveVariables = (text2, vars) => {
-    if (!text2) return "";
-    return text2.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (match, key) => {
-      return vars[key] !== void 0 ? vars[key] : match;
-    });
-  };
-  const expandedItems = [];
-  for (const item of items) {
-    expandedItems.push(item);
-    if (item.bundleId) {
-      const bps = await db.select({ productId: bundleProducts.productId, quantity: bundleProducts.quantity }).from(bundleProducts).where(eq5(bundleProducts.bundleId, item.bundleId));
-      for (const bp of bps) {
-        expandedItems.push({ productId: bp.productId, quantity: bp.quantity || 1 });
-      }
-    }
-    if (item.packageId) {
-      const pkgItems = await db.select().from(packageItems).where(eq5(packageItems.packageId, item.packageId));
-      for (const pi of pkgItems) {
-        if (pi.itemType === "product" && pi.productId) {
-          expandedItems.push({ productId: pi.productId, quantity: pi.quantity || 1 });
-        } else if (pi.itemType === "bundle" && pi.bundleId) {
-          expandedItems.push({ bundleId: pi.bundleId, quantity: pi.quantity || 1 });
-          const bps = await db.select({ productId: bundleProducts.productId, quantity: bundleProducts.quantity }).from(bundleProducts).where(eq5(bundleProducts.bundleId, pi.bundleId));
-          for (const bp of bps) {
-            expandedItems.push({ productId: bp.productId, quantity: bp.quantity || 1 });
-          }
-        }
-      }
-    }
-  }
-  const processedKeys = /* @__PURE__ */ new Set();
-  for (const item of expandedItems) {
-    const dedupeKey = `${item.productId || ""}_${item.bundleId || ""}_${item.packageId || ""}`;
-    if (processedKeys.has(dedupeKey)) continue;
-    processedKeys.add(dedupeKey);
-    try {
-      const conditions = [
-        eq5(productTaskTemplates.taskType, generationType),
-        eq5(productTaskTemplates.status, "active")
-      ];
-      if (item.productId) {
-        conditions.push(eq5(productTaskTemplates.productId, item.productId));
-      } else if (item.bundleId) {
-        conditions.push(eq5(productTaskTemplates.bundleId, item.bundleId));
-      } else if (item.packageId) {
-        conditions.push(eq5(productTaskTemplates.packageId, item.packageId));
-      } else {
-        continue;
-      }
-      const itemIdConditions = [
-        eq5(clientTaskGenerations.clientId, clientId),
-        eq5(clientTaskGenerations.generationType, generationType)
-      ];
-      if (item.productId) itemIdConditions.push(eq5(clientTaskGenerations.productId, item.productId));
-      else if (item.bundleId) itemIdConditions.push(eq5(clientTaskGenerations.bundleId, item.bundleId));
-      else if (item.packageId) itemIdConditions.push(eq5(clientTaskGenerations.packageId, item.packageId));
-      if (cycleNumber !== void 0) {
-        itemIdConditions.push(eq5(clientTaskGenerations.cycleNumber, cycleNumber));
-      }
-      const existingGeneration = await db.select({ id: clientTaskGenerations.id }).from(clientTaskGenerations).where(and4(...itemIdConditions)).limit(1);
-      if (existingGeneration.length > 0) {
-        const itemDesc = item.productId || item.bundleId || item.packageId || "unknown";
-        console.log(`[TaskGen] Skipping item ${itemDesc} \u2014 already generated for this ${generationType}${cycleNumber ? ` cycle ${cycleNumber}` : ""}`);
-        continue;
-      }
-      let templates = await db.select().from(productTaskTemplates).where(and4(...conditions)).orderBy(asc(productTaskTemplates.sortOrder));
-      if (generationType === "onboarding" && targetWeek !== void 0 && targetWeek !== null) {
-        templates = templates.filter((t) => {
-          const tw = t.onboardingWeek;
-          return tw === null || tw === void 0 || tw === targetWeek;
-        });
-      }
-      if (templates.length === 0) continue;
-      let itemName = "Unknown";
-      if (item.productId) itemName = await lookupProductName(item.productId);
-      else if (item.bundleId) itemName = await lookupBundleName(item.bundleId);
-      else if (item.packageId) itemName = await lookupPackageName(item.packageId);
-      const templateToTaskIds = {};
-      const templateToFirstTaskId = {};
-      for (const template of templates) {
-        try {
-          const taskCount = template.quantityMode === "once" ? 1 : Math.max(1, item.quantity || 1);
-          const createdTaskIds = [];
-          for (let unitNum = 1; unitNum <= taskCount; unitNum++) {
-            const dueDate = /* @__PURE__ */ new Date();
-            dueDate.setHours(0, 0, 0, 0);
-            dueDate.setDate(dueDate.getDate() + (template.dueDateOffset ?? 7));
-            let taskTitle = template.name;
-            if (template.quantityMode === "per_unit_named") {
-              taskTitle = `${template.name} ${unitNum} of ${item.quantity}`;
-            }
-            const vars = {
-              "client.name": clientRow.company || clientRow.name,
-              "client.email": clientRow.email || "",
-              "client.domain": clientRow.website || "",
-              "product.name": itemName,
-              quantity: String(item.quantity),
-              "cycle.number": String(cycleNumber || 1),
-              "cycle.startDate": format(cycleStartDate, "yyyy-MM-dd"),
-              "unit.number": String(unitNum),
-              "unit.total": String(item.quantity),
-              ...customFieldMap
-            };
-            const resolvedTitle = resolveVariables(taskTitle, vars);
-            const resolvedDescription = resolveVariables(
-              template.description,
-              vars
-            );
-            let assignedTo = template.assignedStaffId || null;
-            if (assignedTo && !validStaffIds.has(assignedTo)) {
-              console.warn(
-                `[TaskGen] Template ${template.id} references inactive/deleted staff ${assignedTo}, creating unassigned`
-              );
-              summary.errors.push(`Template "${template.name}" references inactive staff \u2014 task created unassigned`);
-              assignedTo = null;
-            }
-            const priorityMap = {
-              low: "low",
-              medium: "normal",
-              high: "high",
-              urgent: "urgent"
-            };
-            const templateOnboardingWeek = template.onboardingWeek ?? null;
-            const [newTask] = await db.insert(tasks).values({
-              title: resolvedTitle,
-              description: resolvedDescription || void 0,
-              status: "todo",
-              priority: priorityMap[template.priority || "medium"] || "normal",
-              assignedTo,
-              clientId,
-              categoryId: template.categoryId || template.departmentId || void 0,
-              workflowId: template.workflowId || void 0,
-              dueDate,
-              timeEstimate: template.estimatedHours ? Math.round(parseFloat(template.estimatedHours) * 60) : void 0,
-              sourceTemplateId: template.id,
-              onboardingWeek: generationType === "onboarding" ? templateOnboardingWeek : void 0
-            }).returning({ id: tasks.id });
-            createdTaskIds.push(newTask.id);
-            summary.totalTasksCreated++;
-            if (generationType === "onboarding") {
-              summary.onboardingTasks++;
-            } else {
-              summary.recurringTasks++;
-            }
-          }
-          templateToTaskIds[template.id] = createdTaskIds;
-          if (createdTaskIds.length > 0) {
-            templateToFirstTaskId[template.id] = createdTaskIds[0];
-          }
-        } catch (taskError) {
-          summary.errors.push(
-            `Failed to create tasks for template "${template.name}": ${taskError.message}`
-          );
-        }
-      }
-      for (const template of templates) {
-        if (template.dependsOnTemplateId && templateToFirstTaskId[template.dependsOnTemplateId]) {
-          const dependsOnTaskId = templateToFirstTaskId[template.dependsOnTemplateId];
-          const tasksForThisTemplate = templateToTaskIds[template.id] || [];
-          for (const taskId of tasksForThisTemplate) {
-            try {
-              await db.insert(taskDependencies).values({
-                taskId,
-                dependsOnTaskId,
-                dependencyType: "finish_to_start"
-              });
-            } catch (depError) {
-              summary.errors.push(
-                `Failed to set dependency for template "${template.name}": ${depError.message}`
-              );
-            }
-          }
-        }
-      }
-      for (const template of templates) {
-        const taskIds = templateToTaskIds[template.id];
-        if (!taskIds || taskIds.length === 0) continue;
-        try {
-          const [genRecord] = await db.insert(clientTaskGenerations).values({
-            clientId,
-            productId: item.productId || null,
-            bundleId: item.bundleId || null,
-            packageId: item.packageId || null,
-            templateId: template.id,
-            generationType,
-            cycleNumber: cycleNumber || null,
-            cycleStartDate,
-            taskIds
-          }).returning({ id: clientTaskGenerations.id });
-          summary.generationIds.push(genRecord.id);
-          await db.update(tasks).set({ generationId: genRecord.id }).where(inArray3(tasks.id, taskIds));
-        } catch (genError) {
-          summary.errors.push(
-            `Failed to create generation record for template "${template.name}": ${genError.message}`
-          );
-        }
-      }
-    } catch (itemError) {
-      const itemDesc = item.productId || item.bundleId || item.packageId || "unknown";
-      summary.errors.push(
-        `Failed to process item ${itemDesc}: ${itemError.message}`
-      );
-    }
-  }
-  return summary;
-}
-var init_taskGenerationEngine = __esm({
-  "server/taskGenerationEngine.ts"() {
-    "use strict";
-    init_db();
-    init_schema();
-  }
-});
-
-// server/services/leadConversionService.ts
-import { eq as eq6, and as and5, desc, sql as sql3 } from "drizzle-orm";
-import { randomUUID as randomUUID2 } from "crypto";
-async function convertLeadToClient(leadId, triggeredBy, options) {
-  console.log(`[LeadConversion] Starting conversion for lead ${leadId} (trigger: ${triggeredBy})`);
-  const [lead] = await db.select().from(leads).where(eq6(leads.id, leadId)).limit(1);
-  if (!lead) {
-    throw new Error(`Lead ${leadId} not found`);
-  }
-  console.log(`[LeadConversion] Lead found: "${lead.name}" (email: ${lead.email}, assignedTo: ${lead.assignedTo}, isConverted: ${lead.isConverted}, clientId: ${lead.clientId})`);
-  if (lead.isConverted && lead.clientId) {
-    console.log(`[LeadConversion] Path 1: Lead already converted \u2192 clientId=${lead.clientId}`);
-    return { success: true, clientId: lead.clientId, alreadyConverted: true };
-  }
-  const existingClient = await db.select().from(clients).where(eq6(clients.email, lead.email)).limit(1);
-  if (existingClient.length > 0) {
-    console.log(`[LeadConversion] Path 2: Existing client found by email "${lead.email}" \u2192 clientId=${existingClient[0].id}, name="${existingClient[0].name}"`);
-    await db.update(leads).set({
-      isConverted: true,
-      convertedAt: /* @__PURE__ */ new Date(),
-      clientId: existingClient[0].id,
-      convertedBy: triggeredBy,
-      status: "Won"
-    }).where(eq6(leads.id, leadId));
-    return { success: true, clientId: existingClient[0].id, alreadyConverted: true };
-  }
-  console.log(`[LeadConversion] Path 3: No existing client found, creating new client via transaction`);
-  const result = await db.transaction(async (tx) => {
-    const [client] = await tx.insert(clients).values({
-      id: randomUUID2(),
-      name: lead.name,
-      email: lead.email,
-      phone: lead.phone || null,
-      company: lead.company || null,
-      status: "active",
-      contactType: "client",
-      contactSource: lead.source || null,
-      contactOwner: lead.assignedTo || null,
-      notes: lead.notes || null,
-      tags: lead.tags || [],
-      onboardingStartDate: /* @__PURE__ */ new Date(),
-      onboardingWeekReleased: 1,
-      createdAt: /* @__PURE__ */ new Date()
-    }).returning();
-    console.log(`[LeadConversion] Client created: ${client.id} ("${client.name}")`);
-    let quote = null;
-    if (options?.quoteId) {
-      const [selected] = await tx.select().from(quotes).where(eq6(quotes.id, options.quoteId)).limit(1);
-      quote = selected || null;
-    } else {
-      const acceptedQuotes = await tx.select().from(quotes).where(
-        and5(
-          eq6(quotes.leadId, leadId),
-          sql3`${quotes.status} IN ('accepted', 'signed', 'completed')`
-        )
-      ).orderBy(desc(quotes.createdAt)).limit(1);
-      quote = acceptedQuotes.length > 0 ? acceptedQuotes[0] : null;
-    }
-    console.log(`[LeadConversion] Quote lookup result: ${quote ? `found quote ${quote.id} (status: ${quote.status})` : "no qualifying quote found"}`);
-    if (quote) {
-      if (quote.status !== "accepted") {
-        await tx.update(quotes).set({ status: "accepted" }).where(eq6(quotes.id, quote.id));
-      }
-      await tx.update(quotes).set({ clientId: client.id }).where(eq6(quotes.id, quote.id));
-      const existingDeal = await tx.select().from(deals).where(eq6(deals.leadId, leadId)).limit(1);
-      if (existingDeal.length === 0) {
-        let dealAssignedTo = lead.assignedTo;
-        if (!dealAssignedTo) {
-          const [firstStaff] = await tx.select({ id: staff.id }).from(staff).where(eq6(staff.role, "admin")).limit(1);
-          dealAssignedTo = firstStaff?.id || null;
-          console.log(`[LeadConversion] Lead has no assignedTo, using fallback staff: ${dealAssignedTo}`);
-        }
-        if (dealAssignedTo) {
-          const dealValue = quote.totalCost || lead.value || "0";
-          const dealData = {
-            leadId,
-            clientId: client.id,
-            name: `${client.name || lead.name} - ${lead.company || "Deal"}`,
-            assignedTo: dealAssignedTo,
-            value: dealValue,
-            mrr: "0",
-            wonDate: /* @__PURE__ */ new Date(),
-            notes: `Deal created from quote #${quote.id}. Total value: $${dealValue}`
-          };
-          await tx.insert(deals).values(dealData);
-          console.log(
-            `\u2705 [LeadConversion] Created deal for client ${client.id} from quote ${quote.id}`
-          );
-        } else {
-          console.warn(`\u26A0\uFE0F [LeadConversion] Skipped deal creation: no assignedTo available for lead ${leadId}`);
-        }
-      }
-      const items = await tx.select().from(quoteItems).where(eq6(quoteItems.quoteId, quote.id));
-      console.log(`[LeadConversion] Found ${items.length} quote items to transfer`);
-      let transferredCount = 0;
-      for (const item of items) {
-        console.log(`[LeadConversion] Processing item: type=${item.itemType}, productId=${item.productId}, bundleId=${item.bundleId}, packageId=${item.packageId}, qty=${item.quantity}, customQuantities=${JSON.stringify(item.customQuantities)}`);
-        if (item.itemType === "product" && item.productId) {
-          const existing = await tx.select().from(clientProducts).where(
-            and5(
-              eq6(clientProducts.clientId, client.id),
-              eq6(clientProducts.productId, item.productId)
-            )
-          ).limit(1);
-          if (existing.length === 0) {
-            await tx.insert(clientProducts).values({
-              clientId: client.id,
-              productId: item.productId
-            });
-            transferredCount++;
-          }
-        } else if (item.itemType === "bundle" && item.bundleId) {
-          const existing = await tx.select().from(clientBundles).where(
-            and5(
-              eq6(clientBundles.clientId, client.id),
-              eq6(clientBundles.bundleId, item.bundleId)
-            )
-          ).limit(1);
-          if (existing.length === 0) {
-            let bundleCustomQtys = item.customQuantities;
-            const bps = await tx.select({ productId: bundleProducts.productId, quantity: bundleProducts.quantity }).from(bundleProducts).where(eq6(bundleProducts.bundleId, item.bundleId));
-            const normalizedQtys = {};
-            for (const bp of bps) {
-              normalizedQtys[bp.productId] = bundleCustomQtys?.[bp.productId] ?? bp.quantity ?? 1;
-            }
-            bundleCustomQtys = Object.keys(normalizedQtys).length > 0 ? normalizedQtys : null;
-            console.log(`[LeadConversion] Inserting client bundle ${item.bundleId} with normalized customQuantities: ${JSON.stringify(bundleCustomQtys)}`);
-            await tx.insert(clientBundles).values({
-              clientId: client.id,
-              bundleId: item.bundleId,
-              customQuantities: bundleCustomQtys
-            });
-            transferredCount++;
-          }
-        } else if (item.itemType === "package" && item.packageId) {
-          console.log(`[LeadConversion] Expanding package ${item.packageId} into individual bundles/products (not adding as package to avoid double-counting)`);
-          const pkgCustomQtys = item.customQuantities || {};
-          const pkgItems = await tx.select().from(packageItems).where(eq6(packageItems.packageId, item.packageId));
-          for (const pkgItem of pkgItems) {
-            if (pkgItem.itemType === "bundle" && pkgItem.bundleId) {
-              const existingBundle = await tx.select().from(clientBundles).where(
-                and5(
-                  eq6(clientBundles.clientId, client.id),
-                  eq6(clientBundles.bundleId, pkgItem.bundleId)
-                )
-              ).limit(1);
-              if (existingBundle.length === 0) {
-                const itemKey = pkgItem.id || `${pkgItem.itemType}-${pkgItem.bundleId}`;
-                const bundleProductQtys = {};
-                const bps = await tx.select({ productId: bundleProducts.productId }).from(bundleProducts).where(eq6(bundleProducts.bundleId, pkgItem.bundleId));
-                for (const bp of bps) {
-                  const bpKey = `${itemKey}_bp_${bp.productId}`;
-                  if (pkgCustomQtys[bpKey] !== void 0) {
-                    bundleProductQtys[bp.productId] = Number(pkgCustomQtys[bpKey]);
-                  }
-                  if (pkgCustomQtys[bp.productId] !== void 0) {
-                    bundleProductQtys[bp.productId] = Number(pkgCustomQtys[bp.productId]);
-                  }
-                }
-                const bpsAll = await tx.select({ productId: bundleProducts.productId, quantity: bundleProducts.quantity }).from(bundleProducts).where(eq6(bundleProducts.bundleId, pkgItem.bundleId));
-                const normalizedBundleQtys = {};
-                for (const bp of bpsAll) {
-                  normalizedBundleQtys[bp.productId] = bundleProductQtys[bp.productId] ?? bp.quantity ?? 1;
-                }
-                const finalBundleQtys = Object.keys(normalizedBundleQtys).length > 0 ? normalizedBundleQtys : null;
-                console.log(`[LeadConversion] Package bundle ${pkgItem.bundleId} normalized customQuantities: ${JSON.stringify(finalBundleQtys)}`);
-                await tx.insert(clientBundles).values({
-                  clientId: client.id,
-                  bundleId: pkgItem.bundleId,
-                  customQuantities: finalBundleQtys
-                });
-                transferredCount++;
-              }
-            } else if (pkgItem.itemType === "product" && pkgItem.productId) {
-              const existingProd = await tx.select().from(clientProducts).where(
-                and5(
-                  eq6(clientProducts.clientId, client.id),
-                  eq6(clientProducts.productId, pkgItem.productId)
-                )
-              ).limit(1);
-              if (existingProd.length === 0) {
-                await tx.insert(clientProducts).values({
-                  clientId: client.id,
-                  productId: pkgItem.productId
-                });
-                transferredCount++;
-              }
-            }
-          }
-        }
-      }
-      console.log(
-        `\u2705 [LeadConversion] Transferred ${transferredCount} items from quote ${quote.id} to client ${client.id}`
-      );
-    }
-    const closedWonStage = await tx.select().from(leadPipelineStages).where(sql3`LOWER(${leadPipelineStages.name}) = 'closed won'`).limit(1);
-    const leadUpdateData = {
-      status: "Won",
-      isConverted: true,
-      convertedAt: /* @__PURE__ */ new Date(),
-      clientId: client.id,
-      convertedBy: triggeredBy
-    };
-    if (closedWonStage.length > 0) {
-      leadUpdateData.stageId = closedWonStage[0].id;
-      console.log(
-        `\u2705 [LeadConversion] Moving lead ${leadId} to "Closed Won" stage`
-      );
-    }
-    await tx.update(leads).set(leadUpdateData).where(eq6(leads.id, leadId));
-    console.log(
-      `\u2705 [LeadConversion] Lead ${leadId} converted to client ${client.id} (triggered by: ${triggeredBy})`
-    );
-    const [cycleLengthSetting] = await tx.select().from(taskSettings).where(
-      eq6(taskSettings.settingKey, "task_mapping_default_cycle_length")
-    );
-    const defaultCycleLength = cycleLengthSetting?.settingValue?.value ?? 30;
-    const [advanceGenSetting] = await tx.select().from(taskSettings).where(
-      eq6(
-        taskSettings.settingKey,
-        "task_mapping_default_advance_generation_days"
-      )
-    );
-    const defaultAdvanceDays = advanceGenSetting?.settingValue?.value ?? 3;
-    const existingConfig = await tx.select().from(clientRecurringConfig).where(eq6(clientRecurringConfig.clientId, client.id)).limit(1);
-    if (existingConfig.length === 0) {
-      await tx.insert(clientRecurringConfig).values({
-        clientId: client.id,
-        cycleStartDate: /* @__PURE__ */ new Date(),
-        cycleLengthDays: defaultCycleLength,
-        advanceGenerationDays: defaultAdvanceDays,
-        status: "active"
-      });
-      console.log(
-        `\u2705 [LeadConversion] Created recurring config for client ${client.id}`
-      );
-    }
-    return {
-      success: true,
-      clientId: client.id,
-      alreadyConverted: false,
-      quoteId: quote?.id || null
-    };
-  });
-  console.log(`[LeadConversion] Transaction completed. clientId=${result.clientId}, alreadyConverted=${result.alreadyConverted}`);
-  if (!result.alreadyConverted) {
-    try {
-      const [autoGenSetting] = await db.select().from(taskSettings).where(
-        eq6(taskSettings.settingKey, "task_mapping_auto_generate_on_conversion")
-      );
-      const autoGenerateEnabled = autoGenSetting?.settingValue?.value ?? true;
-      if (autoGenerateEnabled) {
-        const assignedProducts = await db.select({ productId: clientProducts.productId }).from(clientProducts).where(eq6(clientProducts.clientId, result.clientId));
-        const assignedBundles = await db.select({ bundleId: clientBundles.bundleId }).from(clientBundles).where(eq6(clientBundles.clientId, result.clientId));
-        const assignedPackages = await db.select({ packageId: clientPackages.packageId }).from(clientPackages).where(eq6(clientPackages.clientId, result.clientId));
-        const generationItems = [];
-        for (const cp of assignedProducts) {
-          let qty = 1;
-          if (result.quoteId) {
-            const [qi] = await db.select({ quantity: quoteItems.quantity }).from(quoteItems).where(
-              and5(
-                eq6(quoteItems.quoteId, result.quoteId),
-                eq6(quoteItems.productId, cp.productId),
-                eq6(quoteItems.itemType, "product")
-              )
-            ).limit(1);
-            if (qi) qty = qi.quantity;
-          }
-          generationItems.push({ productId: cp.productId, quantity: qty });
-        }
-        for (const cb of assignedBundles) {
-          let qty = 1;
-          if (result.quoteId) {
-            const [qi] = await db.select({ quantity: quoteItems.quantity }).from(quoteItems).where(
-              and5(
-                eq6(quoteItems.quoteId, result.quoteId),
-                eq6(quoteItems.bundleId, cb.bundleId),
-                eq6(quoteItems.itemType, "bundle")
-              )
-            ).limit(1);
-            if (qi) qty = qi.quantity;
-          }
-          generationItems.push({ bundleId: cb.bundleId, quantity: qty });
-        }
-        for (const cpkg of assignedPackages) {
-          let qty = 1;
-          if (result.quoteId) {
-            const [qi] = await db.select({ quantity: quoteItems.quantity }).from(quoteItems).where(
-              and5(
-                eq6(quoteItems.quoteId, result.quoteId),
-                eq6(quoteItems.packageId, cpkg.packageId),
-                eq6(quoteItems.itemType, "package")
-              )
-            ).limit(1);
-            if (qi) qty = qi.quantity;
-          }
-          generationItems.push({ packageId: cpkg.packageId, quantity: qty });
-        }
-        if (generationItems.length > 0) {
-          const summary = await generateTasksFromTemplates({
-            clientId: result.clientId,
-            items: generationItems,
-            generationType: "onboarding",
-            cycleStartDate: /* @__PURE__ */ new Date(),
-            targetWeek: 1
-          });
-          console.log(
-            `\u2705 [LeadConversion] Task generation for client ${result.clientId}: ${summary.totalTasksCreated} week-1 onboarding tasks created`
-          );
-          if (summary.errors.length > 0) {
-            console.warn(
-              `\u26A0\uFE0F [LeadConversion] Task generation warnings:`,
-              summary.errors
-            );
-          }
-        } else {
-          console.log(`[LeadConversion] No products/bundles/packages to generate tasks for`);
-        }
-      } else {
-        console.log(`[LeadConversion] Auto task generation is disabled`);
-      }
-    } catch (taskGenError) {
-      console.error(
-        "[LeadConversion] Error generating onboarding tasks (non-blocking):",
-        taskGenError
-      );
-    }
-  }
-  console.log(`[LeadConversion] Conversion complete. Returning clientId=${result.clientId}`);
-  return { success: result.success, clientId: result.clientId, alreadyConverted: result.alreadyConverted };
-}
-var init_leadConversionService = __esm({
-  "server/services/leadConversionService.ts"() {
-    "use strict";
-    init_db();
-    init_schema();
-    init_taskGenerationEngine();
-  }
-});
-
 // server/storage.ts
-import { randomUUID as randomUUID3 } from "crypto";
-import { eq as eq7, sql as sql4, asc as asc2, desc as desc2, and as and6, or as or2, max, isNull, inArray as inArray4, isNotNull, ne } from "drizzle-orm";
+import { randomUUID } from "crypto";
+import { eq as eq3, sql as sql3, asc, desc, and as and2, or, max, isNull, inArray as inArray2, isNotNull, ne } from "drizzle-orm";
+function mapBriefSectionKeyToClientColumn(rawKey) {
+  const map = {
+    background: "briefBackground",
+    briefBackground: "briefBackground",
+    objectives: "briefObjectives",
+    briefObjectives: "briefObjectives",
+    brand_info: "briefBrandInfo",
+    brandInfo: "briefBrandInfo",
+    briefBrandInfo: "briefBrandInfo",
+    audience_info: "briefAudienceInfo",
+    audienceInfo: "briefAudienceInfo",
+    briefAudienceInfo: "briefAudienceInfo",
+    products_services: "briefProductsServices",
+    productsServices: "briefProductsServices",
+    briefProductsServices: "briefProductsServices",
+    competitors: "briefCompetitors",
+    briefCompetitors: "briefCompetitors",
+    marketing_tech: "briefMarketingTech",
+    marketingTech: "briefMarketingTech",
+    briefMarketingTech: "briefMarketingTech",
+    miscellaneous: "briefMiscellaneous",
+    briefMiscellaneous: "briefMiscellaneous"
+  };
+  return map[rawKey] ?? null;
+}
+function taskTimeEntryToLegacy(entry, taskTitle) {
+  return {
+    id: entry.id,
+    taskId: entry.taskId,
+    taskTitle: entry.taskTitle || taskTitle || "",
+    startTime: entry.startTime instanceof Date ? entry.startTime.toISOString() : String(entry.startTime),
+    endTime: entry.endTime ? entry.endTime instanceof Date ? entry.endTime.toISOString() : String(entry.endTime) : void 0,
+    userId: entry.userId,
+    userName: entry.userName ?? void 0,
+    isRunning: !!entry.isRunning,
+    duration: entry.duration ?? void 0,
+    source: entry.source ?? void 0,
+    notes: entry.notes ?? void 0
+  };
+}
+function groupEntriesByTask(rows, extra) {
+  const map = /* @__PURE__ */ new Map();
+  for (const row of rows) {
+    const key = row.task.id;
+    if (!map.has(key)) {
+      const base = { ...row.task, timeEntries: [] };
+      const merged = extra ? Object.assign(base, extra(row)) : base;
+      map.set(key, merged);
+    }
+    map.get(key).timeEntries.push(taskTimeEntryToLegacy(row.entry, row.task.title));
+  }
+  return Array.from(map.values());
+}
 var MemStorage, DbStorage, storage2;
 var init_storage = __esm({
   "server/storage.ts"() {
@@ -7638,7 +7121,7 @@ var init_storage = __esm({
         return this.clients.get(id);
       }
       async createClient(insertClient) {
-        const id = randomUUID3();
+        const id = randomUUID();
         const now = /* @__PURE__ */ new Date();
         const client = {
           id,
@@ -7728,7 +7211,7 @@ var init_storage = __esm({
         return Array.from(this.templateTasks.values()).filter((task) => task.templateId === templateId).sort((a, b) => (a.order || 0) - (b.order || 0));
       }
       async createTemplateTask(insertTask) {
-        const id = randomUUID3();
+        const id = randomUUID();
         const now = /* @__PURE__ */ new Date();
         const task = {
           id,
@@ -7761,7 +7244,7 @@ var init_storage = __esm({
         return Array.from(this.campaigns.values()).filter((c) => c.clientId === clientId);
       }
       async createCampaign(insertCampaign) {
-        const id = randomUUID3();
+        const id = randomUUID();
         const now = /* @__PURE__ */ new Date();
         const campaign = {
           id,
@@ -7801,7 +7284,7 @@ var init_storage = __esm({
         return this.leads.get(id);
       }
       async createLead(insertLead) {
-        const id = randomUUID3();
+        const id = randomUUID();
         const now = /* @__PURE__ */ new Date();
         const lead = {
           id,
@@ -7839,7 +7322,7 @@ var init_storage = __esm({
         return this.leadSources.get(id);
       }
       async createLeadSource(insertSource) {
-        const id = randomUUID3();
+        const id = randomUUID();
         const now = /* @__PURE__ */ new Date();
         const source = {
           id,
@@ -7879,7 +7362,7 @@ var init_storage = __esm({
         return this.leadNoteTemplates.get(id);
       }
       async createLeadNoteTemplate(insertTemplate) {
-        const id = randomUUID3();
+        const id = randomUUID();
         const now = /* @__PURE__ */ new Date();
         const template = {
           id,
@@ -7922,7 +7405,7 @@ var init_storage = __esm({
         return Array.from(this.tasks.values()).filter((t) => t.clientId === clientId);
       }
       async createTask(insertTask) {
-        const id = randomUUID3();
+        const id = randomUUID();
         const now = /* @__PURE__ */ new Date();
         let level = 0;
         let taskPath = id;
@@ -7973,9 +7456,10 @@ var init_storage = __esm({
       async updateTask(id, taskUpdate) {
         const task = this.tasks.get(id);
         if (!task) return void 0;
+        const { timeEntries: _ignored, ...taskWithoutTimeEntries } = taskUpdate;
         const updatedTask = {
           ...task,
-          ...taskUpdate,
+          ...taskWithoutTimeEntries,
           completedAt: taskUpdate.status === "completed" ? /* @__PURE__ */ new Date() : task.completedAt
         };
         this.tasks.set(id, updatedTask);
@@ -8329,6 +7813,31 @@ var init_storage = __esm({
         }
         return results;
       }
+      // ---- New normalized per-row methods (MemStorage stubs / not used in prod) ----
+      async startTaskTimer(_input) {
+        throw new Error("startTaskTimer is not supported by MemStorage");
+      }
+      async stopTaskTimerForUser(_userId) {
+        throw new Error("stopTaskTimerForUser is not supported by MemStorage");
+      }
+      async getRunningTaskTimerForUser(_userId) {
+        return void 0;
+      }
+      async addManualTaskTimeEntry(_input) {
+        throw new Error("addManualTaskTimeEntry is not supported by MemStorage");
+      }
+      async appendTaskTimeEntry(_input) {
+        throw new Error("appendTaskTimeEntry is not supported by MemStorage");
+      }
+      async updateTaskTimeEntryById(_taskId, _entryId, _updates) {
+        return void 0;
+      }
+      async deleteTaskTimeEntryById(_taskId, _entryId) {
+        return void 0;
+      }
+      async recomputeTaskTimeTracked(_taskId) {
+        return 0;
+      }
       // Invoices
       async getInvoices() {
         return Array.from(this.invoices.values());
@@ -8340,7 +7849,7 @@ var init_storage = __esm({
         return Array.from(this.invoices.values()).filter((i) => i.clientId === clientId);
       }
       async createInvoice(insertInvoice) {
-        const id = randomUUID3();
+        const id = randomUUID();
         const now = /* @__PURE__ */ new Date();
         const invoice = {
           id,
@@ -8382,7 +7891,7 @@ var init_storage = __esm({
       }
       async createSocialMediaAccount(accountData) {
         const account = {
-          id: randomUUID3(),
+          id: randomUUID(),
           clientId: accountData.clientId,
           platform: accountData.platform,
           accountName: accountData.accountName,
@@ -8431,7 +7940,7 @@ var init_storage = __esm({
       }
       async createSocialMediaPost(postData) {
         const post = {
-          id: randomUUID3(),
+          id: randomUUID(),
           clientId: postData.clientId,
           campaignId: postData.campaignId || null,
           accountId: postData.accountId,
@@ -8492,7 +8001,7 @@ var init_storage = __esm({
       }
       async createSocialMediaTemplate(templateData) {
         const template = {
-          id: randomUUID3(),
+          id: randomUUID(),
           name: templateData.name,
           description: templateData.description || null,
           category: templateData.category || null,
@@ -8529,7 +8038,7 @@ var init_storage = __esm({
       }
       async createSocialMediaAnalytics(analyticsData) {
         const analytics = {
-          id: randomUUID3(),
+          id: randomUUID(),
           accountId: analyticsData.accountId,
           date: analyticsData.date,
           followers: analyticsData.followers || null,
@@ -8565,7 +8074,7 @@ var init_storage = __esm({
       }
       async createWorkflow(workflowData) {
         const workflow = {
-          id: randomUUID3(),
+          id: randomUUID(),
           name: workflowData.name,
           description: workflowData.description || null,
           clientId: workflowData.clientId || null,
@@ -8618,7 +8127,7 @@ var init_storage = __esm({
       }
       async createWorkflowExecution(executionData) {
         const execution = {
-          id: randomUUID3(),
+          id: randomUUID(),
           workflowId: executionData.workflowId,
           contactId: executionData.contactId || null,
           triggerData: executionData.triggerData || null,
@@ -8656,7 +8165,7 @@ var init_storage = __esm({
       }
       async createWorkflowTemplate(templateData) {
         const template = {
-          id: randomUUID3(),
+          id: randomUUID(),
           name: templateData.name,
           description: templateData.description || null,
           category: templateData.category,
@@ -8707,7 +8216,7 @@ var init_storage = __esm({
       }
       async createTaskCategory(categoryData) {
         const category = {
-          id: randomUUID3(),
+          id: randomUUID(),
           name: categoryData.name,
           description: categoryData.description || null,
           color: categoryData.color,
@@ -8743,7 +8252,7 @@ var init_storage = __esm({
       }
       async createTaskTemplate(templateData) {
         const template = {
-          id: randomUUID3(),
+          id: randomUUID(),
           name: templateData.name,
           description: templateData.description || null,
           categoryId: templateData.categoryId || null,
@@ -8795,7 +8304,7 @@ var init_storage = __esm({
       }
       async createEnhancedTask(taskData) {
         const task = {
-          id: randomUUID3(),
+          id: randomUUID(),
           title: taskData.title,
           description: taskData.description || null,
           categoryId: taskData.categoryId || null,
@@ -8855,7 +8364,7 @@ var init_storage = __esm({
       }
       async createTaskHistory(historyData) {
         const history = {
-          id: randomUUID3(),
+          id: randomUUID(),
           taskId: historyData.taskId,
           action: historyData.action,
           field: historyData.field || null,
@@ -8881,7 +8390,7 @@ var init_storage = __esm({
           configSchema: automationTriggers.configSchema,
           isActive: automationTriggers.isActive,
           createdAt: automationTriggers.createdAt
-        }).from(automationTriggers).orderBy(asc2(automationTriggers.createdAt));
+        }).from(automationTriggers).orderBy(asc(automationTriggers.createdAt));
         return triggers;
       }
       async getAutomationTrigger(id) {
@@ -8894,7 +8403,7 @@ var init_storage = __esm({
           configSchema: automationTriggers.configSchema,
           isActive: automationTriggers.isActive,
           createdAt: automationTriggers.createdAt
-        }).from(automationTriggers).where(eq7(automationTriggers.id, id)).limit(1);
+        }).from(automationTriggers).where(eq3(automationTriggers.id, id)).limit(1);
         return result[0];
       }
       async getAutomationTriggersByCategory(category) {
@@ -8907,7 +8416,7 @@ var init_storage = __esm({
           configSchema: automationTriggers.configSchema,
           isActive: automationTriggers.isActive,
           createdAt: automationTriggers.createdAt
-        }).from(automationTriggers).where(eq7(automationTriggers.category, category)).orderBy(asc2(automationTriggers.createdAt));
+        }).from(automationTriggers).where(eq3(automationTriggers.category, category)).orderBy(asc(automationTriggers.createdAt));
         return triggers;
       }
       async createAutomationTrigger(triggerData) {
@@ -8915,11 +8424,11 @@ var init_storage = __esm({
         return result[0];
       }
       async updateAutomationTrigger(id, triggerData) {
-        const result = await db.update(automationTriggers).set(triggerData).where(eq7(automationTriggers.id, id)).returning();
+        const result = await db.update(automationTriggers).set(triggerData).where(eq3(automationTriggers.id, id)).returning();
         return result[0];
       }
       async deleteAutomationTrigger(id) {
-        const result = await db.delete(automationTriggers).where(eq7(automationTriggers.id, id)).returning();
+        const result = await db.delete(automationTriggers).where(eq3(automationTriggers.id, id)).returning();
         return result.length > 0;
       }
       // Automation Actions
@@ -8934,7 +8443,7 @@ var init_storage = __esm({
       }
       async createAutomationAction(actionData) {
         const action = {
-          id: randomUUID3(),
+          id: randomUUID(),
           name: actionData.name,
           type: actionData.type,
           description: actionData.description || null,
@@ -8971,7 +8480,7 @@ var init_storage = __esm({
       }
       async createTemplateFolder(folderData) {
         const folder = {
-          id: randomUUID3(),
+          id: randomUUID(),
           name: folderData.name,
           description: folderData.description || null,
           type: folderData.type,
@@ -9009,7 +8518,7 @@ var init_storage = __esm({
       }
       async createEmailTemplate(templateData) {
         const template = {
-          id: randomUUID3(),
+          id: randomUUID(),
           name: templateData.name,
           subject: templateData.subject,
           content: templateData.content,
@@ -9053,7 +8562,7 @@ var init_storage = __esm({
       }
       async createScheduledEmail(scheduledEmailData) {
         const scheduledEmail = {
-          id: randomUUID3(),
+          id: randomUUID(),
           clientId: scheduledEmailData.clientId,
           fromUserId: scheduledEmailData.fromUserId,
           toEmail: scheduledEmailData.toEmail,
@@ -9152,7 +8661,7 @@ var init_storage = __esm({
             createdBy: smsTemplates.createdBy,
             createdAt: smsTemplates.createdAt,
             updatedAt: smsTemplates.updatedAt
-          }).from(smsTemplates).where(eq7(smsTemplates.id, id));
+          }).from(smsTemplates).where(eq3(smsTemplates.id, id));
           return result[0];
         } catch (error) {
           console.error("Error fetching SMS template:", error);
@@ -9174,7 +8683,7 @@ var init_storage = __esm({
             createdBy: smsTemplates.createdBy,
             createdAt: smsTemplates.createdAt,
             updatedAt: smsTemplates.updatedAt
-          }).from(smsTemplates).where(eq7(smsTemplates.folderId, folderId));
+          }).from(smsTemplates).where(eq3(smsTemplates.folderId, folderId));
           return result;
         } catch (error) {
           console.error("Error fetching SMS templates by folder:", error);
@@ -9192,7 +8701,7 @@ var init_storage = __esm({
       }
       async updateSmsTemplate(id, templateData) {
         try {
-          const result = await db.update(smsTemplates).set(templateData).where(eq7(smsTemplates.id, id)).returning();
+          const result = await db.update(smsTemplates).set(templateData).where(eq3(smsTemplates.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating SMS template:", error);
@@ -9201,7 +8710,7 @@ var init_storage = __esm({
       }
       async deleteSmsTemplate(id) {
         try {
-          await db.delete(smsTemplates).where(eq7(smsTemplates.id, id));
+          await db.delete(smsTemplates).where(eq3(smsTemplates.id, id));
           return true;
         } catch (error) {
           console.error("Error deleting SMS template:", error);
@@ -9217,7 +8726,7 @@ var init_storage = __esm({
       }
       async createCustomField(fieldData) {
         const field = {
-          id: randomUUID3(),
+          id: randomUUID(),
           name: fieldData.name,
           type: fieldData.type,
           options: fieldData.options || null,
@@ -9252,7 +8761,7 @@ var init_storage = __esm({
       }
       async createTag(tagData) {
         const tag = {
-          id: randomUUID3(),
+          id: randomUUID(),
           name: tagData.name,
           color: tagData.color || "#46a1a0",
           description: tagData.description || null,
@@ -9285,7 +8794,7 @@ var init_storage = __esm({
       }
       async createCustomFieldFolder(folderData) {
         const folder = {
-          id: randomUUID3(),
+          id: randomUUID(),
           name: folderData.name,
           description: folderData.description || null,
           order: folderData.order || 0,
@@ -9310,7 +8819,7 @@ var init_storage = __esm({
       }
       async createNotification(notificationData) {
         const notification = {
-          id: randomUUID3(),
+          id: randomUUID(),
           userId: notificationData.userId,
           type: notificationData.type,
           title: notificationData.title,
@@ -9420,7 +8929,7 @@ var init_storage = __esm({
         return Array.from(this.auditLogs.values()).filter((log2) => log2.userId === userId2).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       }
       async createAuditLog(auditLog) {
-        const id = randomUUID3();
+        const id = randomUUID();
         const newAuditLog = {
           ...auditLog,
           id,
@@ -9447,7 +8956,7 @@ var init_storage = __esm({
         return this.smartLists.get(id);
       }
       async createSmartList(smartList) {
-        const id = randomUUID3();
+        const id = randomUUID();
         const newSmartList = {
           ...smartList,
           id,
@@ -9485,7 +8994,7 @@ var init_storage = __esm({
         return Array.from(this.clientBriefSections.values()).find((section) => section.key === key);
       }
       async createBriefSection(section) {
-        const id = randomUUID3();
+        const id = randomUUID();
         const newSection = {
           ...section,
           id,
@@ -9521,7 +9030,7 @@ var init_storage = __esm({
       }
       async getClientBrief(clientId) {
         const sections = await this.listBriefSections();
-        const [client] = await db.select().from(clients).where(eq7(clients.id, clientId)).limit(1);
+        const [client] = await db.select().from(clients).where(eq3(clients.id, clientId)).limit(1);
         return sections.map((section) => {
           let value = void 0;
           if (client && section.key) {
@@ -9567,41 +9076,23 @@ var init_storage = __esm({
         const section = await this.getBriefSection(sectionId);
         if (!section) return;
         if (section.key && section.isCoreSection) {
-          const [client] = await db.select().from(clients).where(eq7(clients.id, clientId)).limit(1);
+          const [client] = await db.select().from(clients).where(eq3(clients.id, clientId)).limit(1);
           if (client) {
             const updateData = {};
-            switch (section.key) {
-              case "background":
-                updateData.briefBackground = value;
-                break;
-              case "objectives":
-                updateData.briefObjectives = value;
-                break;
-              case "brand_info":
-                updateData.briefBrandInfo = value;
-                break;
-              case "audience_info":
-                updateData.briefAudienceInfo = value;
-                break;
-              case "products_services":
-                updateData.briefProductsServices = value;
-                break;
-              case "competitors":
-                updateData.briefCompetitors = value;
-                break;
-              case "marketing_tech":
-                updateData.briefMarketingTech = value;
-                break;
-              case "miscellaneous":
-                updateData.briefMiscellaneous = value;
-                break;
+            const column = mapBriefSectionKeyToClientColumn(section.key);
+            if (column) {
+              updateData[column] = value;
+            }
+            if (Object.keys(updateData).length === 0) {
+              console.warn(`[setClientBriefValue] No client column mapping for core section key: ${section.key}`);
+              return;
             }
             await this.updateClient(clientId, updateData);
           }
         } else {
           const briefValueKey = `${clientId}-${sectionId}`;
           const briefValue = {
-            id: randomUUID3(),
+            id: randomUUID(),
             clientId,
             sectionId,
             value,
@@ -9626,7 +9117,7 @@ var init_storage = __esm({
       }
       async createEmailIntegration(integrationData) {
         const integration = {
-          id: randomUUID3(),
+          id: randomUUID(),
           ...integrationData,
           createdAt: /* @__PURE__ */ new Date(),
           updatedAt: /* @__PURE__ */ new Date()
@@ -9660,7 +9151,7 @@ var init_storage = __esm({
       constructor() {
         this.getAuthUserByEmail = async (email) => {
           try {
-            const result = await db.select().from(authUsers).where(eq7(authUsers.email, email.toLowerCase()));
+            const result = await db.select().from(authUsers).where(eq3(authUsers.email, email.toLowerCase()));
             return result[0];
           } catch (error) {
             console.error("Error fetching auth user:", error);
@@ -9672,7 +9163,7 @@ var init_storage = __esm({
             const result = await db.insert(authUsers).values({
               ...authUser,
               email: authUser.email.toLowerCase(),
-              id: sql4`gen_random_uuid()`,
+              id: sql3`gen_random_uuid()`,
               createdAt: /* @__PURE__ */ new Date()
             }).returning();
             return result[0];
@@ -9683,7 +9174,7 @@ var init_storage = __esm({
         };
         this.updateLastLogin = async (authUserId) => {
           try {
-            await db.update(authUsers).set({ lastLogin: /* @__PURE__ */ new Date() }).where(eq7(authUsers.id, authUserId));
+            await db.update(authUsers).set({ lastLogin: /* @__PURE__ */ new Date() }).where(eq3(authUsers.id, authUserId));
           } catch (error) {
             console.error("Error updating last login:", error);
             throw error;
@@ -9691,7 +9182,7 @@ var init_storage = __esm({
         };
         this.setPasswordHash = async (authUserId, passwordHash) => {
           try {
-            await db.update(authUsers).set({ passwordHash }).where(eq7(authUsers.id, authUserId));
+            await db.update(authUsers).set({ passwordHash }).where(eq3(authUsers.id, authUserId));
           } catch (error) {
             console.error("Error setting password hash:", error);
             throw error;
@@ -9727,9 +9218,9 @@ var init_storage = __esm({
             }
           }
           const slackTypes = slackActionDefs.map((d) => d.type);
-          await db.update(automationActions).set({ category: "integration" }).where(and6(
-            inArray4(automationActions.type, slackTypes),
-            sql4`${automationActions.category} != 'integration'`
+          await db.update(automationActions).set({ category: "integration" }).where(and2(
+            inArray2(automationActions.type, slackTypes),
+            sql3`${automationActions.category} != 'integration'`
           ));
         } catch (error) {
           console.error("Error seeding Slack actions:", error);
@@ -9747,7 +9238,7 @@ var init_storage = __esm({
       }
       async getClient(id) {
         try {
-          const result = await db.select().from(clients).where(eq7(clients.id, id));
+          const result = await db.select().from(clients).where(eq3(clients.id, id));
           return result[0];
         } catch (error) {
           console.error("Error fetching client:", error);
@@ -9758,7 +9249,7 @@ var init_storage = __esm({
         try {
           const result = await db.insert(clients).values({
             ...insertClient,
-            id: randomUUID3(),
+            id: randomUUID(),
             createdAt: /* @__PURE__ */ new Date(),
             updatedAt: /* @__PURE__ */ new Date()
           }).returning();
@@ -9773,7 +9264,7 @@ var init_storage = __esm({
           const result = await db.update(clients).set({
             ...clientData,
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq7(clients.id, id)).returning();
+          }).where(eq3(clients.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating client:", error);
@@ -9792,7 +9283,7 @@ var init_storage = __esm({
           const result = await db.update(clients).set({
             customFieldValues: currentValues,
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq7(clients.id, clientId)).returning();
+          }).where(eq3(clients.id, clientId)).returning();
           return result[0];
         } catch (error) {
           console.error("Error upserting client custom field value:", error);
@@ -9801,35 +9292,35 @@ var init_storage = __esm({
       }
       async deleteClient(id) {
         try {
-          await db.delete(clientBriefValues).where(eq7(clientBriefValues.clientId, id));
-          await db.delete(campaigns).where(eq7(campaigns.clientId, id));
-          await db.delete(clientHealthScores).where(eq7(clientHealthScores.clientId, id));
-          await db.delete(clientNotes).where(eq7(clientNotes.clientId, id));
-          await db.delete(clientTasks).where(eq7(clientTasks.clientId, id));
-          await db.delete(appointments).where(eq7(appointments.clientId, id));
-          await db.delete(clientDocuments).where(eq7(clientDocuments.clientId, id));
-          await db.delete(clientTransactions).where(eq7(clientTransactions.clientId, id));
-          await db.delete(clientProducts).where(eq7(clientProducts.clientId, id));
-          await db.delete(clientBundles).where(eq7(clientBundles.clientId, id));
-          await db.delete(activities).where(eq7(activities.clientId, id));
-          await db.delete(clientTeamAssignments).where(eq7(clientTeamAssignments.clientId, id));
-          await db.delete(customFieldFileUploads).where(eq7(customFieldFileUploads.clientId, id));
-          await db.delete(invoices).where(eq7(invoices.clientId, id));
-          await db.delete(scheduledEmails).where(eq7(scheduledEmails.clientId, id));
-          await db.delete(notes).where(eq7(notes.clientId, id));
-          await db.delete(clientPortalUsers).where(eq7(clientPortalUsers.clientId, id));
-          await db.delete(socialMediaAccounts).where(eq7(socialMediaAccounts.clientId, id));
-          await db.delete(socialMediaPosts).where(eq7(socialMediaPosts.clientId, id));
-          await db.delete(socialMediaTemplates).where(eq7(socialMediaTemplates.clientId, id));
-          await db.delete(deals).where(eq7(deals.clientId, id));
-          await db.update(tasks).set({ clientId: null }).where(eq7(tasks.clientId, id));
-          await db.update(quotes).set({ clientId: null }).where(eq7(quotes.clientId, id));
-          await db.update(calendarAppointments).set({ clientId: null }).where(eq7(calendarAppointments.clientId, id));
-          await db.update(expenseReportSubmissions).set({ clientId: null }).where(eq7(expenseReportSubmissions.clientId, id));
-          await db.update(calendarEvents).set({ clientId: null }).where(eq7(calendarEvents.clientId, id));
-          await db.update(eventTimeEntries).set({ clientId: null }).where(eq7(eventTimeEntries.clientId, id));
-          await db.update(workflowExecutions).set({ contactId: null }).where(eq7(workflowExecutions.contactId, id));
-          const result = await db.delete(clients).where(eq7(clients.id, id)).returning();
+          await db.delete(clientBriefValues).where(eq3(clientBriefValues.clientId, id));
+          await db.delete(campaigns).where(eq3(campaigns.clientId, id));
+          await db.delete(clientHealthScores).where(eq3(clientHealthScores.clientId, id));
+          await db.delete(clientNotes).where(eq3(clientNotes.clientId, id));
+          await db.delete(clientTasks).where(eq3(clientTasks.clientId, id));
+          await db.delete(appointments).where(eq3(appointments.clientId, id));
+          await db.delete(clientDocuments).where(eq3(clientDocuments.clientId, id));
+          await db.delete(clientTransactions).where(eq3(clientTransactions.clientId, id));
+          await db.delete(clientProducts).where(eq3(clientProducts.clientId, id));
+          await db.delete(clientBundles).where(eq3(clientBundles.clientId, id));
+          await db.delete(activities).where(eq3(activities.clientId, id));
+          await db.delete(clientTeamAssignments).where(eq3(clientTeamAssignments.clientId, id));
+          await db.delete(customFieldFileUploads).where(eq3(customFieldFileUploads.clientId, id));
+          await db.delete(invoices).where(eq3(invoices.clientId, id));
+          await db.delete(scheduledEmails).where(eq3(scheduledEmails.clientId, id));
+          await db.delete(notes).where(eq3(notes.clientId, id));
+          await db.delete(clientPortalUsers).where(eq3(clientPortalUsers.clientId, id));
+          await db.delete(socialMediaAccounts).where(eq3(socialMediaAccounts.clientId, id));
+          await db.delete(socialMediaPosts).where(eq3(socialMediaPosts.clientId, id));
+          await db.delete(socialMediaTemplates).where(eq3(socialMediaTemplates.clientId, id));
+          await db.delete(deals).where(eq3(deals.clientId, id));
+          await db.update(tasks).set({ clientId: null }).where(eq3(tasks.clientId, id));
+          await db.update(quotes).set({ clientId: null }).where(eq3(quotes.clientId, id));
+          await db.update(calendarAppointments).set({ clientId: null }).where(eq3(calendarAppointments.clientId, id));
+          await db.update(expenseReportSubmissions).set({ clientId: null }).where(eq3(expenseReportSubmissions.clientId, id));
+          await db.update(calendarEvents).set({ clientId: null }).where(eq3(calendarEvents.clientId, id));
+          await db.update(eventTimeEntries).set({ clientId: null }).where(eq3(eventTimeEntries.clientId, id));
+          await db.update(workflowExecutions).set({ contactId: null }).where(eq3(workflowExecutions.contactId, id));
+          const result = await db.delete(clients).where(eq3(clients.id, id)).returning();
           return result.length > 0;
         } catch (error) {
           console.error("Error deleting client:", error);
@@ -9838,7 +9329,7 @@ var init_storage = __esm({
       }
       async archiveClient(id) {
         try {
-          const result = await db.update(clients).set({ isArchived: true }).where(eq7(clients.id, id)).returning();
+          const result = await db.update(clients).set({ isArchived: true }).where(eq3(clients.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error archiving client:", error);
@@ -9847,7 +9338,7 @@ var init_storage = __esm({
       }
       async reassignClientTasks(fromClientId, toClientId) {
         try {
-          const result = await db.update(tasks).set({ clientId: toClientId }).where(eq7(tasks.clientId, fromClientId)).returning();
+          const result = await db.update(tasks).set({ clientId: toClientId }).where(eq3(tasks.clientId, fromClientId)).returning();
           return { movedCount: result.length };
         } catch (error) {
           console.error("Error reassigning client tasks:", error);
@@ -9857,10 +9348,10 @@ var init_storage = __esm({
       async getClientRelationsCounts(id) {
         try {
           const [tasksCount, campaignsCount, invoicesCount, healthScoresCount] = await Promise.all([
-            db.select({ count: sql4`count(*)` }).from(tasks).where(eq7(tasks.clientId, id)),
-            db.select({ count: sql4`count(*)` }).from(campaigns).where(eq7(campaigns.clientId, id)),
-            db.select({ count: sql4`count(*)` }).from(invoices).where(eq7(invoices.clientId, id)),
-            db.select({ count: sql4`count(*)` }).from(clientHealthScores).where(eq7(clientHealthScores.clientId, id))
+            db.select({ count: sql3`count(*)` }).from(tasks).where(eq3(tasks.clientId, id)),
+            db.select({ count: sql3`count(*)` }).from(campaigns).where(eq3(campaigns.clientId, id)),
+            db.select({ count: sql3`count(*)` }).from(invoices).where(eq3(invoices.clientId, id)),
+            db.select({ count: sql3`count(*)` }).from(clientHealthScores).where(eq3(clientHealthScores.clientId, id))
           ]);
           return {
             tasks: Number(tasksCount[0]?.count || 0),
@@ -9877,35 +9368,35 @@ var init_storage = __esm({
       async createClientHealthScore(data) {
         const result = await db.insert(clientHealthScores).values({
           ...data,
-          id: randomUUID3(),
+          id: randomUUID(),
           createdAt: /* @__PURE__ */ new Date(),
           updatedAt: /* @__PURE__ */ new Date()
         }).returning();
         return result[0];
       }
       async getClientHealthScores(clientId) {
-        return await db.select().from(clientHealthScores).where(eq7(clientHealthScores.clientId, clientId)).orderBy(desc2(clientHealthScores.weekStartDate));
+        return await db.select().from(clientHealthScores).where(eq3(clientHealthScores.clientId, clientId)).orderBy(desc(clientHealthScores.weekStartDate));
       }
       async getClientHealthScore(id) {
-        const result = await db.select().from(clientHealthScores).where(eq7(clientHealthScores.id, id));
+        const result = await db.select().from(clientHealthScores).where(eq3(clientHealthScores.id, id));
         return result[0] || null;
       }
       async updateClientHealthScore(id, data) {
         const result = await db.update(clientHealthScores).set({
           ...data,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq7(clientHealthScores.id, id)).returning();
+        }).where(eq3(clientHealthScores.id, id)).returning();
         return result[0];
       }
       async deleteClientHealthScore(id) {
-        await db.delete(clientHealthScores).where(eq7(clientHealthScores.id, id));
+        await db.delete(clientHealthScores).where(eq3(clientHealthScores.id, id));
       }
       // Activities
       async createActivity(insertActivity) {
         try {
           const result = await db.insert(activities).values({
             ...insertActivity,
-            id: randomUUID3(),
+            id: randomUUID(),
             createdAt: /* @__PURE__ */ new Date()
           }).returning();
           return result[0];
@@ -9915,9 +9406,9 @@ var init_storage = __esm({
         }
       }
       async getClientHealthScoreByWeek(clientId, weekStartDate) {
-        const result = await db.select().from(clientHealthScores).where(and6(
-          eq7(clientHealthScores.clientId, clientId),
-          eq7(clientHealthScores.weekStartDate, weekStartDate.toISOString().split("T")[0])
+        const result = await db.select().from(clientHealthScores).where(and2(
+          eq3(clientHealthScores.clientId, clientId),
+          eq3(clientHealthScores.weekStartDate, weekStartDate.toISOString().split("T")[0])
         ));
         return result[0] || null;
       }
@@ -9937,25 +9428,25 @@ var init_storage = __esm({
         } = filters;
         const conditions = [];
         if (from) {
-          conditions.push(sql4`${clientHealthScores.weekStartDate} >= ${from}`);
+          conditions.push(sql3`${clientHealthScores.weekStartDate} >= ${from}`);
         }
         if (to) {
-          conditions.push(sql4`${clientHealthScores.weekStartDate} <= ${to}`);
+          conditions.push(sql3`${clientHealthScores.weekStartDate} <= ${to}`);
         }
         if (statuses && statuses.length > 0) {
-          conditions.push(sql4`${clientHealthScores.healthIndicator} IN (${sql4.join(statuses.map((status) => sql4`${status}`), sql4`, `)})`);
+          conditions.push(sql3`${clientHealthScores.healthIndicator} IN (${sql3.join(statuses.map((status) => sql3`${status}`), sql3`, `)})`);
         }
         if (search) {
           const searchTerm = `%${search}%`;
           conditions.push(
-            or2(
-              sql4`LOWER(${clients.name}) LIKE LOWER(${searchTerm})`,
-              sql4`LOWER(${clients.email}) LIKE LOWER(${searchTerm})`
+            or(
+              sql3`LOWER(${clients.name}) LIKE LOWER(${searchTerm})`,
+              sql3`LOWER(${clients.email}) LIKE LOWER(${searchTerm})`
             )
           );
         }
         if (clientId) {
-          conditions.push(eq7(clientHealthScores.clientId, clientId));
+          conditions.push(eq3(clientHealthScores.clientId, clientId));
         }
         let baseQuery = db.select({
           id: clientHealthScores.id,
@@ -9978,9 +9469,9 @@ var init_storage = __esm({
           clientName: clients.name,
           clientEmail: clients.email,
           clientCompany: clients.company
-        }).from(clientHealthScores).innerJoin(clients, eq7(clientHealthScores.clientId, clients.id));
+        }).from(clientHealthScores).innerJoin(clients, eq3(clientHealthScores.clientId, clients.id));
         if (conditions.length > 0) {
-          baseQuery = baseQuery.where(and6(...conditions));
+          baseQuery = baseQuery.where(and2(...conditions));
         }
         if (latestPerClient) {
           const latestWeeks = await db.select({
@@ -9993,29 +9484,29 @@ var init_storage = __esm({
           }));
           if (clientWeekPairs.length > 0) {
             const latestConditions = clientWeekPairs.map(
-              (pair) => and6(
-                eq7(clientHealthScores.clientId, pair.clientId),
-                eq7(clientHealthScores.weekStartDate, pair.weekStartDate)
+              (pair) => and2(
+                eq3(clientHealthScores.clientId, pair.clientId),
+                eq3(clientHealthScores.weekStartDate, pair.weekStartDate)
               )
             );
-            conditions.push(or2(...latestConditions));
+            conditions.push(or(...latestConditions));
           }
         }
         const sortColumn = sort === "weekStartDate" ? clientHealthScores.weekStartDate : sort === "clientName" ? clients.name : sort === "healthIndicator" ? clientHealthScores.healthIndicator : sort === "averageScore" ? clientHealthScores.averageScore : sort === "createdAt" ? clientHealthScores.createdAt : sort === "paymentStatus" ? clientHealthScores.paymentStatus : sort === "goals" ? clientHealthScores.goals : sort === "fulfillment" ? clientHealthScores.fulfillment : sort === "relationship" ? clientHealthScores.relationship : sort === "clientActions" ? clientHealthScores.clientActions : clientHealthScores.weekStartDate;
         if (sortOrder === "desc") {
-          baseQuery = baseQuery.orderBy(desc2(sortColumn));
+          baseQuery = baseQuery.orderBy(desc(sortColumn));
         } else {
-          baseQuery = baseQuery.orderBy(asc2(sortColumn));
+          baseQuery = baseQuery.orderBy(asc(sortColumn));
         }
-        let countQuery = db.select({ count: sql4`count(*)` }).from(clientHealthScores).innerJoin(clients, eq7(clientHealthScores.clientId, clients.id));
+        let countQuery = db.select({ count: sql3`count(*)` }).from(clientHealthScores).innerJoin(clients, eq3(clientHealthScores.clientId, clients.id));
         let countConditions = [...conditions];
         if (countConditions.length > 0) {
-          countQuery = countQuery.where(and6(...countConditions));
+          countQuery = countQuery.where(and2(...countConditions));
         }
         if (latestPerClient) {
-          countQuery = db.select({ count: sql4`count(DISTINCT ${clientHealthScores.clientId})` }).from(clientHealthScores).innerJoin(clients, eq7(clientHealthScores.clientId, clients.id));
+          countQuery = db.select({ count: sql3`count(DISTINCT ${clientHealthScores.clientId})` }).from(clientHealthScores).innerJoin(clients, eq3(clientHealthScores.clientId, clients.id));
           if (countConditions.length > 0) {
-            countQuery = countQuery.where(and6(...countConditions));
+            countQuery = countQuery.where(and2(...countConditions));
           }
         }
         const offset = (page - 1) * limit;
@@ -10074,7 +9565,7 @@ var init_storage = __esm({
         const { dateFrom, dateTo, userId: userId2, clientId, taskStatus, reportType } = filters;
         const conditions = [];
         conditions.push(
-          sql4`EXISTS (
+          sql3`EXISTS (
         SELECT 1 FROM jsonb_array_elements(${tasks.timeEntries}) AS entry
         WHERE entry->>'startTime' IS NOT NULL
         AND (entry->>'startTime')::date >= ${dateFrom}::date
@@ -10082,15 +9573,15 @@ var init_storage = __esm({
       )`
         );
         if (userId2) {
-          conditions.push(eq7(tasks.assignedTo, userId2));
+          conditions.push(eq3(tasks.assignedTo, userId2));
         }
         if (clientId) {
-          conditions.push(eq7(tasks.clientId, clientId));
+          conditions.push(eq3(tasks.clientId, clientId));
         }
         if (taskStatus && taskStatus.length > 0) {
-          conditions.push(sql4`${tasks.status} IN (${sql4.join(taskStatus.map((status) => sql4`${status}`), sql4`, `)})`);
+          conditions.push(sql3`${tasks.status} IN (${sql3.join(taskStatus.map((status) => sql3`${status}`), sql3`, `)})`);
         }
-        const tasksQuery = db.select().from(tasks).where(and6(...conditions));
+        const tasksQuery = db.select().from(tasks).where(and2(...conditions));
         const tasksData = await tasksQuery;
         const tasksWithDetails = tasksData.map((task) => {
           const timeEntriesByDate = {};
@@ -10213,50 +9704,25 @@ var init_storage = __esm({
         };
       }
       async getUserTimeEntries(userId2, dateFrom, dateTo) {
-        const tasksData = await db.select().from(tasks).where(
-          and6(
-            eq7(tasks.assignedTo, userId2),
-            sql4`EXISTS (
-            SELECT 1 FROM jsonb_array_elements(${tasks.timeEntries}) AS entry
-            WHERE entry->>'startTime' IS NOT NULL
-            AND (entry->>'startTime')::date >= ${dateFrom}::date
-            AND (entry->>'startTime')::date <= ${dateTo}::date
-          )`
+        const rows = await db.select({
+          entry: taskTimeEntries,
+          task: tasks
+        }).from(taskTimeEntries).innerJoin(tasks, eq3(taskTimeEntries.taskId, tasks.id)).where(
+          and2(
+            eq3(taskTimeEntries.userId, userId2),
+            sql3`(${taskTimeEntries.startTime})::date >= ${dateFrom}::date`,
+            sql3`(${taskTimeEntries.startTime})::date <= ${dateTo}::date`
           )
         );
-        return tasksData.map((task) => ({
-          ...task,
-          timeEntries: task.timeEntries && Array.isArray(task.timeEntries) ? task.timeEntries.filter((entry) => {
-            if (!entry.startTime) return false;
-            const entryDate = new Date(entry.startTime).toISOString().split("T")[0];
-            return entryDate >= dateFrom && entryDate <= dateTo;
-          }) : []
-        }));
+        return groupEntriesByTask(rows);
       }
       async getRunningTimeEntries() {
-        const tasksData = await db.select({
-          id: tasks.id,
-          timeEntries: tasks.timeEntries
-        }).from(tasks).where(
-          sql4`EXISTS (
-          SELECT 1 FROM jsonb_array_elements(${tasks.timeEntries}) AS entry
-          WHERE (entry->>'isRunning')::boolean = true
-        )`
-        );
-        const runningEntries = [];
-        tasksData.forEach((task) => {
-          if (!task.timeEntries || !Array.isArray(task.timeEntries)) return;
-          task.timeEntries.forEach((entry) => {
-            if (entry.isRunning) {
-              runningEntries.push({
-                taskId: task.id,
-                userId: entry.userId,
-                startTime: entry.startTime
-              });
-            }
-          });
-        });
-        return runningEntries;
+        const rows = await db.select({ taskId: taskTimeEntries.taskId, userId: taskTimeEntries.userId, startTime: taskTimeEntries.startTime }).from(taskTimeEntries).where(eq3(taskTimeEntries.isRunning, true));
+        return rows.map((r) => ({
+          taskId: r.taskId,
+          userId: r.userId,
+          startTime: r.startTime instanceof Date ? r.startTime.toISOString() : String(r.startTime)
+        }));
       }
       async getTimeEntriesByDateRange(dateFrom, dateTo, userId2, clientId) {
         console.log(`\u{1F50D} getTimeEntriesByDateRange called with:`, { dateFrom, dateTo, userId: userId2, clientId });
@@ -10266,101 +9732,133 @@ var init_storage = __esm({
           effectiveUserId = void 0;
         }
         const conditions = [
-          sql4`EXISTS (
-        SELECT 1 FROM jsonb_array_elements(${tasks.timeEntries}) AS entry
-        WHERE entry->>'startTime' IS NOT NULL
-        AND (entry->>'startTime')::date >= ${dateFrom}::date
-        AND (entry->>'startTime')::date <= ${dateTo}::date
-        ${effectiveUserId ? sql4`AND entry->>'userId' = ${effectiveUserId}` : sql4``}
-      )`
+          sql3`(${taskTimeEntries.startTime})::date >= ${dateFrom}::date`,
+          sql3`(${taskTimeEntries.startTime})::date <= ${dateTo}::date`
         ];
-        if (clientId === "no-client") {
-          conditions.push(isNull(tasks.clientId));
-        } else if (clientId) {
-          conditions.push(eq7(tasks.clientId, clientId));
-        }
-        const tasksData = await db.select({
+        if (effectiveUserId) conditions.push(eq3(taskTimeEntries.userId, effectiveUserId));
+        if (clientId === "no-client") conditions.push(isNull(tasks.clientId));
+        else if (clientId) conditions.push(eq3(tasks.clientId, clientId));
+        const rows = await db.select({
+          entry: taskTimeEntries,
           task: tasks,
           clientCompany: clients.company,
           clientName: clients.name
-        }).from(tasks).leftJoin(clients, eq7(tasks.clientId, clients.id)).where(and6(...conditions));
-        console.log(`\u{1F50D} getTimeEntriesByDateRange: Found ${tasksData.length} tasks with potential time entries`);
-        const result = tasksData.map(({ task, clientCompany, clientName }) => {
-          const originalEntries = task.timeEntries && Array.isArray(task.timeEntries) ? task.timeEntries : [];
-          const filteredEntries = originalEntries.filter((entry) => {
-            if (!entry.startTime) return false;
-            const entryDate = new Date(entry.startTime).toISOString().split("T")[0];
-            const dateMatch = entryDate >= dateFrom && entryDate <= dateTo;
-            const userMatch = !effectiveUserId || entry.userId === effectiveUserId;
-            if (originalEntries.length > 0 && effectiveUserId) {
-              console.log(`\u{1F4CA} Entry filter check:`, {
-                taskId: task.id,
-                entryUserId: entry.userId,
-                filterUserId: effectiveUserId,
-                userMatch,
-                entryDate,
-                dateFrom,
-                dateTo,
-                dateMatch
-              });
-            }
-            return dateMatch && userMatch;
-          });
-          if (originalEntries.length > 0) {
-            console.log(`\u{1F4CA} Task ${task.id}: ${originalEntries.length} original entries -> ${filteredEntries.length} after filtering`);
-          }
-          return {
-            ...task,
-            clientName: clientCompany || clientName || void 0,
-            timeEntries: filteredEntries
-          };
-        });
-        const tasksWithEntries = result.filter((t) => t.timeEntries.length > 0);
-        console.log(`\u{1F50D} getTimeEntriesByDateRange: Returning ${tasksWithEntries.length} tasks with entries`);
-        return result;
+        }).from(taskTimeEntries).innerJoin(tasks, eq3(taskTimeEntries.taskId, tasks.id)).leftJoin(clients, eq3(tasks.clientId, clients.id)).where(and2(...conditions));
+        const grouped = groupEntriesByTask(rows, (r) => ({
+          clientName: r.clientCompany || r.clientName || void 0
+        }));
+        console.log(`\u{1F50D} getTimeEntriesByDateRange: Returning ${grouped.length} tasks with entries`);
+        return grouped;
       }
       async updateTimeEntry(taskId, entryId, updates) {
-        try {
-          const taskResult = await db.select().from(tasks).where(eq7(tasks.id, taskId));
-          const task = taskResult[0];
-          if (!task || !task.timeEntries) return void 0;
-          const entries = task.timeEntries;
-          const entryIndex = entries.findIndex((e) => e.id === entryId);
-          if (entryIndex === -1) return void 0;
-          const entry = entries[entryIndex];
-          if (updates.duration !== void 0) entry.duration = updates.duration;
-          if (updates.startTime !== void 0) entry.startTime = updates.startTime;
-          if (updates.endTime !== void 0) entry.endTime = updates.endTime;
-          entries[entryIndex] = entry;
-          const [updatedTask] = await db.update(tasks).set({ timeEntries: entries }).where(eq7(tasks.id, taskId)).returning();
-          return updatedTask;
-        } catch (error) {
-          console.error("Error updating time entry:", error);
-          return void 0;
-        }
+        const result = await this.updateTaskTimeEntryById(taskId, entryId, updates);
+        if (!result) return void 0;
+        return result.task;
       }
       async getTimeEntriesForUserOnDate(userId2, date2) {
         try {
-          const tasksData = await db.select().from(tasks).where(
-            sql4`EXISTS (
-            SELECT 1 FROM jsonb_array_elements(${tasks.timeEntries}) AS entry
-            WHERE entry->>'userId' = ${userId2}
-            AND ((entry->>'startTime')::timestamptz AT TIME ZONE 'America/New_York')::date = ${date2}::date
-          )`
+          const rows = await db.select({
+            entry: taskTimeEntries,
+            taskId: tasks.id,
+            taskTitle: tasks.title
+          }).from(taskTimeEntries).innerJoin(tasks, eq3(taskTimeEntries.taskId, tasks.id)).where(
+            and2(
+              eq3(taskTimeEntries.userId, userId2),
+              sql3`((${taskTimeEntries.startTime})::timestamptz AT TIME ZONE 'America/New_York')::date = ${date2}::date`
+            )
           );
-          return tasksData.map((task) => ({
-            taskId: task.id,
-            taskTitle: task.title,
-            entries: task.timeEntries && Array.isArray(task.timeEntries) ? task.timeEntries.filter((entry) => {
-              if (!entry.startTime) return false;
-              const entryDate = new Date(entry.startTime).toLocaleDateString("en-CA", { timeZone: "America/New_York" });
-              return entryDate === date2 && entry.userId === userId2;
-            }) : []
-          }));
+          const grouped = /* @__PURE__ */ new Map();
+          for (const row of rows) {
+            const key = row.taskId;
+            if (!grouped.has(key)) {
+              grouped.set(key, { taskId: row.taskId, taskTitle: row.taskTitle, entries: [] });
+            }
+            grouped.get(key).entries.push(taskTimeEntryToLegacy(row.entry, row.taskTitle));
+          }
+          return Array.from(grouped.values());
         } catch (error) {
           console.error("Error getting time entries for user on date:", error);
           return [];
         }
+      }
+      // ---- New normalized per-row methods ----
+      async startTaskTimer(input) {
+        const now = /* @__PURE__ */ new Date();
+        const [entry] = await db.insert(taskTimeEntries).values({
+          taskId: input.taskId,
+          userId: input.userId,
+          taskTitle: input.taskTitle,
+          userName: input.userName,
+          startTime: now,
+          isRunning: true,
+          source: "timer"
+        }).returning();
+        return entry;
+      }
+      async stopTaskTimerForUser(userId2) {
+        const now = /* @__PURE__ */ new Date();
+        const [running] = await db.select().from(taskTimeEntries).where(and2(eq3(taskTimeEntries.userId, userId2), eq3(taskTimeEntries.isRunning, true))).orderBy(taskTimeEntries.startTime).limit(1);
+        if (!running) return void 0;
+        const durationMin = Math.max(0, Math.floor((now.getTime() - new Date(running.startTime).getTime()) / 1e3 / 60));
+        const [updated] = await db.update(taskTimeEntries).set({ endTime: now, duration: durationMin, isRunning: false, updatedAt: now }).where(eq3(taskTimeEntries.id, running.id)).returning();
+        const totalTracked = await this.recomputeTaskTimeTracked(updated.taskId);
+        const [task] = await db.select().from(tasks).where(eq3(tasks.id, updated.taskId));
+        return { entry: updated, task, totalTracked };
+      }
+      async getRunningTaskTimerForUser(userId2) {
+        const rows = await db.select({ entry: taskTimeEntries, task: tasks }).from(taskTimeEntries).innerJoin(tasks, eq3(taskTimeEntries.taskId, tasks.id)).where(and2(eq3(taskTimeEntries.userId, userId2), eq3(taskTimeEntries.isRunning, true))).limit(1);
+        if (rows.length === 0) return void 0;
+        const r = rows[0];
+        const result = { ...r.entry, task: r.task };
+        return result;
+      }
+      async addManualTaskTimeEntry(input) {
+        const [entry] = await db.insert(taskTimeEntries).values({
+          taskId: input.taskId,
+          userId: input.userId,
+          userName: input.userName,
+          taskTitle: input.taskTitle,
+          startTime: input.entryDate,
+          endTime: input.entryDate,
+          duration: input.durationMinutes,
+          isRunning: false,
+          source: input.source || "manual",
+          notes: input.notes
+        }).returning();
+        const totalTracked = await this.recomputeTaskTimeTracked(input.taskId);
+        return { entry, totalTracked };
+      }
+      async appendTaskTimeEntry(input) {
+        const [entry] = await db.insert(taskTimeEntries).values(input).returning();
+        if (!entry.isRunning) {
+          await this.recomputeTaskTimeTracked(entry.taskId);
+        }
+        return entry;
+      }
+      async updateTaskTimeEntryById(taskId, entryId, updates) {
+        const set = { updatedAt: /* @__PURE__ */ new Date() };
+        if (updates.duration !== void 0) set.duration = updates.duration;
+        if (updates.startTime !== void 0) set.startTime = typeof updates.startTime === "string" ? new Date(updates.startTime) : updates.startTime;
+        if (updates.endTime !== void 0) set.endTime = typeof updates.endTime === "string" ? new Date(updates.endTime) : updates.endTime;
+        if (updates.notes !== void 0) set.notes = updates.notes;
+        const [entry] = await db.update(taskTimeEntries).set(set).where(and2(eq3(taskTimeEntries.id, entryId), eq3(taskTimeEntries.taskId, taskId))).returning();
+        if (!entry) return void 0;
+        const totalTracked = await this.recomputeTaskTimeTracked(entry.taskId);
+        const [task] = await db.select().from(tasks).where(eq3(tasks.id, entry.taskId));
+        return { entry, task, totalTracked };
+      }
+      async deleteTaskTimeEntryById(taskId, entryId) {
+        const [deleted] = await db.delete(taskTimeEntries).where(and2(eq3(taskTimeEntries.id, entryId), eq3(taskTimeEntries.taskId, taskId))).returning();
+        if (!deleted) return void 0;
+        const totalTracked = await this.recomputeTaskTimeTracked(taskId);
+        const [task] = await db.select().from(tasks).where(eq3(tasks.id, taskId));
+        return { task, totalTracked };
+      }
+      async recomputeTaskTimeTracked(taskId) {
+        const [row] = await db.select({ total: sql3`COALESCE(SUM(${taskTimeEntries.duration}), 0)` }).from(taskTimeEntries).where(and2(eq3(taskTimeEntries.taskId, taskId), eq3(taskTimeEntries.isRunning, false)));
+        const total = Number(row?.total || 0);
+        await db.update(tasks).set({ timeTracked: total }).where(eq3(tasks.id, taskId));
+        return total;
       }
       // Campaigns  
       async getCampaigns() {
@@ -10384,7 +9882,7 @@ var init_storage = __esm({
       // Leads - Database implementation
       async getLeads() {
         try {
-          const result = await db.select().from(leads).orderBy(desc2(leads.createdAt));
+          const result = await db.select().from(leads).orderBy(desc(leads.createdAt));
           return result;
         } catch (error) {
           console.error("Error fetching leads from database:", error);
@@ -10393,7 +9891,7 @@ var init_storage = __esm({
       }
       async getLead(id) {
         try {
-          const result = await db.select().from(leads).where(eq7(leads.id, id));
+          const result = await db.select().from(leads).where(eq3(leads.id, id));
           return result[0];
         } catch (error) {
           console.error("Error fetching lead from database:", error);
@@ -10405,7 +9903,7 @@ var init_storage = __esm({
           const now = /* @__PURE__ */ new Date();
           const result = await db.insert(leads).values({
             ...lead,
-            id: sql4`gen_random_uuid()`,
+            id: sql3`gen_random_uuid()`,
             createdAt: now
           }).returning();
           return result[0];
@@ -10418,7 +9916,7 @@ var init_storage = __esm({
         try {
           const result = await db.update(leads).set({
             ...lead
-          }).where(eq7(leads.id, id)).returning();
+          }).where(eq3(leads.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating lead in database:", error);
@@ -10427,7 +9925,7 @@ var init_storage = __esm({
       }
       async deleteLead(id) {
         try {
-          const result = await db.delete(leads).where(eq7(leads.id, id)).returning();
+          const result = await db.delete(leads).where(eq3(leads.id, id)).returning();
           return result.length > 0;
         } catch (error) {
           console.error("Error deleting lead from database:", error);
@@ -10437,7 +9935,7 @@ var init_storage = __esm({
       // Lead Sources
       async getLeadSources() {
         try {
-          const sources = await db.select().from(leadSources).orderBy(asc2(leadSources.order));
+          const sources = await db.select().from(leadSources).orderBy(asc(leadSources.order));
           return sources;
         } catch (error) {
           console.error("Error fetching lead sources:", error);
@@ -10446,7 +9944,7 @@ var init_storage = __esm({
       }
       async getLeadSource(id) {
         try {
-          const result = await db.select().from(leadSources).where(eq7(leadSources.id, id));
+          const result = await db.select().from(leadSources).where(eq3(leadSources.id, id));
           return result[0];
         } catch (error) {
           console.error("Error fetching lead source:", error);
@@ -10457,7 +9955,7 @@ var init_storage = __esm({
         try {
           const result = await db.insert(leadSources).values({
             ...source,
-            id: sql4`gen_random_uuid()`,
+            id: sql3`gen_random_uuid()`,
             createdAt: /* @__PURE__ */ new Date(),
             updatedAt: /* @__PURE__ */ new Date()
           }).returning();
@@ -10469,7 +9967,7 @@ var init_storage = __esm({
       }
       async updateLeadSource(id, source) {
         try {
-          const result = await db.update(leadSources).set({ ...source, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(leadSources.id, id)).returning();
+          const result = await db.update(leadSources).set({ ...source, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(leadSources.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating lead source:", error);
@@ -10478,7 +9976,7 @@ var init_storage = __esm({
       }
       async deleteLeadSource(id) {
         try {
-          await db.delete(leadSources).where(eq7(leadSources.id, id));
+          await db.delete(leadSources).where(eq3(leadSources.id, id));
           return true;
         } catch (error) {
           console.error("Error deleting lead source:", error);
@@ -10488,7 +9986,7 @@ var init_storage = __esm({
       async reorderLeadSources(sourceIds) {
         try {
           for (let i = 0; i < sourceIds.length; i++) {
-            await db.update(leadSources).set({ order: i }).where(eq7(leadSources.id, sourceIds[i]));
+            await db.update(leadSources).set({ order: i }).where(eq3(leadSources.id, sourceIds[i]));
           }
         } catch (error) {
           console.error("Error reordering lead sources:", error);
@@ -10498,7 +9996,7 @@ var init_storage = __esm({
       // Lead Note Templates - Database implementation
       async getLeadNoteTemplates() {
         try {
-          const templates = await db.select().from(leadNoteTemplates).orderBy(asc2(leadNoteTemplates.order));
+          const templates = await db.select().from(leadNoteTemplates).orderBy(asc(leadNoteTemplates.order));
           return templates;
         } catch (error) {
           console.error("Error fetching lead note templates:", error);
@@ -10507,7 +10005,7 @@ var init_storage = __esm({
       }
       async getLeadNoteTemplate(id) {
         try {
-          const result = await db.select().from(leadNoteTemplates).where(eq7(leadNoteTemplates.id, id));
+          const result = await db.select().from(leadNoteTemplates).where(eq3(leadNoteTemplates.id, id));
           return result[0];
         } catch (error) {
           console.error("Error fetching lead note template:", error);
@@ -10518,7 +10016,7 @@ var init_storage = __esm({
         try {
           const result = await db.insert(leadNoteTemplates).values({
             ...template,
-            id: sql4`gen_random_uuid()`,
+            id: sql3`gen_random_uuid()`,
             createdAt: /* @__PURE__ */ new Date(),
             updatedAt: /* @__PURE__ */ new Date()
           }).returning();
@@ -10530,7 +10028,7 @@ var init_storage = __esm({
       }
       async updateLeadNoteTemplate(id, template) {
         try {
-          const result = await db.update(leadNoteTemplates).set({ ...template, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(leadNoteTemplates.id, id)).returning();
+          const result = await db.update(leadNoteTemplates).set({ ...template, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(leadNoteTemplates.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating lead note template:", error);
@@ -10539,7 +10037,7 @@ var init_storage = __esm({
       }
       async deleteLeadNoteTemplate(id) {
         try {
-          await db.delete(leadNoteTemplates).where(eq7(leadNoteTemplates.id, id));
+          await db.delete(leadNoteTemplates).where(eq3(leadNoteTemplates.id, id));
           return true;
         } catch (error) {
           console.error("Error deleting lead note template:", error);
@@ -10549,7 +10047,7 @@ var init_storage = __esm({
       async reorderLeadNoteTemplates(templateIds) {
         try {
           for (let i = 0; i < templateIds.length; i++) {
-            await db.update(leadNoteTemplates).set({ order: i }).where(eq7(leadNoteTemplates.id, templateIds[i]));
+            await db.update(leadNoteTemplates).set({ order: i }).where(eq3(leadNoteTemplates.id, templateIds[i]));
           }
         } catch (error) {
           console.error("Error reordering lead note templates:", error);
@@ -10559,7 +10057,7 @@ var init_storage = __esm({
       // Tasks - Database implementation
       async getTasks() {
         try {
-          const result = await db.select().from(tasks).orderBy(desc2(tasks.createdAt));
+          const result = await db.select().from(tasks).orderBy(desc(tasks.createdAt));
           return result;
         } catch (error) {
           console.error("Error fetching tasks from database:", error);
@@ -10568,7 +10066,7 @@ var init_storage = __esm({
       }
       async getTask(id) {
         try {
-          const result = await db.select().from(tasks).where(eq7(tasks.id, id));
+          const result = await db.select().from(tasks).where(eq3(tasks.id, id));
           return result[0];
         } catch (error) {
           console.error("Error fetching task from database:", error);
@@ -10577,7 +10075,7 @@ var init_storage = __esm({
       }
       async getTasksByClient(clientId) {
         try {
-          const result = await db.select().from(tasks).where(eq7(tasks.clientId, clientId));
+          const result = await db.select().from(tasks).where(eq3(tasks.clientId, clientId));
           return result;
         } catch (error) {
           console.error("Error fetching tasks by client:", error);
@@ -10599,7 +10097,7 @@ var init_storage = __esm({
           }];
           const result = await db.insert(tasks).values({
             ...task,
-            id: sql4`gen_random_uuid()`,
+            id: sql3`gen_random_uuid()`,
             createdAt: now,
             statusHistory
           }).returning();
@@ -10611,11 +10109,12 @@ var init_storage = __esm({
       }
       async updateTask(id, task) {
         try {
-          const [currentTask] = await db.select().from(tasks).where(eq7(tasks.id, id));
+          const [currentTask] = await db.select().from(tasks).where(eq3(tasks.id, id));
           if (!currentTask) {
             return void 0;
           }
-          let updateData = { ...task };
+          const { timeEntries: _ignoredTimeEntries, ...taskWithoutTimeEntries } = task;
+          let updateData = { ...taskWithoutTimeEntries };
           if (task.status && task.status !== currentTask.status) {
             const now = (/* @__PURE__ */ new Date()).toISOString();
             const statusHistory = currentTask.statusHistory || [];
@@ -10638,7 +10137,7 @@ var init_storage = __esm({
             });
             updateData.statusHistory = statusHistory;
           }
-          const result = await db.update(tasks).set(updateData).where(eq7(tasks.id, id)).returning();
+          const result = await db.update(tasks).set(updateData).where(eq3(tasks.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating task in database:", error);
@@ -10647,7 +10146,7 @@ var init_storage = __esm({
       }
       async deleteTask(id) {
         try {
-          const result = await db.delete(tasks).where(eq7(tasks.id, id)).returning();
+          const result = await db.delete(tasks).where(eq3(tasks.id, id)).returning();
           return result.length > 0;
         } catch (error) {
           console.error("Error deleting task from database:", error);
@@ -10687,7 +10186,7 @@ var init_storage = __esm({
             clientApprovalStatus: status,
             clientApprovalNotes: notes2,
             clientApprovalDate: /* @__PURE__ */ new Date()
-          }).where(eq7(tasks.id, taskId)).returning();
+          }).where(eq3(tasks.id, taskId)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating task client approval:", error);
@@ -10700,7 +10199,7 @@ var init_storage = __esm({
             clientApprovalStatus: "approved",
             clientApprovalNotes: notes2,
             clientApprovalDate: /* @__PURE__ */ new Date()
-          }).where(eq7(tasks.id, taskId)).returning();
+          }).where(eq3(tasks.id, taskId)).returning();
           return result[0];
         } catch (error) {
           console.error("Error approving task:", error);
@@ -10713,7 +10212,7 @@ var init_storage = __esm({
             clientApprovalStatus: "changes_requested",
             clientApprovalNotes: notes2,
             clientApprovalDate: /* @__PURE__ */ new Date()
-          }).where(eq7(tasks.id, taskId)).returning();
+          }).where(eq3(tasks.id, taskId)).returning();
           return result[0];
         } catch (error) {
           console.error("Error requesting task changes:", error);
@@ -10724,7 +10223,7 @@ var init_storage = __esm({
       // Invoices - Database implementation
       async getInvoices() {
         try {
-          const result = await db.select().from(invoices).orderBy(desc2(invoices.createdAt));
+          const result = await db.select().from(invoices).orderBy(desc(invoices.createdAt));
           return result;
         } catch (error) {
           console.error("Error fetching invoices from database:", error);
@@ -10733,7 +10232,7 @@ var init_storage = __esm({
       }
       async getInvoice(id) {
         try {
-          const result = await db.select().from(invoices).where(eq7(invoices.id, id));
+          const result = await db.select().from(invoices).where(eq3(invoices.id, id));
           return result[0];
         } catch (error) {
           console.error("Error fetching invoice from database:", error);
@@ -10742,7 +10241,7 @@ var init_storage = __esm({
       }
       async getInvoicesByClient(clientId) {
         try {
-          const result = await db.select().from(invoices).where(eq7(invoices.clientId, clientId));
+          const result = await db.select().from(invoices).where(eq3(invoices.clientId, clientId));
           return result;
         } catch (error) {
           console.error("Error fetching invoices by client:", error);
@@ -10754,7 +10253,7 @@ var init_storage = __esm({
           const now = /* @__PURE__ */ new Date();
           const result = await db.insert(invoices).values({
             ...invoice,
-            id: sql4`gen_random_uuid()`,
+            id: sql3`gen_random_uuid()`,
             createdAt: now
           }).returning();
           return result[0];
@@ -10767,7 +10266,7 @@ var init_storage = __esm({
         try {
           const result = await db.update(invoices).set({
             ...invoice
-          }).where(eq7(invoices.id, id)).returning();
+          }).where(eq3(invoices.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating invoice in database:", error);
@@ -10776,7 +10275,7 @@ var init_storage = __esm({
       }
       async deleteInvoice(id) {
         try {
-          const result = await db.delete(invoices).where(eq7(invoices.id, id)).returning();
+          const result = await db.delete(invoices).where(eq3(invoices.id, id)).returning();
           return result.length > 0;
         } catch (error) {
           console.error("Error deleting invoice from database:", error);
@@ -10856,7 +10355,7 @@ var init_storage = __esm({
       }
       async getWorkflow(id) {
         try {
-          const result = await db.select().from(workflows).where(eq7(workflows.id, id));
+          const result = await db.select().from(workflows).where(eq3(workflows.id, id));
           return result[0];
         } catch (error) {
           console.error("Error fetching workflow from database:", error);
@@ -10867,7 +10366,7 @@ var init_storage = __esm({
         try {
           const result = await db.insert(workflows).values({
             ...workflow,
-            id: sql4`gen_random_uuid()`,
+            id: sql3`gen_random_uuid()`,
             createdAt: /* @__PURE__ */ new Date(),
             updatedAt: /* @__PURE__ */ new Date()
           }).returning();
@@ -10879,7 +10378,7 @@ var init_storage = __esm({
       }
       async updateWorkflow(id, workflow) {
         try {
-          const result = await db.update(workflows).set({ ...workflow, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(workflows.id, id)).returning();
+          const result = await db.update(workflows).set({ ...workflow, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(workflows.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating workflow in database:", error);
@@ -10888,7 +10387,7 @@ var init_storage = __esm({
       }
       async deleteWorkflow(id) {
         try {
-          await db.delete(workflows).where(eq7(workflows.id, id));
+          await db.delete(workflows).where(eq3(workflows.id, id));
           return true;
         } catch (error) {
           console.error("Error deleting workflow from database:", error);
@@ -10915,7 +10414,7 @@ var init_storage = __esm({
       }
       async getWorkflowTemplates() {
         try {
-          const result = await db.select().from(workflowTemplates).orderBy(desc2(workflowTemplates.createdAt));
+          const result = await db.select().from(workflowTemplates).orderBy(desc(workflowTemplates.createdAt));
           return result;
         } catch (error) {
           console.error("Error fetching workflow templates from database:", error);
@@ -10924,7 +10423,7 @@ var init_storage = __esm({
       }
       async getWorkflowTemplate(id) {
         try {
-          const result = await db.select().from(workflowTemplates).where(eq7(workflowTemplates.id, id));
+          const result = await db.select().from(workflowTemplates).where(eq3(workflowTemplates.id, id));
           return result[0];
         } catch (error) {
           console.error("Error fetching workflow template from database:", error);
@@ -10935,7 +10434,7 @@ var init_storage = __esm({
         try {
           const result = await db.insert(workflowTemplates).values({
             ...template,
-            id: sql4`gen_random_uuid()`,
+            id: sql3`gen_random_uuid()`,
             createdAt: /* @__PURE__ */ new Date(),
             updatedAt: /* @__PURE__ */ new Date()
           }).returning();
@@ -10947,7 +10446,7 @@ var init_storage = __esm({
       }
       async updateWorkflowTemplate(id, template) {
         try {
-          const result = await db.update(workflowTemplates).set({ ...template, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(workflowTemplates.id, id)).returning();
+          const result = await db.update(workflowTemplates).set({ ...template, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(workflowTemplates.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating workflow template in database:", error);
@@ -10956,7 +10455,7 @@ var init_storage = __esm({
       }
       async deleteWorkflowTemplate(id) {
         try {
-          await db.delete(workflowTemplates).where(eq7(workflowTemplates.id, id));
+          await db.delete(workflowTemplates).where(eq3(workflowTemplates.id, id));
           return true;
         } catch (error) {
           console.error("Error deleting workflow template from database:", error);
@@ -10965,7 +10464,7 @@ var init_storage = __esm({
       }
       async incrementWorkflowTemplateUsage(id) {
         try {
-          await db.update(workflowTemplates).set({ usageCount: sql4`${workflowTemplates.usageCount} + 1` }).where(eq7(workflowTemplates.id, id));
+          await db.update(workflowTemplates).set({ usageCount: sql3`${workflowTemplates.usageCount} + 1` }).where(eq3(workflowTemplates.id, id));
         } catch (error) {
           console.error("Error incrementing workflow template usage:", error);
         }
@@ -10994,13 +10493,13 @@ var init_storage = __esm({
           workflowId: taskCategories.workflowId,
           isDefault: taskCategories.isDefault,
           createdAt: taskCategories.createdAt
-        }).from(taskCategories).where(eq7(taskCategories.id, id)).limit(1);
+        }).from(taskCategories).where(eq3(taskCategories.id, id)).limit(1);
         return result[0];
       }
       async createTaskCategory(category) {
         const result = await db.insert(taskCategories).values({
           ...category,
-          id: sql4`gen_random_uuid()`,
+          id: sql3`gen_random_uuid()`,
           createdAt: /* @__PURE__ */ new Date()
         }).returning();
         return result[0];
@@ -11010,11 +10509,11 @@ var init_storage = __esm({
         if ("workflowId" in sanitizedCategory && (sanitizedCategory.workflowId === "" || sanitizedCategory.workflowId === void 0 || sanitizedCategory.workflowId === "none")) {
           sanitizedCategory.workflowId = null;
         }
-        const result = await db.update(taskCategories).set(sanitizedCategory).where(eq7(taskCategories.id, id)).returning();
+        const result = await db.update(taskCategories).set(sanitizedCategory).where(eq3(taskCategories.id, id)).returning();
         return result[0];
       }
       async deleteTaskCategory(id) {
-        const result = await db.delete(taskCategories).where(eq7(taskCategories.id, id)).returning();
+        const result = await db.delete(taskCategories).where(eq3(taskCategories.id, id)).returning();
         return result.length > 0;
       }
       // Enhanced Tasks  
@@ -11048,7 +10547,7 @@ var init_storage = __esm({
       // Automation Triggers - Database operations
       async getAutomationTriggers() {
         try {
-          const result = await db.select().from(automationTriggers).orderBy(asc2(automationTriggers.createdAt));
+          const result = await db.select().from(automationTriggers).orderBy(asc(automationTriggers.createdAt));
           return result;
         } catch (error) {
           console.error("Error fetching automation triggers from database:", error);
@@ -11057,7 +10556,7 @@ var init_storage = __esm({
       }
       async getAutomationTrigger(id) {
         try {
-          const result = await db.select().from(automationTriggers).where(eq7(automationTriggers.id, id));
+          const result = await db.select().from(automationTriggers).where(eq3(automationTriggers.id, id));
           return result[0];
         } catch (error) {
           console.error("Error fetching automation trigger from database:", error);
@@ -11075,7 +10574,7 @@ var init_storage = __esm({
       }
       async updateAutomationTrigger(id, trigger) {
         try {
-          const result = await db.update(automationTriggers).set(trigger).where(eq7(automationTriggers.id, id)).returning();
+          const result = await db.update(automationTriggers).set(trigger).where(eq3(automationTriggers.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating automation trigger in database:", error);
@@ -11084,7 +10583,7 @@ var init_storage = __esm({
       }
       async deleteAutomationTrigger(id) {
         try {
-          const result = await db.delete(automationTriggers).where(eq7(automationTriggers.id, id)).returning();
+          const result = await db.delete(automationTriggers).where(eq3(automationTriggers.id, id)).returning();
           return result.length > 0;
         } catch (error) {
           console.error("Error deleting automation trigger from database:", error);
@@ -11094,7 +10593,7 @@ var init_storage = __esm({
       // Automation Actions - Database operations
       async getAutomationActions() {
         try {
-          const result = await db.select().from(automationActions).orderBy(asc2(automationActions.createdAt));
+          const result = await db.select().from(automationActions).orderBy(asc(automationActions.createdAt));
           return result;
         } catch (error) {
           console.error("Error fetching automation actions from database:", error);
@@ -11103,7 +10602,7 @@ var init_storage = __esm({
       }
       async getAutomationAction(id) {
         try {
-          const result = await db.select().from(automationActions).where(eq7(automationActions.id, id));
+          const result = await db.select().from(automationActions).where(eq3(automationActions.id, id));
           return result[0];
         } catch (error) {
           console.error("Error fetching automation action from database:", error);
@@ -11121,7 +10620,7 @@ var init_storage = __esm({
       }
       async updateAutomationAction(id, action) {
         try {
-          const result = await db.update(automationActions).set(action).where(eq7(automationActions.id, id)).returning();
+          const result = await db.update(automationActions).set(action).where(eq3(automationActions.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating automation action in database:", error);
@@ -11130,7 +10629,7 @@ var init_storage = __esm({
       }
       async deleteAutomationAction(id) {
         try {
-          const result = await db.delete(automationActions).where(eq7(automationActions.id, id)).returning();
+          const result = await db.delete(automationActions).where(eq3(automationActions.id, id)).returning();
           return result.length > 0;
         } catch (error) {
           console.error("Error deleting automation action from database:", error);
@@ -11161,12 +10660,12 @@ var init_storage = __esm({
           order: templateFolders.order,
           createdAt: templateFolders.createdAt,
           updatedAt: templateFolders.updatedAt
-        }).from(templateFolders).where(eq7(templateFolders.id, id)).limit(1);
+        }).from(templateFolders).where(eq3(templateFolders.id, id)).limit(1);
         return folder[0];
       }
       async createTemplateFolder(folderData) {
         const folder = {
-          id: randomUUID3(),
+          id: randomUUID(),
           name: folderData.name,
           description: folderData.description || null,
           type: folderData.type,
@@ -11183,11 +10682,11 @@ var init_storage = __esm({
           ...folderData,
           updatedAt: /* @__PURE__ */ new Date()
         };
-        await db.update(templateFolders).set(updates).where(eq7(templateFolders.id, id));
+        await db.update(templateFolders).set(updates).where(eq3(templateFolders.id, id));
         return this.getTemplateFolder(id);
       }
       async deleteTemplateFolder(id) {
-        const result = await db.delete(templateFolders).where(eq7(templateFolders.id, id));
+        const result = await db.delete(templateFolders).where(eq3(templateFolders.id, id));
         return (result.rowCount ?? 0) > 0;
       }
       async getEmailTemplates() {
@@ -11206,7 +10705,7 @@ var init_storage = __esm({
           createdBy: emailTemplates.createdBy,
           createdAt: emailTemplates.createdAt,
           updatedAt: emailTemplates.updatedAt
-        }).from(emailTemplates).orderBy(asc2(emailTemplates.name));
+        }).from(emailTemplates).orderBy(asc(emailTemplates.name));
       }
       async getEmailTemplate(id) {
         const results = await db.select({
@@ -11224,7 +10723,7 @@ var init_storage = __esm({
           createdBy: emailTemplates.createdBy,
           createdAt: emailTemplates.createdAt,
           updatedAt: emailTemplates.updatedAt
-        }).from(emailTemplates).where(eq7(emailTemplates.id, id));
+        }).from(emailTemplates).where(eq3(emailTemplates.id, id));
         return results[0];
       }
       async getEmailTemplatesByFolder(folderId) {
@@ -11243,12 +10742,12 @@ var init_storage = __esm({
           createdBy: emailTemplates.createdBy,
           createdAt: emailTemplates.createdAt,
           updatedAt: emailTemplates.updatedAt
-        }).from(emailTemplates).where(eq7(emailTemplates.folderId, folderId));
+        }).from(emailTemplates).where(eq3(emailTemplates.folderId, folderId));
       }
       async createEmailTemplate(template) {
         const result = await db.insert(emailTemplates).values({
           ...template,
-          id: sql4`gen_random_uuid()`,
+          id: sql3`gen_random_uuid()`,
           createdAt: /* @__PURE__ */ new Date(),
           updatedAt: /* @__PURE__ */ new Date()
         }).returning();
@@ -11256,11 +10755,11 @@ var init_storage = __esm({
       }
       async updateEmailTemplate(id, template) {
         const updatedTemplate = { ...template, updatedAt: /* @__PURE__ */ new Date() };
-        await db.update(emailTemplates).set(updatedTemplate).where(eq7(emailTemplates.id, id));
+        await db.update(emailTemplates).set(updatedTemplate).where(eq3(emailTemplates.id, id));
         return await this.getEmailTemplate(id);
       }
       async deleteEmailTemplate(id) {
-        const result = await db.delete(emailTemplates).where(eq7(emailTemplates.id, id));
+        const result = await db.delete(emailTemplates).where(eq3(emailTemplates.id, id));
         return (result.rowCount ?? 0) > 0;
       }
       // Scheduled Emails
@@ -11285,7 +10784,7 @@ var init_storage = __esm({
             retryCount: scheduledEmails.retryCount,
             createdAt: scheduledEmails.createdAt,
             updatedAt: scheduledEmails.updatedAt
-          }).from(scheduledEmails).orderBy(desc2(scheduledEmails.createdAt));
+          }).from(scheduledEmails).orderBy(desc(scheduledEmails.createdAt));
           return result;
         } catch (error) {
           console.error("Error fetching scheduled emails:", error);
@@ -11313,7 +10812,7 @@ var init_storage = __esm({
             retryCount: scheduledEmails.retryCount,
             createdAt: scheduledEmails.createdAt,
             updatedAt: scheduledEmails.updatedAt
-          }).from(scheduledEmails).where(eq7(scheduledEmails.id, id)).limit(1);
+          }).from(scheduledEmails).where(eq3(scheduledEmails.id, id)).limit(1);
           return result[0];
         } catch (error) {
           console.error("Error fetching scheduled email:", error);
@@ -11341,7 +10840,7 @@ var init_storage = __esm({
             retryCount: scheduledEmails.retryCount,
             createdAt: scheduledEmails.createdAt,
             updatedAt: scheduledEmails.updatedAt
-          }).from(scheduledEmails).where(eq7(scheduledEmails.clientId, clientId)).orderBy(desc2(scheduledEmails.createdAt));
+          }).from(scheduledEmails).where(eq3(scheduledEmails.clientId, clientId)).orderBy(desc(scheduledEmails.createdAt));
           return result;
         } catch (error) {
           console.error("Error fetching scheduled emails for client:", error);
@@ -11351,7 +10850,7 @@ var init_storage = __esm({
       async createScheduledEmail(scheduledEmail) {
         const result = await db.insert(scheduledEmails).values({
           ...scheduledEmail,
-          id: sql4`gen_random_uuid()`,
+          id: sql3`gen_random_uuid()`,
           createdAt: /* @__PURE__ */ new Date(),
           updatedAt: /* @__PURE__ */ new Date()
         }).returning();
@@ -11359,11 +10858,11 @@ var init_storage = __esm({
       }
       async updateScheduledEmail(id, scheduledEmail) {
         const updatedEmail = { ...scheduledEmail, updatedAt: /* @__PURE__ */ new Date() };
-        await db.update(scheduledEmails).set(updatedEmail).where(eq7(scheduledEmails.id, id));
+        await db.update(scheduledEmails).set(updatedEmail).where(eq3(scheduledEmails.id, id));
         return await this.getScheduledEmail(id);
       }
       async deleteScheduledEmail(id) {
-        const result = await db.delete(scheduledEmails).where(eq7(scheduledEmails.id, id));
+        const result = await db.delete(scheduledEmails).where(eq3(scheduledEmails.id, id));
         return (result.rowCount ?? 0) > 0;
       }
       async markScheduledEmailAsSent(id, sentAt) {
@@ -11371,7 +10870,7 @@ var init_storage = __esm({
           status: "sent",
           sentAt,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq7(scheduledEmails.id, id));
+        }).where(eq3(scheduledEmails.id, id));
       }
       async markScheduledEmailAsFailed(id, failureReason) {
         const existing = await this.getScheduledEmail(id);
@@ -11380,7 +10879,7 @@ var init_storage = __esm({
           failureReason,
           retryCount: (existing?.retryCount || 0) + 1,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq7(scheduledEmails.id, id));
+        }).where(eq3(scheduledEmails.id, id));
       }
       async getSmsTemplates() {
         const result = await db.select({
@@ -11411,7 +10910,7 @@ var init_storage = __esm({
           createdBy: smsTemplates.createdBy,
           createdAt: smsTemplates.createdAt,
           updatedAt: smsTemplates.updatedAt
-        }).from(smsTemplates).where(eq7(smsTemplates.id, id)).limit(1);
+        }).from(smsTemplates).where(eq3(smsTemplates.id, id)).limit(1);
         return result[0];
       }
       async getSmsTemplatesByFolder(folderId) {
@@ -11427,12 +10926,12 @@ var init_storage = __esm({
           createdBy: smsTemplates.createdBy,
           createdAt: smsTemplates.createdAt,
           updatedAt: smsTemplates.updatedAt
-        }).from(smsTemplates).where(eq7(smsTemplates.folderId, folderId));
+        }).from(smsTemplates).where(eq3(smsTemplates.folderId, folderId));
       }
       async createSmsTemplate(template) {
         const result = await db.insert(smsTemplates).values({
           ...template,
-          id: sql4`gen_random_uuid()`,
+          id: sql3`gen_random_uuid()`,
           createdAt: /* @__PURE__ */ new Date(),
           updatedAt: /* @__PURE__ */ new Date()
         }).returning();
@@ -11442,17 +10941,17 @@ var init_storage = __esm({
         const result = await db.update(smsTemplates).set({
           ...template,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq7(smsTemplates.id, id)).returning();
+        }).where(eq3(smsTemplates.id, id)).returning();
         return result[0];
       }
       async deleteSmsTemplate(id) {
-        const result = await db.delete(smsTemplates).where(eq7(smsTemplates.id, id)).returning();
+        const result = await db.delete(smsTemplates).where(eq3(smsTemplates.id, id)).returning();
         return result.length > 0;
       }
       // Custom Fields - Database implementation
       async getCustomFields() {
         try {
-          const result = await db.select().from(customFields).orderBy(asc2(customFields.order));
+          const result = await db.select().from(customFields).orderBy(asc(customFields.order));
           return result;
         } catch (error) {
           console.error("Error fetching custom fields from database:", error);
@@ -11461,7 +10960,7 @@ var init_storage = __esm({
       }
       async getCustomField(id) {
         try {
-          const result = await db.select().from(customFields).where(eq7(customFields.id, id));
+          const result = await db.select().from(customFields).where(eq3(customFields.id, id));
           return result[0];
         } catch (error) {
           console.error("Error fetching custom field from database:", error);
@@ -11472,7 +10971,7 @@ var init_storage = __esm({
         try {
           const result = await db.insert(customFields).values({
             ...field,
-            id: sql4`gen_random_uuid()`,
+            id: sql3`gen_random_uuid()`,
             createdAt: /* @__PURE__ */ new Date()
           }).returning();
           return result[0];
@@ -11483,7 +10982,7 @@ var init_storage = __esm({
       }
       async updateCustomField(id, field) {
         try {
-          const result = await db.update(customFields).set(field).where(eq7(customFields.id, id)).returning();
+          const result = await db.update(customFields).set(field).where(eq3(customFields.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating custom field in database:", error);
@@ -11492,7 +10991,7 @@ var init_storage = __esm({
       }
       async deleteCustomField(id) {
         try {
-          const result = await db.delete(customFields).where(eq7(customFields.id, id)).returning();
+          const result = await db.delete(customFields).where(eq3(customFields.id, id)).returning();
           return result.length > 0;
         } catch (error) {
           console.error("Error deleting custom field from database:", error);
@@ -11502,7 +11001,7 @@ var init_storage = __esm({
       async reorderCustomFields(fieldOrders) {
         try {
           for (const { id, order } of fieldOrders) {
-            await db.update(customFields).set({ order }).where(eq7(customFields.id, id));
+            await db.update(customFields).set({ order }).where(eq3(customFields.id, id));
           }
         } catch (error) {
           console.error("Error reordering custom fields:", error);
@@ -11511,7 +11010,7 @@ var init_storage = __esm({
       }
       async getCustomFieldFolders() {
         try {
-          const result = await db.select().from(customFieldFolders).orderBy(asc2(customFieldFolders.order));
+          const result = await db.select().from(customFieldFolders).orderBy(asc(customFieldFolders.order));
           return result;
         } catch (error) {
           console.error("Error fetching custom field folders from database:", error);
@@ -11520,7 +11019,7 @@ var init_storage = __esm({
       }
       async getCustomFieldFolder(id) {
         try {
-          const result = await db.select().from(customFieldFolders).where(eq7(customFieldFolders.id, id));
+          const result = await db.select().from(customFieldFolders).where(eq3(customFieldFolders.id, id));
           return result[0];
         } catch (error) {
           console.error("Error fetching custom field folder from database:", error);
@@ -11531,7 +11030,7 @@ var init_storage = __esm({
         try {
           const result = await db.insert(customFieldFolders).values({
             ...folder,
-            id: sql4`gen_random_uuid()`,
+            id: sql3`gen_random_uuid()`,
             createdAt: /* @__PURE__ */ new Date()
           }).returning();
           return result[0];
@@ -11542,7 +11041,7 @@ var init_storage = __esm({
       }
       async updateCustomFieldFolder(id, folder) {
         try {
-          const result = await db.update(customFieldFolders).set(folder).where(eq7(customFieldFolders.id, id)).returning();
+          const result = await db.update(customFieldFolders).set(folder).where(eq3(customFieldFolders.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating custom field folder in database:", error);
@@ -11551,7 +11050,7 @@ var init_storage = __esm({
       }
       async deleteCustomFieldFolder(id) {
         try {
-          const result = await db.delete(customFieldFolders).where(eq7(customFieldFolders.id, id)).returning();
+          const result = await db.delete(customFieldFolders).where(eq3(customFieldFolders.id, id)).returning();
           return result.length > 0;
         } catch (error) {
           console.error("Error deleting custom field folder from database:", error);
@@ -11561,7 +11060,7 @@ var init_storage = __esm({
       async reorderCustomFieldFolders(folderOrders) {
         try {
           for (const { id, order } of folderOrders) {
-            await db.update(customFieldFolders).set({ order }).where(eq7(customFieldFolders.id, id));
+            await db.update(customFieldFolders).set({ order }).where(eq3(customFieldFolders.id, id));
           }
         } catch (error) {
           console.error("Error reordering custom field folders:", error);
@@ -11570,11 +11069,11 @@ var init_storage = __esm({
       }
       // Staff
       async getStaff() {
-        const result = await db.select().from(staff).orderBy(asc2(staff.firstName), asc2(staff.lastName));
+        const result = await db.select().from(staff).orderBy(asc(staff.firstName), asc(staff.lastName));
         return result;
       }
       async getStaffMember(id) {
-        const result = await db.select().from(staff).where(eq7(staff.id, id));
+        const result = await db.select().from(staff).where(eq3(staff.id, id));
         return result[0];
       }
       async createStaffMember(staffData) {
@@ -11585,20 +11084,20 @@ var init_storage = __esm({
         const result = await db.update(staff).set({
           ...staffData,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq7(staff.id, id)).returning();
+        }).where(eq3(staff.id, id)).returning();
         return result[0];
       }
       async deleteStaffMember(id) {
-        const result = await db.delete(staff).where(eq7(staff.id, id)).returning();
+        const result = await db.delete(staff).where(eq3(staff.id, id)).returning();
         return result.length > 0;
       }
       // Team Positions
       async getTeamPositions() {
-        const result = await db.select().from(teamPositions).where(eq7(teamPositions.isActive, true)).orderBy(asc2(teamPositions.order), asc2(teamPositions.label));
+        const result = await db.select().from(teamPositions).where(eq3(teamPositions.isActive, true)).orderBy(asc(teamPositions.order), asc(teamPositions.label));
         return result;
       }
       async getTeamPosition(id) {
-        const result = await db.select().from(teamPositions).where(eq7(teamPositions.id, id));
+        const result = await db.select().from(teamPositions).where(eq3(teamPositions.id, id));
         return result[0];
       }
       async createTeamPosition(positionData) {
@@ -11609,11 +11108,11 @@ var init_storage = __esm({
         const result = await db.update(teamPositions).set({
           ...positionData,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq7(teamPositions.id, id)).returning();
+        }).where(eq3(teamPositions.id, id)).returning();
         return result[0];
       }
       async deleteTeamPosition(id) {
-        const result = await db.delete(teamPositions).where(eq7(teamPositions.id, id)).returning();
+        const result = await db.delete(teamPositions).where(eq3(teamPositions.id, id)).returning();
         return result.length > 0;
       }
       async reorderTeamPositions(positions2) {
@@ -11623,7 +11122,7 @@ var init_storage = __esm({
               await tx.update(teamPositions).set({
                 order: position.order,
                 updatedAt: /* @__PURE__ */ new Date()
-              }).where(eq7(teamPositions.id, position.id));
+              }).where(eq3(teamPositions.id, position.id));
             }
           });
           return true;
@@ -11645,7 +11144,7 @@ var init_storage = __esm({
           updatedAt: clientTeamAssignments.updatedAt,
           positionDetails: teamPositions,
           staffMember: staff
-        }).from(clientTeamAssignments).leftJoin(teamPositions, eq7(clientTeamAssignments.position, teamPositions.id)).leftJoin(staff, eq7(clientTeamAssignments.staffId, staff.id)).where(eq7(clientTeamAssignments.clientId, clientId)).orderBy(asc2(teamPositions.order));
+        }).from(clientTeamAssignments).leftJoin(teamPositions, eq3(clientTeamAssignments.position, teamPositions.id)).leftJoin(staff, eq3(clientTeamAssignments.staffId, staff.id)).where(eq3(clientTeamAssignments.clientId, clientId)).orderBy(asc(teamPositions.order));
         return result.map((row) => ({
           ...row,
           position: row.positionDetails
@@ -11663,7 +11162,7 @@ var init_storage = __esm({
           updatedAt: clientTeamAssignments.updatedAt,
           positionDetails: teamPositions,
           staffMember: staff
-        }).from(clientTeamAssignments).leftJoin(teamPositions, eq7(clientTeamAssignments.position, teamPositions.id)).leftJoin(staff, eq7(clientTeamAssignments.staffId, staff.id)).orderBy(asc2(teamPositions.order));
+        }).from(clientTeamAssignments).leftJoin(teamPositions, eq3(clientTeamAssignments.position, teamPositions.id)).leftJoin(staff, eq3(clientTeamAssignments.staffId, staff.id)).orderBy(asc(teamPositions.order));
         return result.map((row) => ({
           ...row,
           position: row.positionDetails
@@ -11677,11 +11176,11 @@ var init_storage = __esm({
         const result = await db.update(clientTeamAssignments).set({
           ...assignmentData,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq7(clientTeamAssignments.id, id)).returning();
+        }).where(eq3(clientTeamAssignments.id, id)).returning();
         return result[0];
       }
       async deleteClientTeamAssignment(id) {
-        const result = await db.delete(clientTeamAssignments).where(eq7(clientTeamAssignments.id, id)).returning();
+        const result = await db.delete(clientTeamAssignments).where(eq3(clientTeamAssignments.id, id)).returning();
         return result.length > 0;
       }
       async getClientTeamAssignmentsList() {
@@ -11697,16 +11196,16 @@ var init_storage = __esm({
           staffLastName: staff.lastName,
           positionLabel: teamPositions.label,
           positionKey: teamPositions.key
-        }).from(clientTeamAssignments).leftJoin(clients, eq7(clientTeamAssignments.clientId, clients.id)).leftJoin(staff, eq7(clientTeamAssignments.staffId, staff.id)).leftJoin(teamPositions, eq7(clientTeamAssignments.position, teamPositions.id)).orderBy(asc2(clients.name), asc2(teamPositions.order));
+        }).from(clientTeamAssignments).leftJoin(clients, eq3(clientTeamAssignments.clientId, clients.id)).leftJoin(staff, eq3(clientTeamAssignments.staffId, staff.id)).leftJoin(teamPositions, eq3(clientTeamAssignments.position, teamPositions.id)).orderBy(asc(clients.name), asc(teamPositions.order));
         return result;
       }
       // Departments
       async getDepartments() {
-        const result = await db.select().from(departments).orderBy(asc2(departments.name));
+        const result = await db.select().from(departments).orderBy(asc(departments.name));
         return result;
       }
       async getDepartment(id) {
-        const result = await db.select().from(departments).where(eq7(departments.id, id));
+        const result = await db.select().from(departments).where(eq3(departments.id, id));
         return result[0];
       }
       async createDepartment(department) {
@@ -11714,12 +11213,12 @@ var init_storage = __esm({
         return result[0];
       }
       async updateDepartment(id, department) {
-        const result = await db.update(departments).set({ ...department, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(departments.id, id)).returning();
+        const result = await db.update(departments).set({ ...department, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(departments.id, id)).returning();
         return result[0];
       }
       async deleteDepartment(id) {
         try {
-          await db.delete(departments).where(eq7(departments.id, id));
+          await db.delete(departments).where(eq3(departments.id, id));
           return true;
         } catch (error) {
           console.error("Error deleting department:", error);
@@ -11728,15 +11227,15 @@ var init_storage = __esm({
       }
       // Positions
       async getPositions() {
-        const result = await db.select().from(positions).orderBy(asc2(positions.name));
+        const result = await db.select().from(positions).orderBy(asc(positions.name));
         return result;
       }
       async getPosition(id) {
-        const result = await db.select().from(positions).where(eq7(positions.id, id));
+        const result = await db.select().from(positions).where(eq3(positions.id, id));
         return result[0];
       }
       async getPositionsByDepartment(departmentId) {
-        const result = await db.select().from(positions).where(eq7(positions.departmentId, departmentId)).orderBy(asc2(positions.name));
+        const result = await db.select().from(positions).where(eq3(positions.departmentId, departmentId)).orderBy(asc(positions.name));
         return result;
       }
       async createPosition(position) {
@@ -11744,12 +11243,12 @@ var init_storage = __esm({
         return result[0];
       }
       async updatePosition(id, position) {
-        const result = await db.update(positions).set({ ...position, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(positions.id, id)).returning();
+        const result = await db.update(positions).set({ ...position, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(positions.id, id)).returning();
         return result[0];
       }
       async deletePosition(id) {
         try {
-          await db.delete(positions).where(eq7(positions.id, id));
+          await db.delete(positions).where(eq3(positions.id, id));
           return true;
         } catch (error) {
           console.error("Error deleting position:", error);
@@ -11758,11 +11257,11 @@ var init_storage = __esm({
       }
       // Position KPIs
       async getPositionKpis(positionId) {
-        const result = await db.select().from(positionKpis2).where(eq7(positionKpis2.positionId, positionId)).orderBy(asc2(positionKpis2.createdAt));
+        const result = await db.select().from(positionKpis2).where(eq3(positionKpis2.positionId, positionId)).orderBy(asc(positionKpis2.createdAt));
         return result;
       }
       async getPositionKpi(id) {
-        const result = await db.select().from(positionKpis2).where(eq7(positionKpis2.id, id));
+        const result = await db.select().from(positionKpis2).where(eq3(positionKpis2.id, id));
         return result[0];
       }
       async createPositionKpi(kpi) {
@@ -11770,12 +11269,12 @@ var init_storage = __esm({
         return result[0];
       }
       async updatePositionKpi(id, kpi) {
-        const result = await db.update(positionKpis2).set({ ...kpi, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(positionKpis2.id, id)).returning();
+        const result = await db.update(positionKpis2).set({ ...kpi, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(positionKpis2.id, id)).returning();
         return result[0];
       }
       async deletePositionKpi(id) {
         try {
-          await db.delete(positionKpis2).where(eq7(positionKpis2.id, id));
+          await db.delete(positionKpis2).where(eq3(positionKpis2.id, id));
           return true;
         } catch (error) {
           console.error("Error deleting position KPI:", error);
@@ -11784,15 +11283,15 @@ var init_storage = __esm({
       }
       // Organization Chart Structures
       async getOrgChartStructures() {
-        const result = await db.select().from(orgChartStructures).orderBy(desc2(orgChartStructures.createdAt));
+        const result = await db.select().from(orgChartStructures).orderBy(desc(orgChartStructures.createdAt));
         return result;
       }
       async getOrgChartStructure(id) {
-        const result = await db.select().from(orgChartStructures).where(eq7(orgChartStructures.id, id));
+        const result = await db.select().from(orgChartStructures).where(eq3(orgChartStructures.id, id));
         return result[0];
       }
       async getActiveOrgChartStructure() {
-        const result = await db.select().from(orgChartStructures).where(eq7(orgChartStructures.isActive, true));
+        const result = await db.select().from(orgChartStructures).where(eq3(orgChartStructures.isActive, true));
         return result[0];
       }
       async createOrgChartStructure(structure) {
@@ -11800,12 +11299,12 @@ var init_storage = __esm({
         return result[0];
       }
       async updateOrgChartStructure(id, structure) {
-        const result = await db.update(orgChartStructures).set({ ...structure, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(orgChartStructures.id, id)).returning();
+        const result = await db.update(orgChartStructures).set({ ...structure, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(orgChartStructures.id, id)).returning();
         return result[0];
       }
       async deleteOrgChartStructure(id) {
         try {
-          await db.delete(orgChartStructures).where(eq7(orgChartStructures.id, id));
+          await db.delete(orgChartStructures).where(eq3(orgChartStructures.id, id));
           return true;
         } catch (error) {
           console.error("Error deleting org chart structure:", error);
@@ -11814,16 +11313,16 @@ var init_storage = __esm({
       }
       async setActiveOrgChartStructure(id) {
         await db.update(orgChartStructures).set({ isActive: false, updatedAt: /* @__PURE__ */ new Date() });
-        const result = await db.update(orgChartStructures).set({ isActive: true, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(orgChartStructures.id, id)).returning();
+        const result = await db.update(orgChartStructures).set({ isActive: true, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(orgChartStructures.id, id)).returning();
         return result[0];
       }
       // Organization Chart Nodes
       async getOrgChartNodes(structureId) {
-        const result = await db.select().from(orgChartNodes).where(eq7(orgChartNodes.structureId, structureId)).orderBy(asc2(orgChartNodes.orderIndex));
+        const result = await db.select().from(orgChartNodes).where(eq3(orgChartNodes.structureId, structureId)).orderBy(asc(orgChartNodes.orderIndex));
         return result;
       }
       async getOrgChartNode(id) {
-        const result = await db.select().from(orgChartNodes).where(eq7(orgChartNodes.id, id));
+        const result = await db.select().from(orgChartNodes).where(eq3(orgChartNodes.id, id));
         return result[0];
       }
       async createOrgChartNode(node) {
@@ -11831,12 +11330,12 @@ var init_storage = __esm({
         return result[0];
       }
       async updateOrgChartNode(id, node) {
-        const result = await db.update(orgChartNodes).set({ ...node, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(orgChartNodes.id, id)).returning();
+        const result = await db.update(orgChartNodes).set({ ...node, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(orgChartNodes.id, id)).returning();
         return result[0];
       }
       async deleteOrgChartNode(id) {
         try {
-          await db.delete(orgChartNodes).where(eq7(orgChartNodes.id, id));
+          await db.delete(orgChartNodes).where(eq3(orgChartNodes.id, id));
           return true;
         } catch (error) {
           console.error("Error deleting org chart node:", error);
@@ -11849,7 +11348,7 @@ var init_storage = __esm({
             orderIndex: update.orderIndex,
             parentId: update.parentId !== void 0 ? update.parentId : void 0,
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq7(orgChartNodes.id, update.id));
+          }).where(eq3(orgChartNodes.id, update.id));
         }
       }
       // Organization Chart Node Assignments
@@ -11864,7 +11363,7 @@ var init_storage = __esm({
           createdAt: orgChartNodeAssignments.createdAt,
           updatedAt: orgChartNodeAssignments.updatedAt,
           staff
-        }).from(orgChartNodeAssignments).leftJoin(staff, eq7(orgChartNodeAssignments.staffId, staff.id)).where(eq7(orgChartNodeAssignments.nodeId, nodeId));
+        }).from(orgChartNodeAssignments).leftJoin(staff, eq3(orgChartNodeAssignments.staffId, staff.id)).where(eq3(orgChartNodeAssignments.nodeId, nodeId));
         return result;
       }
       async getAllOrgChartAssignments(structureId) {
@@ -11879,7 +11378,7 @@ var init_storage = __esm({
           updatedAt: orgChartNodeAssignments.updatedAt,
           staff,
           node: orgChartNodes
-        }).from(orgChartNodeAssignments).leftJoin(staff, eq7(orgChartNodeAssignments.staffId, staff.id)).leftJoin(orgChartNodes, eq7(orgChartNodeAssignments.nodeId, orgChartNodes.id)).where(eq7(orgChartNodes.structureId, structureId));
+        }).from(orgChartNodeAssignments).leftJoin(staff, eq3(orgChartNodeAssignments.staffId, staff.id)).leftJoin(orgChartNodes, eq3(orgChartNodeAssignments.nodeId, orgChartNodes.id)).where(eq3(orgChartNodes.structureId, structureId));
         return result;
       }
       async createOrgChartNodeAssignment(assignment) {
@@ -11887,12 +11386,12 @@ var init_storage = __esm({
         return result[0];
       }
       async updateOrgChartNodeAssignment(id, assignment) {
-        const result = await db.update(orgChartNodeAssignments).set({ ...assignment, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(orgChartNodeAssignments.id, id)).returning();
+        const result = await db.update(orgChartNodeAssignments).set({ ...assignment, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(orgChartNodeAssignments.id, id)).returning();
         return result[0];
       }
       async deleteOrgChartNodeAssignment(id) {
         try {
-          await db.delete(orgChartNodeAssignments).where(eq7(orgChartNodeAssignments.id, id));
+          await db.delete(orgChartNodeAssignments).where(eq3(orgChartNodeAssignments.id, id));
           return true;
         } catch (error) {
           console.error("Error deleting org chart node assignment:", error);
@@ -11905,13 +11404,13 @@ var init_storage = __esm({
         return result;
       }
       async getTag(id) {
-        const result = await db.select().from(tags).where(eq7(tags.id, id)).limit(1);
+        const result = await db.select().from(tags).where(eq3(tags.id, id)).limit(1);
         return result[0];
       }
       async createTag(tag) {
         const result = await db.insert(tags).values({
           ...tag,
-          id: sql4`gen_random_uuid()`,
+          id: sql3`gen_random_uuid()`,
           createdAt: /* @__PURE__ */ new Date(),
           updatedAt: /* @__PURE__ */ new Date()
         }).returning();
@@ -11921,17 +11420,17 @@ var init_storage = __esm({
         const result = await db.update(tags).set({
           ...tag,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq7(tags.id, id)).returning();
+        }).where(eq3(tags.id, id)).returning();
         return result[0];
       }
       async deleteTag(id) {
-        const result = await db.delete(tags).where(eq7(tags.id, id)).returning();
+        const result = await db.delete(tags).where(eq3(tags.id, id)).returning();
         return result.length > 0;
       }
       // Products - Database implementation
       async getProducts() {
         try {
-          const result = await db.select().from(products).orderBy(asc2(products.name));
+          const result = await db.select().from(products).orderBy(asc(products.name));
           return result;
         } catch (error) {
           console.error("Error fetching products from database:", error);
@@ -11940,7 +11439,7 @@ var init_storage = __esm({
       }
       async getProduct(id) {
         try {
-          const result = await db.select().from(products).where(eq7(products.id, id));
+          const result = await db.select().from(products).where(eq3(products.id, id));
           return result[0];
         } catch (error) {
           console.error("Error fetching product from database:", error);
@@ -11951,7 +11450,7 @@ var init_storage = __esm({
         try {
           const result = await db.insert(products).values({
             ...product,
-            id: sql4`gen_random_uuid()`,
+            id: sql3`gen_random_uuid()`,
             createdAt: /* @__PURE__ */ new Date(),
             updatedAt: /* @__PURE__ */ new Date()
           }).returning();
@@ -11966,7 +11465,7 @@ var init_storage = __esm({
           const result = await db.update(products).set({
             ...product,
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq7(products.id, id)).returning();
+          }).where(eq3(products.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating product in database:", error);
@@ -11975,7 +11474,7 @@ var init_storage = __esm({
       }
       async deleteProduct(id) {
         try {
-          const result = await db.delete(products).where(eq7(products.id, id)).returning();
+          const result = await db.delete(products).where(eq3(products.id, id)).returning();
           return result.length > 0;
         } catch (error) {
           console.error("Error deleting product from database:", error);
@@ -11984,21 +11483,21 @@ var init_storage = __esm({
       }
       // SECURITY: Audit Logs - MUST use database for security compliance
       async getAuditLogs() {
-        return await db.select().from(auditLogs).orderBy(desc2(auditLogs.createdAt));
+        return await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt));
       }
       async getAuditLog(id) {
-        const result = await db.select().from(auditLogs).where(eq7(auditLogs.id, id)).limit(1);
+        const result = await db.select().from(auditLogs).where(eq3(auditLogs.id, id)).limit(1);
         return result[0];
       }
       async getAuditLogsByEntity(entityType, entityId) {
-        return await db.select().from(auditLogs).where(and6(eq7(auditLogs.entityType, entityType), eq7(auditLogs.entityId, entityId))).orderBy(desc2(auditLogs.createdAt));
+        return await db.select().from(auditLogs).where(and2(eq3(auditLogs.entityType, entityType), eq3(auditLogs.entityId, entityId))).orderBy(desc(auditLogs.createdAt));
       }
       async getAuditLogsByUser(userId2) {
-        return await db.select().from(auditLogs).where(eq7(auditLogs.userId, userId2)).orderBy(desc2(auditLogs.createdAt));
+        return await db.select().from(auditLogs).where(eq3(auditLogs.userId, userId2)).orderBy(desc(auditLogs.createdAt));
       }
       async createAuditLog(auditLog) {
         const [newAuditLog] = await db.insert(auditLogs).values({
-          id: randomUUID3(),
+          id: randomUUID(),
           ...auditLog,
           createdAt: /* @__PURE__ */ new Date()
         }).returning();
@@ -12009,12 +11508,12 @@ var init_storage = __esm({
         return await db.select().from(roles).orderBy(roles.name);
       }
       async getRole(id) {
-        const result = await db.select().from(roles).where(eq7(roles.id, id)).limit(1);
+        const result = await db.select().from(roles).where(eq3(roles.id, id)).limit(1);
         return result[0];
       }
       async createRole(role) {
         const [newRole] = await db.insert(roles).values({
-          id: randomUUID3(),
+          id: randomUUID(),
           ...role,
           createdAt: /* @__PURE__ */ new Date(),
           updatedAt: /* @__PURE__ */ new Date()
@@ -12022,23 +11521,23 @@ var init_storage = __esm({
         return newRole;
       }
       async updateRole(id, role) {
-        const [updatedRole] = await db.update(roles).set({ ...role, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(roles.id, id)).returning();
+        const [updatedRole] = await db.update(roles).set({ ...role, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(roles.id, id)).returning();
         return updatedRole;
       }
       async deleteRole(id) {
-        const result = await db.delete(roles).where(eq7(roles.id, id));
+        const result = await db.delete(roles).where(eq3(roles.id, id));
         return result.rowCount > 0;
       }
       async getPermissions() {
         return await db.select().from(permissions).orderBy(permissions.module, permissions.roleId);
       }
       async getPermission(id) {
-        const result = await db.select().from(permissions).where(eq7(permissions.id, id)).limit(1);
+        const result = await db.select().from(permissions).where(eq3(permissions.id, id)).limit(1);
         return result[0];
       }
       async createPermission(permission) {
         const [newPermission] = await db.insert(permissions).values({
-          id: randomUUID3(),
+          id: randomUUID(),
           ...permission,
           createdAt: /* @__PURE__ */ new Date(),
           updatedAt: /* @__PURE__ */ new Date()
@@ -12046,46 +11545,46 @@ var init_storage = __esm({
         return newPermission;
       }
       async updatePermission(id, permission) {
-        const [updatedPermission] = await db.update(permissions).set({ ...permission, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(permissions.id, id)).returning();
+        const [updatedPermission] = await db.update(permissions).set({ ...permission, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(permissions.id, id)).returning();
         return updatedPermission;
       }
       async deletePermission(id) {
-        const result = await db.delete(permissions).where(eq7(permissions.id, id));
+        const result = await db.delete(permissions).where(eq3(permissions.id, id));
         return result.rowCount > 0;
       }
       async getUserRoles() {
         return await db.select().from(userRoles).orderBy(userRoles.userId, userRoles.roleId);
       }
       async getUserRole(id) {
-        const result = await db.select().from(userRoles).where(eq7(userRoles.id, id)).limit(1);
+        const result = await db.select().from(userRoles).where(eq3(userRoles.id, id)).limit(1);
         return result[0];
       }
       async getUserRolesByUser(userId2) {
-        return await db.select().from(userRoles).where(eq7(userRoles.userId, userId2));
+        return await db.select().from(userRoles).where(eq3(userRoles.userId, userId2));
       }
       async getUserRolesByRole(roleId) {
-        return await db.select().from(userRoles).where(eq7(userRoles.roleId, roleId));
+        return await db.select().from(userRoles).where(eq3(userRoles.roleId, roleId));
       }
       async createUserRole(userRole) {
         const [newUserRole] = await db.insert(userRoles).values({
-          id: randomUUID3(),
+          id: randomUUID(),
           ...userRole,
           createdAt: /* @__PURE__ */ new Date()
         }).returning();
         return newUserRole;
       }
       async updateUserRole(id, userRole) {
-        const [updatedUserRole] = await db.update(userRoles).set({ ...userRole, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(userRoles.id, id)).returning();
+        const [updatedUserRole] = await db.update(userRoles).set({ ...userRole, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(userRoles.id, id)).returning();
         return updatedUserRole;
       }
       async deleteUserRole(id) {
-        const result = await db.delete(userRoles).where(eq7(userRoles.id, id));
+        const result = await db.delete(userRoles).where(eq3(userRoles.id, id));
         return result.rowCount > 0;
       }
       // Notifications - Database Implementation
       async getNotifications(userId2) {
         try {
-          const result = await db.select().from(notifications).where(eq7(notifications.userId, userId2)).orderBy(desc2(notifications.createdAt));
+          const result = await db.select().from(notifications).where(eq3(notifications.userId, userId2)).orderBy(desc(notifications.createdAt));
           return result;
         } catch (error) {
           console.error(`Error fetching notifications for user ${userId2}:`, error);
@@ -12094,7 +11593,7 @@ var init_storage = __esm({
       }
       async getNotification(id) {
         try {
-          const result = await db.select().from(notifications).where(eq7(notifications.id, id)).limit(1);
+          const result = await db.select().from(notifications).where(eq3(notifications.id, id)).limit(1);
           return result.length > 0 ? result[0] : void 0;
         } catch (error) {
           console.error(`Error fetching notification ${id}:`, error);
@@ -12103,10 +11602,10 @@ var init_storage = __esm({
       }
       async getUnreadNotifications(userId2) {
         try {
-          const result = await db.select().from(notifications).where(and6(
-            eq7(notifications.userId, userId2),
-            eq7(notifications.read, false)
-          )).orderBy(desc2(notifications.createdAt));
+          const result = await db.select().from(notifications).where(and2(
+            eq3(notifications.userId, userId2),
+            eq3(notifications.read, false)
+          )).orderBy(desc(notifications.createdAt));
           return result;
         } catch (error) {
           console.error(`Error fetching unread notifications for user ${userId2}:`, error);
@@ -12115,7 +11614,7 @@ var init_storage = __esm({
       }
       async createNotification(notificationData) {
         const [created] = await db.insert(notifications).values({
-          id: randomUUID3(),
+          id: randomUUID(),
           ...notificationData,
           read: false,
           createdAt: /* @__PURE__ */ new Date()
@@ -12124,7 +11623,7 @@ var init_storage = __esm({
       }
       async markNotificationAsRead(id) {
         try {
-          const result = await db.update(notifications).set({ read: true }).where(eq7(notifications.id, id));
+          const result = await db.update(notifications).set({ read: true }).where(eq3(notifications.id, id));
           return result.rowCount > 0;
         } catch (error) {
           console.error(`Error marking notification ${id} as read:`, error);
@@ -12133,7 +11632,7 @@ var init_storage = __esm({
       }
       async markAllNotificationsAsRead(userId2) {
         try {
-          const result = await db.update(notifications).set({ read: true }).where(eq7(notifications.userId, userId2));
+          const result = await db.update(notifications).set({ read: true }).where(eq3(notifications.userId, userId2));
           return result.rowCount > 0;
         } catch (error) {
           console.error(`Error marking all notifications as read for user ${userId2}:`, error);
@@ -12142,7 +11641,7 @@ var init_storage = __esm({
       }
       async deleteNotification(id) {
         try {
-          const result = await db.delete(notifications).where(eq7(notifications.id, id));
+          const result = await db.delete(notifications).where(eq3(notifications.id, id));
           return result.rowCount > 0;
         } catch (error) {
           console.error(`Error deleting notification ${id}:`, error);
@@ -12152,7 +11651,7 @@ var init_storage = __esm({
       // Notification Settings - Database Implementation
       async getNotificationSettings(userId2) {
         try {
-          const result = await db.select().from(notificationSettings).where(eq7(notificationSettings.userId, userId2)).limit(1);
+          const result = await db.select().from(notificationSettings).where(eq3(notificationSettings.userId, userId2)).limit(1);
           return result.length > 0 ? result[0] : void 0;
         } catch (error) {
           console.error(`Error fetching notification settings for user ${userId2}:`, error);
@@ -12161,7 +11660,7 @@ var init_storage = __esm({
       }
       async createNotificationSettings(settings) {
         const [created] = await db.insert(notificationSettings).values({
-          id: randomUUID3(),
+          id: randomUUID(),
           ...settings,
           createdAt: /* @__PURE__ */ new Date(),
           updatedAt: /* @__PURE__ */ new Date()
@@ -12169,7 +11668,7 @@ var init_storage = __esm({
         return created;
       }
       async updateNotificationSettings(userId2, settings) {
-        const [updated] = await db.update(notificationSettings).set({ ...settings, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(notificationSettings.userId, userId2)).returning();
+        const [updated] = await db.update(notificationSettings).set({ ...settings, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(notificationSettings.userId, userId2)).returning();
         return updated;
       }
       // Sales Settings - Database Implementation
@@ -12178,7 +11677,7 @@ var init_storage = __esm({
           const result = await db.select().from(salesSettings).limit(1);
           if (result.length === 0) {
             const [defaultSettings] = await db.insert(salesSettings).values({
-              id: randomUUID3(),
+              id: randomUUID(),
               minimumMarginThreshold: "35.00",
               updatedAt: /* @__PURE__ */ new Date()
             }).returning();
@@ -12199,7 +11698,7 @@ var init_storage = __esm({
           const [updated] = await db.update(salesSettings).set({
             ...settings,
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq7(salesSettings.id, existing.id)).returning();
+          }).where(eq3(salesSettings.id, existing.id)).returning();
           return updated;
         } catch (error) {
           console.error("Error updating sales settings:", error);
@@ -12209,7 +11708,7 @@ var init_storage = __esm({
       // Sales Targets - Database Implementation
       async getSalesTargets() {
         try {
-          const result = await db.select().from(salesTargets).orderBy(desc2(salesTargets.year), desc2(salesTargets.month));
+          const result = await db.select().from(salesTargets).orderBy(desc(salesTargets.year), desc(salesTargets.month));
           return result;
         } catch (error) {
           console.error("Error getting sales targets:", error);
@@ -12218,7 +11717,7 @@ var init_storage = __esm({
       }
       async getSalesTarget(id) {
         try {
-          const result = await db.select().from(salesTargets).where(eq7(salesTargets.id, id)).limit(1);
+          const result = await db.select().from(salesTargets).where(eq3(salesTargets.id, id)).limit(1);
           return result[0];
         } catch (error) {
           console.error("Error getting sales target:", error);
@@ -12227,7 +11726,7 @@ var init_storage = __esm({
       }
       async getSalesTargetByMonth(year, month) {
         try {
-          const result = await db.select().from(salesTargets).where(and6(eq7(salesTargets.year, year), eq7(salesTargets.month, month))).limit(1);
+          const result = await db.select().from(salesTargets).where(and2(eq3(salesTargets.year, year), eq3(salesTargets.month, month))).limit(1);
           return result[0];
         } catch (error) {
           console.error("Error getting sales target by month:", error);
@@ -12237,7 +11736,7 @@ var init_storage = __esm({
       async createSalesTarget(target) {
         try {
           const [created] = await db.insert(salesTargets).values({
-            id: randomUUID3(),
+            id: randomUUID(),
             ...target,
             createdAt: /* @__PURE__ */ new Date(),
             updatedAt: /* @__PURE__ */ new Date()
@@ -12253,7 +11752,7 @@ var init_storage = __esm({
           const [updated] = await db.update(salesTargets).set({
             ...target,
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq7(salesTargets.id, id)).returning();
+          }).where(eq3(salesTargets.id, id)).returning();
           return updated;
         } catch (error) {
           console.error("Error updating sales target:", error);
@@ -12262,7 +11761,7 @@ var init_storage = __esm({
       }
       async deleteSalesTarget(id) {
         try {
-          const result = await db.delete(salesTargets).where(eq7(salesTargets.id, id));
+          const result = await db.delete(salesTargets).where(eq3(salesTargets.id, id));
           return (result.rowCount ?? 0) > 0;
         } catch (error) {
           console.error("Error deleting sales target:", error);
@@ -12274,7 +11773,7 @@ var init_storage = __esm({
         try {
           let query = db.select().from(smartLists);
           if (entityType) {
-            query = query.where(eq7(smartLists.entityType, entityType));
+            query = query.where(eq3(smartLists.entityType, entityType));
           }
           const allLists = await query;
           return allLists.filter((list) => {
@@ -12292,7 +11791,7 @@ var init_storage = __esm({
       }
       async getSmartList(id) {
         try {
-          const result = await db.select().from(smartLists).where(eq7(smartLists.id, id)).limit(1);
+          const result = await db.select().from(smartLists).where(eq3(smartLists.id, id)).limit(1);
           return result[0];
         } catch (error) {
           console.error("Error getting smart list:", error);
@@ -12303,7 +11802,7 @@ var init_storage = __esm({
         try {
           const result = await db.insert(smartLists).values({
             ...smartList,
-            id: randomUUID3(),
+            id: randomUUID(),
             createdAt: /* @__PURE__ */ new Date(),
             updatedAt: /* @__PURE__ */ new Date()
           }).returning();
@@ -12315,7 +11814,7 @@ var init_storage = __esm({
       }
       async updateSmartList(id, smartList) {
         try {
-          const result = await db.update(smartLists).set({ ...smartList, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(smartLists.id, id)).returning();
+          const result = await db.update(smartLists).set({ ...smartList, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(smartLists.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating smart list:", error);
@@ -12324,7 +11823,7 @@ var init_storage = __esm({
       }
       async deleteSmartList(id) {
         try {
-          await db.delete(smartLists).where(eq7(smartLists.id, id));
+          await db.delete(smartLists).where(eq3(smartLists.id, id));
           return true;
         } catch (error) {
           console.error("Error deleting smart list:", error);
@@ -12334,7 +11833,7 @@ var init_storage = __esm({
       // Client Brief Sections Management
       async listBriefSections() {
         try {
-          return await db.select().from(clientBriefSections).orderBy(asc2(clientBriefSections.displayOrder), asc2(clientBriefSections.createdAt));
+          return await db.select().from(clientBriefSections).orderBy(asc(clientBriefSections.displayOrder), asc(clientBriefSections.createdAt));
         } catch (error) {
           console.error("Error listing brief sections:", error);
           return [];
@@ -12342,7 +11841,7 @@ var init_storage = __esm({
       }
       async getBriefSection(id) {
         try {
-          const result = await db.select().from(clientBriefSections).where(eq7(clientBriefSections.id, id)).limit(1);
+          const result = await db.select().from(clientBriefSections).where(eq3(clientBriefSections.id, id)).limit(1);
           return result[0];
         } catch (error) {
           console.error("Error getting brief section:", error);
@@ -12351,7 +11850,7 @@ var init_storage = __esm({
       }
       async getBriefSectionByKey(key) {
         try {
-          const result = await db.select().from(clientBriefSections).where(eq7(clientBriefSections.key, key)).limit(1);
+          const result = await db.select().from(clientBriefSections).where(eq3(clientBriefSections.key, key)).limit(1);
           return result[0];
         } catch (error) {
           console.error("Error getting brief section by key:", error);
@@ -12369,7 +11868,7 @@ var init_storage = __esm({
       }
       async updateBriefSection(id, sectionData) {
         try {
-          const result = await db.update(clientBriefSections).set({ ...sectionData, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(clientBriefSections.id, id)).returning();
+          const result = await db.update(clientBriefSections).set({ ...sectionData, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(clientBriefSections.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating brief section:", error);
@@ -12378,12 +11877,12 @@ var init_storage = __esm({
       }
       async deleteBriefSection(id) {
         try {
-          const section = await db.select().from(clientBriefSections).where(eq7(clientBriefSections.id, id)).limit(1);
+          const section = await db.select().from(clientBriefSections).where(eq3(clientBriefSections.id, id)).limit(1);
           if (section.length === 0) return false;
-          if (section[0].isCoreSection) {
+          if (section[0].isCoreSection || section[0].scope === "core") {
             throw new Error("Cannot delete core client brief section");
           }
-          await db.delete(clientBriefSections).where(eq7(clientBriefSections.id, id));
+          await db.delete(clientBriefSections).where(eq3(clientBriefSections.id, id));
           return true;
         } catch (error) {
           console.error("Error deleting brief section:", error);
@@ -12393,7 +11892,7 @@ var init_storage = __esm({
       async reorderBriefSections(sectionIds) {
         try {
           const promises = sectionIds.map(
-            (id, index2) => db.update(clientBriefSections).set({ displayOrder: index2, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(clientBriefSections.id, id))
+            (id, index2) => db.update(clientBriefSections).set({ displayOrder: index2, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(clientBriefSections.id, id))
           );
           await Promise.all(promises);
         } catch (error) {
@@ -12404,36 +11903,14 @@ var init_storage = __esm({
       async getClientBrief(clientId) {
         try {
           const sections = await this.listBriefSections();
-          const [client] = await db.select().from(clients).where(eq7(clients.id, clientId)).limit(1);
-          const customValues = await db.select().from(clientBriefValues).where(eq7(clientBriefValues.clientId, clientId));
+          const [client] = await db.select().from(clients).where(eq3(clients.id, clientId)).limit(1);
+          const customValues = await db.select().from(clientBriefValues).where(eq3(clientBriefValues.clientId, clientId));
           return sections.map((section) => {
             let value = void 0;
-            if (client && section.key && section.isCoreSection) {
-              switch (section.key) {
-                case "background":
-                  value = client.briefBackground || void 0;
-                  break;
-                case "objectives":
-                  value = client.briefObjectives || void 0;
-                  break;
-                case "brand_info":
-                  value = client.briefBrandInfo || void 0;
-                  break;
-                case "audience_info":
-                  value = client.briefAudienceInfo || void 0;
-                  break;
-                case "products_services":
-                  value = client.briefProductsServices || void 0;
-                  break;
-                case "competitors":
-                  value = client.briefCompetitors || void 0;
-                  break;
-                case "marketing_tech":
-                  value = client.briefMarketingTech || void 0;
-                  break;
-                case "miscellaneous":
-                  value = client.briefMiscellaneous || void 0;
-                  break;
+            if (client && section.key && (section.isCoreSection || section.scope === "core")) {
+              const column = mapBriefSectionKeyToClientColumn(section.key);
+              if (column) {
+                value = client[column] || void 0;
               }
             }
             if (!value) {
@@ -12456,44 +11933,26 @@ var init_storage = __esm({
           if (!section) {
             throw new Error("Section not found");
           }
-          if (section.key && section.isCoreSection) {
+          if (section.key && (section.isCoreSection || section.scope === "core")) {
             const updateData = {};
-            switch (section.key) {
-              case "background":
-                updateData.briefBackground = value;
-                break;
-              case "objectives":
-                updateData.briefObjectives = value;
-                break;
-              case "brand_info":
-                updateData.briefBrandInfo = value;
-                break;
-              case "audience_info":
-                updateData.briefAudienceInfo = value;
-                break;
-              case "products_services":
-                updateData.briefProductsServices = value;
-                break;
-              case "competitors":
-                updateData.briefCompetitors = value;
-                break;
-              case "marketing_tech":
-                updateData.briefMarketingTech = value;
-                break;
-              case "miscellaneous":
-                updateData.briefMiscellaneous = value;
-                break;
+            const column = mapBriefSectionKeyToClientColumn(section.key);
+            if (column) {
+              updateData[column] = value;
+            }
+            if (Object.keys(updateData).length === 0) {
+              console.warn(`[setClientBriefValue] No client column mapping for core section key: ${section.key}`);
+              return;
             }
             await this.updateClient(clientId, updateData);
           } else {
-            const existing = await db.select().from(clientBriefValues).where(and6(
-              eq7(clientBriefValues.clientId, clientId),
-              eq7(clientBriefValues.sectionId, sectionId)
+            const existing = await db.select().from(clientBriefValues).where(and2(
+              eq3(clientBriefValues.clientId, clientId),
+              eq3(clientBriefValues.sectionId, sectionId)
             )).limit(1);
             if (existing.length > 0) {
-              await db.update(clientBriefValues).set({ value, updatedAt: /* @__PURE__ */ new Date() }).where(and6(
-                eq7(clientBriefValues.clientId, clientId),
-                eq7(clientBriefValues.sectionId, sectionId)
+              await db.update(clientBriefValues).set({ value, updatedAt: /* @__PURE__ */ new Date() }).where(and2(
+                eq3(clientBriefValues.clientId, clientId),
+                eq3(clientBriefValues.sectionId, sectionId)
               ));
             } else {
               await db.insert(clientBriefValues).values({
@@ -12520,9 +11979,9 @@ var init_storage = __esm({
       }
       async getClientsWithPagination(limit, offset, sortBy, sortOrder) {
         try {
-          const totalResult = await db.select({ count: sql4`count(*)` }).from(clients).where(or2(eq7(clients.isArchived, false), isNull(clients.isArchived)));
+          const totalResult = await db.select({ count: sql3`count(*)` }).from(clients).where(or(eq3(clients.isArchived, false), isNull(clients.isArchived)));
           const total = Number(totalResult[0]?.count) || 0;
-          const lastActivitySubquery = sql4`
+          const lastActivitySubquery = sql3`
         GREATEST(
           ${clients.createdAt},
           COALESCE((SELECT MAX(tasks.created_at) FROM tasks WHERE tasks.client_id = ${clients.id}), ${clients.createdAt}),
@@ -12580,26 +12039,26 @@ var init_storage = __esm({
             lastActivity: lastActivitySubquery.as("last_activity"),
             isArchived: clients.isArchived,
             createdAt: clients.createdAt
-          }).from(clients).where(or2(eq7(clients.isArchived, false), isNull(clients.isArchived)));
+          }).from(clients).where(or(eq3(clients.isArchived, false), isNull(clients.isArchived)));
           if (sortBy) {
             if (sortBy === "lastActivity") {
               if (sortOrder === "desc") {
-                query = query.orderBy(desc2(lastActivitySubquery));
+                query = query.orderBy(desc(lastActivitySubquery));
               } else {
-                query = query.orderBy(asc2(lastActivitySubquery));
+                query = query.orderBy(asc(lastActivitySubquery));
               }
             } else {
               const column = clients[sortBy];
               if (column) {
                 if (sortOrder === "desc") {
-                  query = query.orderBy(desc2(column));
+                  query = query.orderBy(desc(column));
                 } else {
-                  query = query.orderBy(asc2(column));
+                  query = query.orderBy(asc(column));
                 }
               }
             }
           } else {
-            query = query.orderBy(desc2(clients.createdAt));
+            query = query.orderBy(desc(clients.createdAt));
           }
           query = query.limit(limit).offset(offset);
           const clientsResult = await query;
@@ -12639,7 +12098,7 @@ var init_storage = __esm({
       }
       async getEmailIntegration(id) {
         try {
-          const result = await db.select().from(emailIntegrations).where(eq7(emailIntegrations.id, id)).limit(1);
+          const result = await db.select().from(emailIntegrations).where(eq3(emailIntegrations.id, id)).limit(1);
           return result[0];
         } catch (error) {
           console.error("Error fetching email integration:", error);
@@ -12648,7 +12107,7 @@ var init_storage = __esm({
       }
       async getEmailIntegrationByProvider(provider) {
         try {
-          const result = await db.select().from(emailIntegrations).where(and6(eq7(emailIntegrations.provider, provider), eq7(emailIntegrations.isActive, true))).limit(1);
+          const result = await db.select().from(emailIntegrations).where(and2(eq3(emailIntegrations.provider, provider), eq3(emailIntegrations.isActive, true))).limit(1);
           return result[0];
         } catch (error) {
           console.error("Error fetching email integration by provider:", error);
@@ -12673,7 +12132,7 @@ var init_storage = __esm({
           const result = await db.update(emailIntegrations).set({
             ...integrationData,
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq7(emailIntegrations.id, id)).returning();
+          }).where(eq3(emailIntegrations.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating email integration:", error);
@@ -12682,7 +12141,7 @@ var init_storage = __esm({
       }
       async deleteEmailIntegration(id) {
         try {
-          const result = await db.delete(emailIntegrations).where(eq7(emailIntegrations.id, id));
+          const result = await db.delete(emailIntegrations).where(eq3(emailIntegrations.id, id));
           return result.rowCount > 0;
         } catch (error) {
           console.error("Error deleting email integration:", error);
@@ -12701,9 +12160,9 @@ var init_storage = __esm({
       }
       async getUserViewPreference(userId2, viewType) {
         try {
-          const result = await db.select().from(userViewPreferences).where(and6(
-            eq7(userViewPreferences.userId, userId2),
-            eq7(userViewPreferences.viewType, viewType)
+          const result = await db.select().from(userViewPreferences).where(and2(
+            eq3(userViewPreferences.userId, userId2),
+            eq3(userViewPreferences.viewType, viewType)
           )).limit(1);
           return result[0] || null;
         } catch (error) {
@@ -12718,7 +12177,7 @@ var init_storage = __esm({
             const result = await db.update(userViewPreferences).set({
               preferences,
               updatedAt: /* @__PURE__ */ new Date()
-            }).where(eq7(userViewPreferences.id, existing.id)).returning();
+            }).where(eq3(userViewPreferences.id, existing.id)).returning();
             return result[0];
           } else {
             const result = await db.insert(userViewPreferences).values({
@@ -12738,7 +12197,7 @@ var init_storage = __esm({
       // =============================================================================
       async getUserDashboards(userId2) {
         try {
-          const result = await db.select().from(dashboards).where(eq7(dashboards.userId, userId2)).orderBy(asc2(dashboards.displayOrder), desc2(dashboards.isDefault), asc2(dashboards.name));
+          const result = await db.select().from(dashboards).where(eq3(dashboards.userId, userId2)).orderBy(asc(dashboards.displayOrder), desc(dashboards.isDefault), asc(dashboards.name));
           return result;
         } catch (error) {
           console.error("Error fetching user dashboards:", error);
@@ -12747,7 +12206,7 @@ var init_storage = __esm({
       }
       async getDashboard(id) {
         try {
-          const result = await db.select().from(dashboards).where(eq7(dashboards.id, id)).limit(1);
+          const result = await db.select().from(dashboards).where(eq3(dashboards.id, id)).limit(1);
           return result[0];
         } catch (error) {
           console.error("Error fetching dashboard:", error);
@@ -12768,7 +12227,7 @@ var init_storage = __esm({
           const result = await db.update(dashboards).set({
             ...data,
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq7(dashboards.id, id)).returning();
+          }).where(eq3(dashboards.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating dashboard:", error);
@@ -12777,7 +12236,7 @@ var init_storage = __esm({
       }
       async deleteDashboard(id) {
         try {
-          const result = await db.delete(dashboards).where(eq7(dashboards.id, id));
+          const result = await db.delete(dashboards).where(eq3(dashboards.id, id));
           return result.rowCount > 0;
         } catch (error) {
           console.error("Error deleting dashboard:", error);
@@ -12786,8 +12245,8 @@ var init_storage = __esm({
       }
       async setDefaultDashboard(userId2, dashboardId) {
         try {
-          await db.update(dashboards).set({ isDefault: false, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(dashboards.userId, userId2));
-          await db.update(dashboards).set({ isDefault: true, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(dashboards.id, dashboardId));
+          await db.update(dashboards).set({ isDefault: false, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(dashboards.userId, userId2));
+          await db.update(dashboards).set({ isDefault: true, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(dashboards.id, dashboardId));
         } catch (error) {
           console.error("Error setting default dashboard:", error);
           throw error;
@@ -12799,7 +12258,7 @@ var init_storage = __esm({
             await db.update(dashboards).set({
               displayOrder: update.displayOrder,
               updatedAt: /* @__PURE__ */ new Date()
-            }).where(eq7(dashboards.id, update.id));
+            }).where(eq3(dashboards.id, update.id));
           }
         } catch (error) {
           console.error("Error updating dashboards order:", error);
@@ -12811,7 +12270,7 @@ var init_storage = __esm({
       // =============================================================================
       async getDashboardWidgets() {
         try {
-          const widgets = await db.select().from(dashboardWidgets).where(eq7(dashboardWidgets.isActive, true)).orderBy(dashboardWidgets.category, dashboardWidgets.name);
+          const widgets = await db.select().from(dashboardWidgets).where(eq3(dashboardWidgets.isActive, true)).orderBy(dashboardWidgets.category, dashboardWidgets.name);
           return widgets;
         } catch (error) {
           console.error("Error fetching dashboard widgets:", error);
@@ -12820,10 +12279,10 @@ var init_storage = __esm({
       }
       async getUserDashboardWidgets(userId2, dashboardId) {
         try {
-          const widgets = await db.select().from(userDashboardWidgets).where(and6(
-            eq7(userDashboardWidgets.userId, userId2),
-            eq7(userDashboardWidgets.dashboardId, dashboardId),
-            eq7(userDashboardWidgets.isVisible, true)
+          const widgets = await db.select().from(userDashboardWidgets).where(and2(
+            eq3(userDashboardWidgets.userId, userId2),
+            eq3(userDashboardWidgets.dashboardId, dashboardId),
+            eq3(userDashboardWidgets.isVisible, true)
           )).orderBy(userDashboardWidgets.order);
           return widgets;
         } catch (error) {
@@ -12833,7 +12292,7 @@ var init_storage = __esm({
       }
       async getUserDashboardWidget(id) {
         try {
-          const result = await db.select().from(userDashboardWidgets).where(eq7(userDashboardWidgets.id, id)).limit(1);
+          const result = await db.select().from(userDashboardWidgets).where(eq3(userDashboardWidgets.id, id)).limit(1);
           return result[0];
         } catch (error) {
           console.error("Error fetching user dashboard widget:", error);
@@ -12854,7 +12313,7 @@ var init_storage = __esm({
           const result = await db.update(userDashboardWidgets).set({
             ...data,
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq7(userDashboardWidgets.id, id)).returning();
+          }).where(eq3(userDashboardWidgets.id, id)).returning();
           return result[0];
         } catch (error) {
           console.error("Error updating user dashboard widget:", error);
@@ -12863,7 +12322,7 @@ var init_storage = __esm({
       }
       async deleteUserDashboardWidget(id) {
         try {
-          const result = await db.delete(userDashboardWidgets).where(eq7(userDashboardWidgets.id, id));
+          const result = await db.delete(userDashboardWidgets).where(eq3(userDashboardWidgets.id, id));
           return result.rowCount > 0;
         } catch (error) {
           console.error("Error deleting user dashboard widget:", error);
@@ -12884,7 +12343,7 @@ var init_storage = __esm({
           );
           let assignedClientIds = [];
           if (!isAdminOrManager) {
-            const userAssignments = await db.select({ clientId: clientTeamAssignments.clientId }).from(clientTeamAssignments).where(eq7(clientTeamAssignments.staffId, userId2));
+            const userAssignments = await db.select({ clientId: clientTeamAssignments.clientId }).from(clientTeamAssignments).where(eq3(clientTeamAssignments.staffId, userId2));
             assignedClientIds = userAssignments.map((a) => a.clientId);
           }
           switch (widgetType) {
@@ -12992,7 +12451,7 @@ var init_storage = __esm({
             healthIndicator: clientHealthScores.healthIndicator,
             averageScore: clientHealthScores.averageScore,
             weekStartDate: clientHealthScores.weekStartDate
-          }).from(clientHealthScores).orderBy(desc2(clientHealthScores.weekStartDate));
+          }).from(clientHealthScores).orderBy(desc(clientHealthScores.weekStartDate));
           const latestScores = /* @__PURE__ */ new Map();
           healthScores.forEach((score) => {
             if (!latestScores.has(score.clientId)) {
@@ -13018,7 +12477,7 @@ var init_storage = __esm({
       }
       async getRecentClientsData() {
         try {
-          const recentClients = await db.select().from(clients).where(eq7(clients.isArchived, false)).orderBy(desc2(clients.createdAt)).limit(5);
+          const recentClients = await db.select().from(clients).where(eq3(clients.isArchived, false)).orderBy(desc(clients.createdAt)).limit(5);
           return recentClients;
         } catch (error) {
           console.error("Error fetching recent clients:", error);
@@ -13038,11 +12497,11 @@ var init_storage = __esm({
             status: tasks.clientApprovalStatus,
             dueDate: tasks.dueDate,
             createdAt: tasks.createdAt
-          }).from(tasks).leftJoin(clients, eq7(tasks.clientId, clients.id)).where(and6(
-            eq7(tasks.requiresClientApproval, true),
-            inArray4(tasks.clientId, assignedClientIds),
-            eq7(tasks.clientApprovalStatus, "pending")
-          )).orderBy(desc2(tasks.createdAt)).limit(10);
+          }).from(tasks).leftJoin(clients, eq3(tasks.clientId, clients.id)).where(and2(
+            eq3(tasks.requiresClientApproval, true),
+            inArray2(tasks.clientId, assignedClientIds),
+            eq3(tasks.clientApprovalStatus, "pending")
+          )).orderBy(desc(tasks.createdAt)).limit(10);
           return approvalQueue;
         } catch (error) {
           console.error("Error fetching client approval queue:", error);
@@ -13055,7 +12514,7 @@ var init_storage = __esm({
           const allClients = await db.select({
             id: clients.id,
             customFieldValues: clients.customFieldValues
-          }).from(clients).where(eq7(clients.isArchived, false));
+          }).from(clients).where(eq3(clients.isArchived, false));
           const verticalCounts = {};
           allClients.forEach((client) => {
             const customFields2 = client.customFieldValues || {};
@@ -13085,11 +12544,11 @@ var init_storage = __esm({
             firstName: clientPortalUsers.firstName,
             lastName: clientPortalUsers.lastName,
             lastLogin: clientPortalUsers.lastLogin
-          }).from(clientPortalUsers).leftJoin(clients, eq7(clientPortalUsers.clientId, clients.id)).where(and6(
-            inArray4(clientPortalUsers.clientId, assignedClientIds),
-            eq7(clientPortalUsers.isActive, true),
+          }).from(clientPortalUsers).leftJoin(clients, eq3(clientPortalUsers.clientId, clients.id)).where(and2(
+            inArray2(clientPortalUsers.clientId, assignedClientIds),
+            eq3(clientPortalUsers.isActive, true),
             isNotNull(clientPortalUsers.lastLogin)
-          )).orderBy(desc2(clientPortalUsers.lastLogin)).limit(10);
+          )).orderBy(desc(clientPortalUsers.lastLogin)).limit(10);
           return recentActivity;
         } catch (error) {
           console.error("Error fetching client portal activity:", error);
@@ -13108,7 +12567,7 @@ var init_storage = __esm({
             staffEmail: staff.email,
             position: clientTeamAssignments.position,
             isPrimary: clientTeamAssignments.isPrimary
-          }).from(clientTeamAssignments).innerJoin(clients, eq7(clientTeamAssignments.clientId, clients.id)).leftJoin(staff, eq7(clientTeamAssignments.staffId, staff.id)).where(eq7(clients.isArchived, false)).orderBy(clients.name, desc2(clientTeamAssignments.isPrimary));
+          }).from(clientTeamAssignments).innerJoin(clients, eq3(clientTeamAssignments.clientId, clients.id)).leftJoin(staff, eq3(clientTeamAssignments.staffId, staff.id)).where(eq3(clients.isArchived, false)).orderBy(clients.name, desc(clientTeamAssignments.isPrimary));
           const grouped = assignments.reduce((acc, assignment) => {
             const clientId = assignment.clientId;
             if (!clientId) return acc;
@@ -13142,21 +12601,21 @@ var init_storage = __esm({
         try {
           const pipelineData = await db.select({
             stage: leadPipelineStages.name,
-            count: sql4`count(*)::int`,
-            totalValue: sql4`sum(COALESCE(CAST(${leads.value} AS NUMERIC), 0))::int`
-          }).from(leads).leftJoin(leadPipelineStages, eq7(leads.stageId, leadPipelineStages.id)).where(
-            and6(
-              eq7(leads.status, "Open"),
-              !isAdminOrManager ? eq7(leads.assignedTo, userId2) : void 0
+            count: sql3`count(*)::int`,
+            totalValue: sql3`sum(COALESCE(CAST(${leads.value} AS NUMERIC), 0))::int`
+          }).from(leads).leftJoin(leadPipelineStages, eq3(leads.stageId, leadPipelineStages.id)).where(
+            and2(
+              eq3(leads.status, "Open"),
+              !isAdminOrManager ? eq3(leads.assignedTo, userId2) : void 0
             )
           ).groupBy(leadPipelineStages.name);
-          const wonLeads = await db.select({ count: sql4`count(*)::int` }).from(leads).where(
-            and6(
-              eq7(leads.status, "Won"),
-              !isAdminOrManager ? eq7(leads.assignedTo, userId2) : void 0
+          const wonLeads = await db.select({ count: sql3`count(*)::int` }).from(leads).where(
+            and2(
+              eq3(leads.status, "Won"),
+              !isAdminOrManager ? eq3(leads.assignedTo, userId2) : void 0
             )
           );
-          const totalLeads = await db.select({ count: sql4`count(*)::int` }).from(leads).where(!isAdminOrManager ? eq7(leads.assignedTo, userId2) : void 0);
+          const totalLeads = await db.select({ count: sql3`count(*)::int` }).from(leads).where(!isAdminOrManager ? eq3(leads.assignedTo, userId2) : void 0);
           const conversionRate = totalLeads[0]?.count > 0 ? ((wonLeads[0]?.count || 0) / totalLeads[0].count * 100).toFixed(1) : "0.0";
           return {
             stages: pipelineData,
@@ -13172,10 +12631,10 @@ var init_storage = __esm({
         try {
           const statusCounts = await db.select({
             status: quotes.status,
-            count: sql4`count(*)::int`,
-            totalValue: sql4`sum(COALESCE(CAST(${quotes.clientBudget} AS NUMERIC), 0))::int`
+            count: sql3`count(*)::int`,
+            totalValue: sql3`sum(COALESCE(CAST(${quotes.clientBudget} AS NUMERIC), 0))::int`
           }).from(quotes).where(
-            assignedClientIds.length > 0 ? inArray4(quotes.clientId, assignedClientIds) : void 0
+            assignedClientIds.length > 0 ? inArray2(quotes.clientId, assignedClientIds) : void 0
           ).groupBy(quotes.status);
           return statusCounts.map((s) => ({
             status: s.status,
@@ -13194,13 +12653,13 @@ var init_storage = __esm({
           const currentYear = now.getFullYear();
           const currentMonth = now.getMonth() + 1;
           const revenue = await db.select({
-            total: sql4`sum(COALESCE(CAST(${quotes.clientBudget} AS NUMERIC), 0))::int`,
-            count: sql4`count(*)::int`
+            total: sql3`sum(COALESCE(CAST(${quotes.clientBudget} AS NUMERIC), 0))::int`,
+            count: sql3`count(*)::int`
           }).from(quotes).where(
-            and6(
-              eq7(quotes.status, "accepted"),
-              sql4`${quotes.updatedAt} >= ${startOfMonth}`,
-              assignedClientIds.length > 0 ? inArray4(quotes.clientId, assignedClientIds) : void 0
+            and2(
+              eq3(quotes.status, "accepted"),
+              sql3`${quotes.updatedAt} >= ${startOfMonth}`,
+              assignedClientIds.length > 0 ? inArray2(quotes.clientId, assignedClientIds) : void 0
             )
           );
           const targetRecord = await this.getSalesTargetByMonth(currentYear, currentMonth);
@@ -13226,9 +12685,9 @@ var init_storage = __esm({
             name: clients.name,
             customFieldValues: clients.customFieldValues
           }).from(clients).where(
-            and6(
-              eq7(clients.status, "active"),
-              assignedClientIds.length > 0 ? inArray4(clients.id, assignedClientIds) : void 0
+            and2(
+              eq3(clients.status, "active"),
+              assignedClientIds.length > 0 ? inArray2(clients.id, assignedClientIds) : void 0
             )
           );
           const clientsWithMrr = activeClients.map((client) => {
@@ -13255,10 +12714,10 @@ var init_storage = __esm({
       }
       async getWinRateData(userId2, isAdminOrManager) {
         try {
-          const wonWhere = isAdminOrManager ? eq7(leads.status, "Won") : and6(eq7(leads.status, "Won"), eq7(leads.assignedTo, userId2));
-          const totalWhere = isAdminOrManager ? sql4`${leads.status} IN ('Won', 'Lost')` : and6(sql4`${leads.status} IN ('Won', 'Lost')`, eq7(leads.assignedTo, userId2));
-          const wonCount = await db.select({ count: sql4`count(*)::int` }).from(leads).where(wonWhere);
-          const totalCount = await db.select({ count: sql4`count(*)::int` }).from(leads).where(totalWhere);
+          const wonWhere = isAdminOrManager ? eq3(leads.status, "Won") : and2(eq3(leads.status, "Won"), eq3(leads.assignedTo, userId2));
+          const totalWhere = isAdminOrManager ? sql3`${leads.status} IN ('Won', 'Lost')` : and2(sql3`${leads.status} IN ('Won', 'Lost')`, eq3(leads.assignedTo, userId2));
+          const wonCount = await db.select({ count: sql3`count(*)::int` }).from(leads).where(wonWhere);
+          const totalCount = await db.select({ count: sql3`count(*)::int` }).from(leads).where(totalWhere);
           const won = wonCount[0]?.count || 0;
           const total = totalCount[0]?.count || 0;
           const winRate = total > 0 ? (won / total * 100).toFixed(1) : "0.0";
@@ -13279,14 +12738,14 @@ var init_storage = __esm({
             staffId: leads.assignedTo,
             staffFirstName: staff.firstName,
             staffLastName: staff.lastName,
-            dealsWon: sql4`count(*)::int`,
-            totalRevenue: sql4`sum(COALESCE(CAST(${leads.value} AS NUMERIC), 0))::int`
-          }).from(leads).leftJoin(staff, eq7(leads.assignedTo, staff.id)).where(
-            and6(
-              eq7(leads.status, "Won"),
+            dealsWon: sql3`count(*)::int`,
+            totalRevenue: sql3`sum(COALESCE(CAST(${leads.value} AS NUMERIC), 0))::int`
+          }).from(leads).leftJoin(staff, eq3(leads.assignedTo, staff.id)).where(
+            and2(
+              eq3(leads.status, "Won"),
               isNotNull(leads.assignedTo)
             )
-          ).groupBy(leads.assignedTo, staff.firstName, staff.lastName).orderBy(desc2(sql4`count(*)`)).limit(5);
+          ).groupBy(leads.assignedTo, staff.firstName, staff.lastName).orderBy(desc(sql3`count(*)`)).limit(5);
           return topReps.map((rep) => ({
             staffId: rep.staffId,
             staffName: rep.staffFirstName && rep.staffLastName ? `${rep.staffFirstName} ${rep.staffLastName}` : "Unknown",
@@ -13308,12 +12767,12 @@ var init_storage = __esm({
             wonDate: leads.updatedAt,
             staffFirstName: staff.firstName,
             staffLastName: staff.lastName
-          }).from(leads).leftJoin(staff, eq7(leads.assignedTo, staff.id)).where(
-            and6(
-              eq7(leads.status, "Won"),
-              !isAdminOrManager ? eq7(leads.assignedTo, userId2) : void 0
+          }).from(leads).leftJoin(staff, eq3(leads.assignedTo, staff.id)).where(
+            and2(
+              eq3(leads.status, "Won"),
+              !isAdminOrManager ? eq3(leads.assignedTo, userId2) : void 0
             )
-          ).orderBy(desc2(leads.updatedAt)).limit(10);
+          ).orderBy(desc(leads.updatedAt)).limit(10);
           return recentDeals.map((deal) => ({
             id: deal.id,
             companyName: deal.companyName,
@@ -13337,13 +12796,13 @@ var init_storage = __esm({
             priority: tasks.priority,
             dueDate: tasks.dueDate,
             clientName: clients.name
-          }).from(tasks).leftJoin(clients, eq7(tasks.clientId, clients.id)).where(
-            and6(
-              eq7(tasks.assignedTo, userId2),
+          }).from(tasks).leftJoin(clients, eq3(tasks.clientId, clients.id)).where(
+            and2(
+              eq3(tasks.assignedTo, userId2),
               ne(tasks.status, "completed"),
               ne(tasks.status, "cancelled")
             )
-          ).orderBy(desc2(tasks.priority), asc2(tasks.dueDate)).limit(10);
+          ).orderBy(desc(tasks.priority), asc(tasks.dueDate)).limit(10);
           return myTasks;
         } catch (error) {
           console.error("Error fetching my tasks:", error);
@@ -13354,12 +12813,12 @@ var init_storage = __esm({
         try {
           const now = /* @__PURE__ */ new Date();
           const conditions = [
-            sql4`${tasks.dueDate} < ${now.toISOString()}`,
+            sql3`${tasks.dueDate} < ${now.toISOString()}`,
             ne(tasks.status, "completed"),
             ne(tasks.status, "cancelled")
           ];
           if (filters?.assignee === "mine") {
-            conditions.push(eq7(tasks.assignedTo, userId2));
+            conditions.push(eq3(tasks.assignedTo, userId2));
           }
           const overdueTasks = await db.select({
             id: tasks.id,
@@ -13370,7 +12829,7 @@ var init_storage = __esm({
             clientName: clients.name,
             assignedToFirstName: staff.firstName,
             assignedToLastName: staff.lastName
-          }).from(tasks).leftJoin(clients, eq7(tasks.clientId, clients.id)).leftJoin(staff, eq7(tasks.assignedTo, staff.id)).where(and6(...conditions)).orderBy(asc2(tasks.dueDate)).limit(20);
+          }).from(tasks).leftJoin(clients, eq3(tasks.clientId, clients.id)).leftJoin(staff, eq3(tasks.assignedTo, staff.id)).where(and2(...conditions)).orderBy(asc(tasks.dueDate)).limit(20);
           return overdueTasks.map((task) => ({
             ...task,
             assignedToName: task.assignedToFirstName && task.assignedToLastName ? `${task.assignedToFirstName} ${task.assignedToLastName}` : "Unassigned"
@@ -13394,15 +12853,15 @@ var init_storage = __esm({
             priority: tasks.priority,
             dueDate: tasks.dueDate,
             clientName: clients.name
-          }).from(tasks).leftJoin(clients, eq7(tasks.clientId, clients.id)).where(
-            and6(
-              eq7(tasks.assignedTo, userId2),
-              sql4`${tasks.dueDate} >= ${startOfToday.toISOString()}`,
-              sql4`${tasks.dueDate} <= ${endOfWeek.toISOString()}`,
+          }).from(tasks).leftJoin(clients, eq3(tasks.clientId, clients.id)).where(
+            and2(
+              eq3(tasks.assignedTo, userId2),
+              sql3`${tasks.dueDate} >= ${startOfToday.toISOString()}`,
+              sql3`${tasks.dueDate} <= ${endOfWeek.toISOString()}`,
               ne(tasks.status, "completed"),
               ne(tasks.status, "cancelled")
             )
-          ).orderBy(asc2(tasks.dueDate)).limit(10);
+          ).orderBy(asc(tasks.dueDate)).limit(10);
           return tasksDueThisWeek;
         } catch (error) {
           console.error("Error fetching tasks due this week:", error);
@@ -13413,17 +12872,17 @@ var init_storage = __esm({
         try {
           const thirtyDaysAgo = /* @__PURE__ */ new Date();
           thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-          const completedTasks = await db.select({ count: sql4`count(*)::int` }).from(tasks).where(
-            and6(
-              eq7(tasks.assignedTo, userId2),
-              eq7(tasks.status, "completed"),
-              sql4`${tasks.completedAt} > ${thirtyDaysAgo.toISOString()}`
+          const completedTasks = await db.select({ count: sql3`count(*)::int` }).from(tasks).where(
+            and2(
+              eq3(tasks.assignedTo, userId2),
+              eq3(tasks.status, "completed"),
+              sql3`${tasks.completedAt} > ${thirtyDaysAgo.toISOString()}`
             )
           );
-          const totalTasks = await db.select({ count: sql4`count(*)::int` }).from(tasks).where(
-            and6(
-              eq7(tasks.assignedTo, userId2),
-              sql4`${tasks.createdAt} > ${thirtyDaysAgo.toISOString()}`
+          const totalTasks = await db.select({ count: sql3`count(*)::int` }).from(tasks).where(
+            and2(
+              eq3(tasks.assignedTo, userId2),
+              sql3`${tasks.createdAt} > ${thirtyDaysAgo.toISOString()}`
             )
           );
           const completed = completedTasks[0]?.count || 0;
@@ -13450,12 +12909,12 @@ var init_storage = __esm({
             clientName: clients.name,
             assignedToFirstName: staff.firstName,
             assignedToLastName: staff.lastName
-          }).from(tasks).leftJoin(clients, eq7(tasks.clientId, clients.id)).leftJoin(staff, eq7(tasks.assignedTo, staff.id)).where(
-            and6(
-              sql4`${tasks.description} ILIKE '%approval%' OR ${tasks.title} ILIKE '%approval%'`,
-              eq7(tasks.status, "in_progress")
+          }).from(tasks).leftJoin(clients, eq3(tasks.clientId, clients.id)).leftJoin(staff, eq3(tasks.assignedTo, staff.id)).where(
+            and2(
+              sql3`${tasks.description} ILIKE '%approval%' OR ${tasks.title} ILIKE '%approval%'`,
+              eq3(tasks.status, "in_progress")
             )
-          ).orderBy(asc2(tasks.dueDate)).limit(10);
+          ).orderBy(asc(tasks.dueDate)).limit(10);
           return approvalTasks.map((task) => ({
             ...task,
             assignedToName: task.assignedToFirstName && task.assignedToLastName ? `${task.assignedToFirstName} ${task.assignedToLastName}` : "Unassigned"
@@ -13469,8 +12928,8 @@ var init_storage = __esm({
         try {
           const statusCounts = await db.select({
             status: tasks.status,
-            count: sql4`count(*)::int`
-          }).from(tasks).where(eq7(tasks.assignedTo, userId2)).groupBy(tasks.status);
+            count: sql3`count(*)::int`
+          }).from(tasks).where(eq3(tasks.assignedTo, userId2)).groupBy(tasks.status);
           const counts = {
             todo: 0,
             in_progress: 0,
@@ -13494,7 +12953,7 @@ var init_storage = __esm({
           const startOfWeek = /* @__PURE__ */ new Date();
           startOfWeek.setDate(now.getDate() - now.getDay());
           startOfWeek.setHours(0, 0, 0, 0);
-          const result = await db.execute(sql4`
+          const result = await db.execute(sql3`
         SELECT COALESCE(SUM((entry->>'duration')::int), 0) as total_minutes
         FROM ${tasks} t,
         jsonb_array_elements(t.time_entries) AS entry
@@ -13517,7 +12976,7 @@ var init_storage = __esm({
       }
       async getTeamWorkloadData(userId2) {
         try {
-          const currentUserResult = await db.select().from(staff).where(eq7(staff.id, userId2)).limit(1);
+          const currentUserResult = await db.select().from(staff).where(eq3(staff.id, userId2)).limit(1);
           if (!currentUserResult || currentUserResult.length === 0) {
             return [];
           }
@@ -13527,20 +12986,20 @@ var init_storage = __esm({
             firstName: staff.firstName,
             lastName: staff.lastName,
             department: staff.department,
-            taskCount: sql4`count(${tasks.id})::int`
+            taskCount: sql3`count(${tasks.id})::int`
           }).from(staff).leftJoin(
             tasks,
-            and6(
-              eq7(tasks.assignedTo, staff.id),
+            and2(
+              eq3(tasks.assignedTo, staff.id),
               ne(tasks.status, "completed"),
               ne(tasks.status, "cancelled")
             )
           ).where(
-            and6(
-              eq7(staff.isActive, true),
-              eq7(staff.department, userDepartment)
+            and2(
+              eq3(staff.isActive, true),
+              eq3(staff.department, userDepartment)
             )
-          ).groupBy(staff.id, staff.firstName, staff.lastName, staff.department).orderBy(desc2(sql4`count(${tasks.id})`)).limit(10);
+          ).groupBy(staff.id, staff.firstName, staff.lastName, staff.department).orderBy(desc(sql3`count(${tasks.id})`)).limit(10);
           return teamWorkload.map((member) => ({
             staffId: member.staffId,
             staffName: `${member.firstName} ${member.lastName}`,
@@ -13560,16 +13019,16 @@ var init_storage = __esm({
           const startOfWeek = /* @__PURE__ */ new Date();
           startOfWeek.setDate(now.getDate() - now.getDay());
           startOfWeek.setHours(0, 0, 0, 0);
-          const leadsToday = await db.select({ count: sql4`count(*)::int` }).from(leads).where(
-            and6(
-              sql4`${leads.createdAt} >= ${startOfToday}`,
-              !isAdminOrManager ? eq7(leads.assignedTo, userId2) : void 0
+          const leadsToday = await db.select({ count: sql3`count(*)::int` }).from(leads).where(
+            and2(
+              sql3`${leads.createdAt} >= ${startOfToday}`,
+              !isAdminOrManager ? eq3(leads.assignedTo, userId2) : void 0
             )
           );
-          const leadsThisWeek = await db.select({ count: sql4`count(*)::int` }).from(leads).where(
-            and6(
-              sql4`${leads.createdAt} >= ${startOfWeek}`,
-              !isAdminOrManager ? eq7(leads.assignedTo, userId2) : void 0
+          const leadsThisWeek = await db.select({ count: sql3`count(*)::int` }).from(leads).where(
+            and2(
+              sql3`${leads.createdAt} >= ${startOfWeek}`,
+              !isAdminOrManager ? eq3(leads.assignedTo, userId2) : void 0
             )
           );
           return {
@@ -13588,14 +13047,14 @@ var init_storage = __esm({
             stageName: leadPipelineStages.name,
             stageColor: leadPipelineStages.color,
             stageOrder: leadPipelineStages.order,
-            count: sql4`count(${leads.id})::int`
+            count: sql3`count(${leads.id})::int`
           }).from(leadPipelineStages).leftJoin(
             leads,
-            and6(
-              eq7(leads.stageId, leadPipelineStages.id),
-              !isAdminOrManager ? eq7(leads.assignedTo, userId2) : void 0
+            and2(
+              eq3(leads.stageId, leadPipelineStages.id),
+              !isAdminOrManager ? eq3(leads.assignedTo, userId2) : void 0
             )
-          ).where(eq7(leadPipelineStages.isActive, true)).groupBy(leadPipelineStages.id, leadPipelineStages.name, leadPipelineStages.color, leadPipelineStages.order).orderBy(leadPipelineStages.order);
+          ).where(eq3(leadPipelineStages.isActive, true)).groupBy(leadPipelineStages.id, leadPipelineStages.name, leadPipelineStages.color, leadPipelineStages.order).orderBy(leadPipelineStages.order);
           return stageData.map((stage) => ({
             stageId: stage.stageId,
             stageName: stage.stageName,
@@ -13618,12 +13077,12 @@ var init_storage = __esm({
             stageName: leadPipelineStages.name,
             value: leads.value,
             lastContactDate: leads.lastContactDate
-          }).from(leads).leftJoin(leadPipelineStages, eq7(leads.stageId, leadPipelineStages.id)).where(
-            and6(
-              eq7(leads.assignedTo, userId2),
-              eq7(leads.status, "Open")
+          }).from(leads).leftJoin(leadPipelineStages, eq3(leads.stageId, leadPipelineStages.id)).where(
+            and2(
+              eq3(leads.assignedTo, userId2),
+              eq3(leads.status, "Open")
             )
-          ).orderBy(desc2(leads.createdAt)).limit(10);
+          ).orderBy(desc(leads.createdAt)).limit(10);
           return assignedLeads;
         } catch (error) {
           console.error("Error fetching my assigned leads:", error);
@@ -13642,19 +13101,19 @@ var init_storage = __esm({
             lastContactDate: leads.lastContactDate,
             createdAt: leads.createdAt,
             stageName: leadPipelineStages.name
-          }).from(leads).leftJoin(leadPipelineStages, eq7(leads.stageId, leadPipelineStages.id)).where(
-            and6(
-              eq7(leads.status, "Open"),
-              or2(
-                sql4`${leads.lastContactDate} < ${thirtyDaysAgo}`,
-                and6(
+          }).from(leads).leftJoin(leadPipelineStages, eq3(leads.stageId, leadPipelineStages.id)).where(
+            and2(
+              eq3(leads.status, "Open"),
+              or(
+                sql3`${leads.lastContactDate} < ${thirtyDaysAgo}`,
+                and2(
                   isNull(leads.lastContactDate),
-                  sql4`${leads.createdAt} < ${thirtyDaysAgo}`
+                  sql3`${leads.createdAt} < ${thirtyDaysAgo}`
                 )
               ),
-              !isAdminOrManager ? eq7(leads.assignedTo, userId2) : void 0
+              !isAdminOrManager ? eq3(leads.assignedTo, userId2) : void 0
             )
-          ).orderBy(asc2(leads.lastContactDate)).limit(10);
+          ).orderBy(asc(leads.lastContactDate)).limit(10);
           return staleLeads;
         } catch (error) {
           console.error("Error fetching stale leads:", error);
@@ -13663,11 +13122,11 @@ var init_storage = __esm({
       }
       async getLeadConversionRateData(userId2, isAdminOrManager) {
         try {
-          const totalLeads = await db.select({ count: sql4`count(*)::int` }).from(leads).where(!isAdminOrManager ? eq7(leads.assignedTo, userId2) : void 0);
-          const convertedLeads = await db.select({ count: sql4`count(*)::int` }).from(leads).where(
-            and6(
-              eq7(leads.status, "Won"),
-              !isAdminOrManager ? eq7(leads.assignedTo, userId2) : void 0
+          const totalLeads = await db.select({ count: sql3`count(*)::int` }).from(leads).where(!isAdminOrManager ? eq3(leads.assignedTo, userId2) : void 0);
+          const convertedLeads = await db.select({ count: sql3`count(*)::int` }).from(leads).where(
+            and2(
+              eq3(leads.status, "Won"),
+              !isAdminOrManager ? eq3(leads.assignedTo, userId2) : void 0
             )
           );
           const total = totalLeads[0]?.count || 0;
@@ -13687,8 +13146,8 @@ var init_storage = __esm({
         try {
           const sourceData = await db.select({
             source: leads.source,
-            count: sql4`count(*)::int`
-          }).from(leads).where(!isAdminOrManager ? eq7(leads.assignedTo, userId2) : void 0).groupBy(leads.source).orderBy(desc2(sql4`count(*)`));
+            count: sql3`count(*)::int`
+          }).from(leads).where(!isAdminOrManager ? eq3(leads.assignedTo, userId2) : void 0).groupBy(leads.source).orderBy(desc(sql3`count(*)`));
           return sourceData.map((item) => ({
             source: item.source || "Unknown",
             count: item.count
@@ -13705,16 +13164,16 @@ var init_storage = __esm({
             return [];
           }
           const pendingRequests = await db.select({
-            id: sql4`time_off_requests.id`,
-            staffId: sql4`time_off_requests.staff_id`,
-            staffName: sql4`CONCAT(staff.first_name, ' ', staff.last_name)`,
-            startDate: sql4`time_off_requests.start_date`,
-            endDate: sql4`time_off_requests.end_date`,
-            type: sql4`time_off_requests.type`,
-            reason: sql4`time_off_requests.reason`,
-            status: sql4`time_off_requests.status`,
-            createdAt: sql4`time_off_requests.created_at`
-          }).from(timeOffRequests).leftJoin(staff, sql4`time_off_requests.staff_id = staff.id`).where(sql4`time_off_requests.status = 'pending'`).orderBy(sql4`time_off_requests.created_at ASC`).limit(10);
+            id: sql3`time_off_requests.id`,
+            staffId: sql3`time_off_requests.staff_id`,
+            staffName: sql3`CONCAT(staff.first_name, ' ', staff.last_name)`,
+            startDate: sql3`time_off_requests.start_date`,
+            endDate: sql3`time_off_requests.end_date`,
+            type: sql3`time_off_requests.type`,
+            reason: sql3`time_off_requests.reason`,
+            status: sql3`time_off_requests.status`,
+            createdAt: sql3`time_off_requests.created_at`
+          }).from(timeOffRequests).leftJoin(staff, sql3`time_off_requests.staff_id = staff.id`).where(sql3`time_off_requests.status = 'pending'`).orderBy(sql3`time_off_requests.created_at ASC`).limit(10);
           return pendingRequests;
         } catch (error) {
           console.error("Error fetching pending time off requests:", error);
@@ -13728,21 +13187,21 @@ var init_storage = __esm({
           const endOfWeek = new Date(today);
           endOfWeek.setDate(today.getDate() + 7);
           const offToday = await db.select({
-            id: sql4`time_off_requests.id`,
-            staffId: sql4`time_off_requests.staff_id`,
-            staffName: sql4`CONCAT(staff.first_name, ' ', staff.last_name)`,
-            type: sql4`time_off_requests.type`,
-            startDate: sql4`time_off_requests.start_date`,
-            endDate: sql4`time_off_requests.end_date`
-          }).from(timeOffRequests).leftJoin(staff, sql4`time_off_requests.staff_id = staff.id`).where(sql4`time_off_requests.status = 'approved' AND time_off_requests.start_date <= ${today} AND time_off_requests.end_date >= ${today}`).orderBy(sql4`staff.first_name ASC`);
+            id: sql3`time_off_requests.id`,
+            staffId: sql3`time_off_requests.staff_id`,
+            staffName: sql3`CONCAT(staff.first_name, ' ', staff.last_name)`,
+            type: sql3`time_off_requests.type`,
+            startDate: sql3`time_off_requests.start_date`,
+            endDate: sql3`time_off_requests.end_date`
+          }).from(timeOffRequests).leftJoin(staff, sql3`time_off_requests.staff_id = staff.id`).where(sql3`time_off_requests.status = 'approved' AND time_off_requests.start_date <= ${today} AND time_off_requests.end_date >= ${today}`).orderBy(sql3`staff.first_name ASC`);
           const offThisWeek = await db.select({
-            id: sql4`time_off_requests.id`,
-            staffId: sql4`time_off_requests.staff_id`,
-            staffName: sql4`CONCAT(staff.first_name, ' ', staff.last_name)`,
-            type: sql4`time_off_requests.type`,
-            startDate: sql4`time_off_requests.start_date`,
-            endDate: sql4`time_off_requests.end_date`
-          }).from(timeOffRequests).leftJoin(staff, sql4`time_off_requests.staff_id = staff.id`).where(sql4`time_off_requests.status = 'approved' AND time_off_requests.start_date <= ${endOfWeek} AND time_off_requests.end_date >= ${today}`).orderBy(sql4`time_off_requests.start_date ASC`);
+            id: sql3`time_off_requests.id`,
+            staffId: sql3`time_off_requests.staff_id`,
+            staffName: sql3`CONCAT(staff.first_name, ' ', staff.last_name)`,
+            type: sql3`time_off_requests.type`,
+            startDate: sql3`time_off_requests.start_date`,
+            endDate: sql3`time_off_requests.end_date`
+          }).from(timeOffRequests).leftJoin(staff, sql3`time_off_requests.staff_id = staff.id`).where(sql3`time_off_requests.status = 'approved' AND time_off_requests.start_date <= ${endOfWeek} AND time_off_requests.end_date >= ${today}`).orderBy(sql3`time_off_requests.start_date ASC`);
           return {
             today: offToday,
             thisWeek: offThisWeek
@@ -13759,14 +13218,14 @@ var init_storage = __esm({
           }
           const recentApplications = await db.select({
             id: jobApplications.id,
-            applicantName: sql4`applicant_name`,
-            applicantEmail: sql4`applicant_email`,
-            applicantPhone: sql4`applicant_phone`,
-            positionId: sql4`position_id`,
-            positionTitle: sql4`position_title`,
-            applicationStatus: sql4`application_status`,
-            appliedAt: sql4`applied_at`
-          }).from(jobApplications).orderBy(desc2(sql4`applied_at`)).limit(10);
+            applicantName: sql3`applicant_name`,
+            applicantEmail: sql3`applicant_email`,
+            applicantPhone: sql3`applicant_phone`,
+            positionId: sql3`position_id`,
+            positionTitle: sql3`position_title`,
+            applicationStatus: sql3`application_status`,
+            appliedAt: sql3`applied_at`
+          }).from(jobApplications).orderBy(desc(sql3`applied_at`)).limit(10);
           return recentApplications;
         } catch (error) {
           console.error("Error fetching new job applications:", error);
@@ -13785,7 +13244,7 @@ var init_storage = __esm({
             status: newHireOnboardingSubmissions.status,
             submittedAt: newHireOnboardingSubmissions.submittedAt,
             customFieldData: newHireOnboardingSubmissions.customFieldData
-          }).from(newHireOnboardingSubmissions).where(eq7(newHireOnboardingSubmissions.status, "pending")).orderBy(asc2(newHireOnboardingSubmissions.submittedAt)).limit(10);
+          }).from(newHireOnboardingSubmissions).where(eq3(newHireOnboardingSubmissions.status, "pending")).orderBy(asc(newHireOnboardingSubmissions.submittedAt)).limit(10);
           return pendingOnboarding;
         } catch (error) {
           console.error("Error fetching onboarding queue:", error);
@@ -13797,7 +13256,7 @@ var init_storage = __esm({
           const userRolesList = await this.getUserRolesByUser(userId2);
           const roleNames = await Promise.all(
             userRolesList.map(async (ur) => {
-              const role = await db.select().from(roles).where(eq7(roles.id, ur.roleId)).limit(1);
+              const role = await db.select().from(roles).where(eq3(roles.id, ur.roleId)).limit(1);
               return role[0]?.name;
             })
           );
@@ -13815,7 +13274,7 @@ var init_storage = __esm({
             expenseTotal: expenseReportSubmissions.expenseTotal,
             status: expenseReportSubmissions.status,
             submittedAt: expenseReportSubmissions.submittedAt
-          }).from(expenseReportSubmissions).where(eq7(expenseReportSubmissions.status, "pending")).orderBy(asc2(expenseReportSubmissions.submittedAt)).limit(10);
+          }).from(expenseReportSubmissions).where(eq3(expenseReportSubmissions.status, "pending")).orderBy(asc(expenseReportSubmissions.submittedAt)).limit(10);
           return pendingExpenses;
         } catch (error) {
           console.error("Error fetching pending expense reports:", error);
@@ -13845,16 +13304,16 @@ var init_storage = __esm({
             title: calendarAppointments.title,
             startTime: calendarAppointments.startTime,
             description: calendarAppointments.description
-          }).from(calendarAppointments).leftJoin(calendars, eq7(calendarAppointments.calendarId, calendars.id)).where(
-            and6(
-              or2(
-                eq7(calendars.name, "Birthdays"),
-                eq7(calendars.name, "Anniversaries")
+          }).from(calendarAppointments).leftJoin(calendars, eq3(calendarAppointments.calendarId, calendars.id)).where(
+            and2(
+              or(
+                eq3(calendars.name, "Birthdays"),
+                eq3(calendars.name, "Anniversaries")
               ),
-              sql4`${calendarAppointments.startTime} >= ${today}`,
-              sql4`${calendarAppointments.startTime} <= ${thirtyDaysFromNow}`
+              sql3`${calendarAppointments.startTime} >= ${today}`,
+              sql3`${calendarAppointments.startTime} <= ${thirtyDaysFromNow}`
             )
-          ).orderBy(asc2(calendarAppointments.startTime)).limit(10);
+          ).orderBy(asc(calendarAppointments.startTime)).limit(10);
           return upcomingEvents;
         } catch (error) {
           console.error("Error fetching team birthday/anniversary data:", error);
@@ -13869,9 +13328,9 @@ var init_storage = __esm({
           const courseStats = await db.select({
             courseId: trainingCourses.id,
             courseName: trainingCourses.title,
-            totalEnrollments: sql4`count(DISTINCT ${trainingEnrollments.id})::int`,
-            completedEnrollments: sql4`count(DISTINCT CASE WHEN ${trainingEnrollments.status} = 'completed' THEN ${trainingEnrollments.id} END)::int`
-          }).from(trainingCourses).leftJoin(trainingEnrollments, eq7(trainingEnrollments.courseId, trainingCourses.id)).where(eq7(trainingCourses.isPublished, true)).groupBy(trainingCourses.id, trainingCourses.title).orderBy(desc2(sql4`count(DISTINCT ${trainingEnrollments.id})`)).limit(10);
+            totalEnrollments: sql3`count(DISTINCT ${trainingEnrollments.id})::int`,
+            completedEnrollments: sql3`count(DISTINCT CASE WHEN ${trainingEnrollments.status} = 'completed' THEN ${trainingEnrollments.id} END)::int`
+          }).from(trainingCourses).leftJoin(trainingEnrollments, eq3(trainingEnrollments.courseId, trainingCourses.id)).where(eq3(trainingCourses.isPublished, true)).groupBy(trainingCourses.id, trainingCourses.title).orderBy(desc(sql3`count(DISTINCT ${trainingEnrollments.id})`)).limit(10);
           return courseStats.map((stat) => ({
             courseId: stat.courseId,
             courseName: stat.courseName,
@@ -13901,16 +13360,16 @@ var init_storage = __esm({
             bookerName: calendarAppointments.bookerName,
             bookerEmail: calendarAppointments.bookerEmail,
             clientId: calendarAppointments.clientId,
-            clientName: sql4`clients.name`,
+            clientName: sql3`clients.name`,
             assignedTo: calendarAppointments.assignedTo,
-            assignedToName: sql4`CONCAT(staff.first_name, ' ', staff.last_name)`
-          }).from(calendarAppointments).leftJoin(clients, eq7(calendarAppointments.clientId, clients.id)).leftJoin(staff, eq7(calendarAppointments.assignedTo, staff.id)).where(
-            and6(
-              eq7(calendarAppointments.assignedTo, userId2),
-              sql4`${calendarAppointments.startTime} >= ${today}`,
-              sql4`${calendarAppointments.startTime} < ${tomorrow}`
+            assignedToName: sql3`CONCAT(staff.first_name, ' ', staff.last_name)`
+          }).from(calendarAppointments).leftJoin(clients, eq3(calendarAppointments.clientId, clients.id)).leftJoin(staff, eq3(calendarAppointments.assignedTo, staff.id)).where(
+            and2(
+              eq3(calendarAppointments.assignedTo, userId2),
+              sql3`${calendarAppointments.startTime} >= ${today}`,
+              sql3`${calendarAppointments.startTime} < ${tomorrow}`
             )
-          ).orderBy(asc2(calendarAppointments.startTime)).limit(20);
+          ).orderBy(asc(calendarAppointments.startTime)).limit(20);
           return appointments2;
         } catch (error) {
           console.error("Error fetching today's appointments:", error);
@@ -13933,17 +13392,17 @@ var init_storage = __esm({
             bookerName: calendarAppointments.bookerName,
             bookerEmail: calendarAppointments.bookerEmail,
             clientId: calendarAppointments.clientId,
-            clientName: sql4`clients.name`,
+            clientName: sql3`clients.name`,
             assignedTo: calendarAppointments.assignedTo,
-            assignedToName: sql4`CONCAT(staff.first_name, ' ', staff.last_name)`
-          }).from(calendarAppointments).leftJoin(clients, eq7(calendarAppointments.clientId, clients.id)).leftJoin(staff, eq7(calendarAppointments.assignedTo, staff.id)).where(
-            and6(
-              eq7(calendarAppointments.assignedTo, userId2),
+            assignedToName: sql3`CONCAT(staff.first_name, ' ', staff.last_name)`
+          }).from(calendarAppointments).leftJoin(clients, eq3(calendarAppointments.clientId, clients.id)).leftJoin(staff, eq3(calendarAppointments.assignedTo, staff.id)).where(
+            and2(
+              eq3(calendarAppointments.assignedTo, userId2),
               ne(calendarAppointments.status, "cancelled"),
-              sql4`${calendarAppointments.startTime} > ${today}`,
-              sql4`${calendarAppointments.startTime} <= ${sevenDaysFromNow}`
+              sql3`${calendarAppointments.startTime} > ${today}`,
+              sql3`${calendarAppointments.startTime} <= ${sevenDaysFromNow}`
             )
-          ).orderBy(asc2(calendarAppointments.startTime)).limit(20);
+          ).orderBy(asc(calendarAppointments.startTime)).limit(20);
           return appointments2;
         } catch (error) {
           console.error("Error fetching upcoming appointments:", error);
@@ -13964,16 +13423,16 @@ var init_storage = __esm({
             bookerName: calendarAppointments.bookerName,
             bookerEmail: calendarAppointments.bookerEmail,
             clientId: calendarAppointments.clientId,
-            clientName: sql4`clients.name`,
+            clientName: sql3`clients.name`,
             assignedTo: calendarAppointments.assignedTo,
-            assignedToName: sql4`CONCAT(staff.first_name, ' ', staff.last_name)`
-          }).from(calendarAppointments).leftJoin(clients, eq7(calendarAppointments.clientId, clients.id)).leftJoin(staff, eq7(calendarAppointments.assignedTo, staff.id)).where(
-            and6(
-              isAdminOrManager ? void 0 : eq7(calendarAppointments.assignedTo, userId2),
-              eq7(calendarAppointments.status, "no_show"),
-              sql4`${calendarAppointments.startTime} >= ${thirtyDaysAgo}`
+            assignedToName: sql3`CONCAT(staff.first_name, ' ', staff.last_name)`
+          }).from(calendarAppointments).leftJoin(clients, eq3(calendarAppointments.clientId, clients.id)).leftJoin(staff, eq3(calendarAppointments.assignedTo, staff.id)).where(
+            and2(
+              isAdminOrManager ? void 0 : eq3(calendarAppointments.assignedTo, userId2),
+              eq3(calendarAppointments.status, "no_show"),
+              sql3`${calendarAppointments.startTime} >= ${thirtyDaysAgo}`
             )
-          ).orderBy(desc2(calendarAppointments.startTime)).limit(15);
+          ).orderBy(desc(calendarAppointments.startTime)).limit(15);
           return noShows;
         } catch (error) {
           console.error("Error fetching appointment no-shows:", error);
@@ -13993,16 +13452,16 @@ var init_storage = __esm({
             bookerName: calendarAppointments.bookerName,
             bookerEmail: calendarAppointments.bookerEmail,
             clientId: calendarAppointments.clientId,
-            clientName: sql4`clients.name`,
+            clientName: sql3`clients.name`,
             assignedTo: calendarAppointments.assignedTo,
-            assignedToName: sql4`CONCAT(staff.first_name, ' ', staff.last_name)`
-          }).from(calendarAppointments).leftJoin(clients, eq7(calendarAppointments.clientId, clients.id)).leftJoin(staff, eq7(calendarAppointments.assignedTo, staff.id)).where(
-            and6(
-              isAdminOrManager ? void 0 : eq7(calendarAppointments.assignedTo, userId2),
-              eq7(calendarAppointments.status, "confirmed"),
-              sql4`${calendarAppointments.endTime} < ${now}`
+            assignedToName: sql3`CONCAT(staff.first_name, ' ', staff.last_name)`
+          }).from(calendarAppointments).leftJoin(clients, eq3(calendarAppointments.clientId, clients.id)).leftJoin(staff, eq3(calendarAppointments.assignedTo, staff.id)).where(
+            and2(
+              isAdminOrManager ? void 0 : eq3(calendarAppointments.assignedTo, userId2),
+              eq3(calendarAppointments.status, "confirmed"),
+              sql3`${calendarAppointments.endTime} < ${now}`
             )
-          ).orderBy(desc2(calendarAppointments.startTime)).limit(15);
+          ).orderBy(desc(calendarAppointments.startTime)).limit(15);
           return overdueAppointments;
         } catch (error) {
           console.error("Error fetching overdue appointments:", error);
@@ -14018,10 +13477,10 @@ var init_storage = __esm({
             content: taskComments.content,
             createdAt: taskComments.createdAt,
             authorId: taskComments.authorId,
-            authorName: sql4`CONCAT(staff.first_name, ' ', staff.last_name)`,
+            authorName: sql3`CONCAT(staff.first_name, ' ', staff.last_name)`,
             taskId: taskComments.taskId,
-            taskTitle: sql4`tasks.title`
-          }).from(taskComments).leftJoin(staff, eq7(taskComments.authorId, staff.id)).leftJoin(tasks, eq7(taskComments.taskId, tasks.id)).where(sql4`${userId2} = ANY(${taskComments.mentions})`).orderBy(desc2(taskComments.createdAt)).limit(10);
+            taskTitle: sql3`tasks.title`
+          }).from(taskComments).leftJoin(staff, eq3(taskComments.authorId, staff.id)).leftJoin(tasks, eq3(taskComments.taskId, tasks.id)).where(sql3`${userId2} = ANY(${taskComments.mentions})`).orderBy(desc(taskComments.createdAt)).limit(10);
           taskCommentMentions.forEach((comment) => {
             mentions.push({
               id: comment.id,
@@ -14039,22 +13498,22 @@ var init_storage = __esm({
             content: imageAnnotations.content,
             createdAt: imageAnnotations.createdAt,
             authorId: imageAnnotations.authorId,
-            authorName: sql4`CONCAT(staff.first_name, ' ', staff.last_name)`,
+            authorName: sql3`CONCAT(staff.first_name, ' ', staff.last_name)`,
             fileId: imageAnnotations.fileId,
             // Try to get task ID from task attachments first
             taskIdFromAttachment: taskAttachments.taskId,
             taskTitleFromAttachment: tasks.title,
             // Also try to get task ID from comment files
             commentId: commentFiles.commentId
-          }).from(imageAnnotations).leftJoin(staff, eq7(imageAnnotations.authorId, staff.id)).leftJoin(taskAttachments, eq7(taskAttachments.id, imageAnnotations.fileId)).leftJoin(tasks, eq7(taskAttachments.taskId, tasks.id)).leftJoin(commentFiles, eq7(commentFiles.id, imageAnnotations.fileId)).where(sql4`${userId2} = ANY(${imageAnnotations.mentions})`).orderBy(desc2(imageAnnotations.createdAt)).limit(10);
+          }).from(imageAnnotations).leftJoin(staff, eq3(imageAnnotations.authorId, staff.id)).leftJoin(taskAttachments, eq3(taskAttachments.id, imageAnnotations.fileId)).leftJoin(tasks, eq3(taskAttachments.taskId, tasks.id)).leftJoin(commentFiles, eq3(commentFiles.id, imageAnnotations.fileId)).where(sql3`${userId2} = ANY(${imageAnnotations.mentions})`).orderBy(desc(imageAnnotations.createdAt)).limit(10);
           for (const annotation of annotationMentions) {
             let taskId = annotation.taskIdFromAttachment;
             let taskTitle = annotation.taskTitleFromAttachment || "File Annotation";
             if (!taskId && annotation.commentId) {
               const commentTask = await db.select({
                 taskId: taskComments.taskId,
-                taskTitle: sql4`tasks.title`
-              }).from(taskComments).leftJoin(tasks, eq7(taskComments.taskId, tasks.id)).where(eq7(taskComments.id, annotation.commentId)).limit(1);
+                taskTitle: sql3`tasks.title`
+              }).from(taskComments).leftJoin(tasks, eq3(taskComments.taskId, tasks.id)).where(eq3(taskComments.id, annotation.commentId)).limit(1);
               if (commentTask.length > 0) {
                 taskId = commentTask[0].taskId;
                 taskTitle = commentTask[0].taskTitle || "File Annotation";
@@ -14076,10 +13535,10 @@ var init_storage = __esm({
             content: knowledgeBaseComments.content,
             createdAt: knowledgeBaseComments.createdAt,
             authorId: knowledgeBaseComments.authorId,
-            authorName: sql4`CONCAT(staff.first_name, ' ', staff.last_name)`,
+            authorName: sql3`CONCAT(staff.first_name, ' ', staff.last_name)`,
             articleId: knowledgeBaseComments.articleId,
-            articleTitle: sql4`knowledge_base_articles.title`
-          }).from(knowledgeBaseComments).leftJoin(staff, eq7(knowledgeBaseComments.authorId, staff.id)).leftJoin(knowledgeBaseArticles, eq7(knowledgeBaseComments.articleId, knowledgeBaseArticles.id)).where(sql4`${userId2} = ANY(${knowledgeBaseComments.mentions})`).orderBy(desc2(knowledgeBaseComments.createdAt)).limit(10);
+            articleTitle: sql3`knowledge_base_articles.title`
+          }).from(knowledgeBaseComments).leftJoin(staff, eq3(knowledgeBaseComments.authorId, staff.id)).leftJoin(knowledgeBaseArticles, eq3(knowledgeBaseComments.articleId, knowledgeBaseArticles.id)).where(sql3`${userId2} = ANY(${knowledgeBaseComments.mentions})`).orderBy(desc(knowledgeBaseComments.createdAt)).limit(10);
           kbCommentMentions.forEach((comment) => {
             mentions.push({
               id: comment.id,
@@ -14112,17 +13571,17 @@ var init_storage = __esm({
             actionText: notifications.actionText,
             createdAt: notifications.createdAt
           }).from(notifications).where(
-            and6(
-              eq7(notifications.userId, userId2),
-              or2(
-                eq7(notifications.type, "system"),
-                eq7(notifications.priority, "high"),
-                eq7(notifications.priority, "urgent")
+            and2(
+              eq3(notifications.userId, userId2),
+              or(
+                eq3(notifications.type, "system"),
+                eq3(notifications.priority, "high"),
+                eq3(notifications.priority, "urgent")
               )
             )
           ).orderBy(
-            desc2(sql4`CASE WHEN ${notifications.isRead} = false THEN 1 ELSE 0 END`),
-            desc2(notifications.createdAt)
+            desc(sql3`CASE WHEN ${notifications.isRead} = false THEN 1 ELSE 0 END`),
+            desc(notifications.createdAt)
           ).limit(20);
           return alerts;
         } catch (error) {
@@ -14132,11 +13591,11 @@ var init_storage = __esm({
       }
       // Time Off Types methods
       async getTimeOffTypes(policyId) {
-        const types = await db.select().from(timeOffTypes).where(eq7(timeOffTypes.policyId, policyId)).orderBy(asc2(timeOffTypes.orderIndex));
+        const types = await db.select().from(timeOffTypes).where(eq3(timeOffTypes.policyId, policyId)).orderBy(asc(timeOffTypes.orderIndex));
         return types;
       }
       async getTimeOffType(id) {
-        const [type] = await db.select().from(timeOffTypes).where(eq7(timeOffTypes.id, id)).limit(1);
+        const [type] = await db.select().from(timeOffTypes).where(eq3(timeOffTypes.id, id)).limit(1);
         return type;
       }
       async createTimeOffType(data) {
@@ -14144,17 +13603,17 @@ var init_storage = __esm({
         return newType;
       }
       async updateTimeOffType(id, data) {
-        const [updated] = await db.update(timeOffTypes).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(timeOffTypes.id, id)).returning();
+        const [updated] = await db.update(timeOffTypes).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(timeOffTypes.id, id)).returning();
         return updated;
       }
       async deleteTimeOffType(id) {
-        const result = await db.delete(timeOffTypes).where(eq7(timeOffTypes.id, id));
+        const result = await db.delete(timeOffTypes).where(eq3(timeOffTypes.id, id));
         return result.rowCount ? result.rowCount > 0 : false;
       }
       async reorderTimeOffTypes(updates) {
         await Promise.all(
           updates.map(
-            ({ id, orderIndex }) => db.update(timeOffTypes).set({ orderIndex }).where(eq7(timeOffTypes.id, id))
+            ({ id, orderIndex }) => db.update(timeOffTypes).set({ orderIndex }).where(eq3(timeOffTypes.id, id))
           )
         );
       }
@@ -14164,7 +13623,7 @@ var init_storage = __esm({
         return integration;
       }
       async getGoHighLevelIntegrationByToken(token) {
-        const [integration] = await db.select().from(goHighLevelIntegration).where(eq7(goHighLevelIntegration.webhookToken, token)).limit(1);
+        const [integration] = await db.select().from(goHighLevelIntegration).where(eq3(goHighLevelIntegration.webhookToken, token)).limit(1);
         return integration;
       }
       async createGoHighLevelIntegration(data) {
@@ -14172,37 +13631,37 @@ var init_storage = __esm({
         return newIntegration;
       }
       async updateGoHighLevelIntegration(id, data) {
-        const [updated] = await db.update(goHighLevelIntegration).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(goHighLevelIntegration.id, id)).returning();
+        const [updated] = await db.update(goHighLevelIntegration).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(goHighLevelIntegration.id, id)).returning();
         return updated;
       }
       async deleteGoHighLevelIntegration(id) {
-        const result = await db.delete(goHighLevelIntegration).where(eq7(goHighLevelIntegration.id, id));
+        const result = await db.delete(goHighLevelIntegration).where(eq3(goHighLevelIntegration.id, id));
         return result.rowCount ? result.rowCount > 0 : false;
       }
       async incrementGoHighLevelLeadCount(id) {
         await db.update(goHighLevelIntegration).set({
-          leadsReceived: sql4`${goHighLevelIntegration.leadsReceived} + 1`,
+          leadsReceived: sql3`${goHighLevelIntegration.leadsReceived} + 1`,
           lastLeadAt: /* @__PURE__ */ new Date(),
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq7(goHighLevelIntegration.id, id));
+        }).where(eq3(goHighLevelIntegration.id, id));
       }
       // ================================
       // SURVEY METHODS
       // ================================
       // Survey Folders
       async getSurveyFolders() {
-        return await db.select().from(surveyFolders).orderBy(asc2(surveyFolders.order));
+        return await db.select().from(surveyFolders).orderBy(asc(surveyFolders.order));
       }
       async createSurveyFolder(data) {
         const [folder] = await db.insert(surveyFolders).values(data).returning();
         return folder;
       }
       async updateSurveyFolder(id, data) {
-        const [updated] = await db.update(surveyFolders).set(data).where(eq7(surveyFolders.id, id)).returning();
+        const [updated] = await db.update(surveyFolders).set(data).where(eq3(surveyFolders.id, id)).returning();
         return updated;
       }
       async deleteSurveyFolder(id) {
-        const result = await db.delete(surveyFolders).where(eq7(surveyFolders.id, id));
+        const result = await db.delete(surveyFolders).where(eq3(surveyFolders.id, id));
         return result.rowCount ? result.rowCount > 0 : false;
       }
       // Surveys
@@ -14220,29 +13679,29 @@ var init_storage = __esm({
           updatedBy: surveys.updatedBy,
           createdAt: surveys.createdAt,
           updatedAt: surveys.updatedAt,
-          createdByName: sql4`COALESCE(${staff.firstName} || ' ' || ${staff.lastName}, 'Unknown')`
-        }).from(surveys).leftJoin(staff, eq7(surveys.createdBy, staff.id)).orderBy(desc2(surveys.createdAt));
+          createdByName: sql3`COALESCE(${staff.firstName} || ' ' || ${staff.lastName}, 'Unknown')`
+        }).from(surveys).leftJoin(staff, eq3(surveys.createdBy, staff.id)).orderBy(desc(surveys.createdAt));
         return results;
       }
       async getSurvey(id) {
-        const [survey] = await db.select().from(surveys).where(eq7(surveys.id, id)).limit(1);
+        const [survey] = await db.select().from(surveys).where(eq3(surveys.id, id)).limit(1);
         return survey;
       }
       async getSurveyByShortCode(shortCode) {
-        const [survey] = await db.select().from(surveys).where(eq7(surveys.shortCode, shortCode)).limit(1);
+        const [survey] = await db.select().from(surveys).where(eq3(surveys.shortCode, shortCode)).limit(1);
         return survey;
       }
       async createSurvey(data) {
-        const shortCode = randomUUID3().substring(0, 8);
+        const shortCode = randomUUID().substring(0, 8);
         const [survey] = await db.insert(surveys).values({ ...data, shortCode }).returning();
         return survey;
       }
       async updateSurvey(id, data) {
-        const [updated] = await db.update(surveys).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(surveys.id, id)).returning();
+        const [updated] = await db.update(surveys).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(surveys.id, id)).returning();
         return updated;
       }
       async deleteSurvey(id) {
-        const result = await db.delete(surveys).where(eq7(surveys.id, id));
+        const result = await db.delete(surveys).where(eq3(surveys.id, id));
         return result.rowCount ? result.rowCount > 0 : false;
       }
       async duplicateSurvey(id, userId2) {
@@ -14292,10 +13751,10 @@ var init_storage = __esm({
       }
       // Survey Slides
       async getSurveySlides(surveyId) {
-        return await db.select().from(surveySlides).where(eq7(surveySlides.surveyId, surveyId)).orderBy(asc2(surveySlides.order));
+        return await db.select().from(surveySlides).where(eq3(surveySlides.surveyId, surveyId)).orderBy(asc(surveySlides.order));
       }
       async getSurveySlide(id) {
-        const [slide] = await db.select().from(surveySlides).where(eq7(surveySlides.id, id)).limit(1);
+        const [slide] = await db.select().from(surveySlides).where(eq3(surveySlides.id, id)).limit(1);
         return slide;
       }
       async createSurveySlide(data) {
@@ -14303,29 +13762,29 @@ var init_storage = __esm({
         return slide;
       }
       async updateSurveySlide(id, data) {
-        const [updated] = await db.update(surveySlides).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(surveySlides.id, id)).returning();
+        const [updated] = await db.update(surveySlides).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(surveySlides.id, id)).returning();
         return updated;
       }
       async deleteSurveySlide(id) {
-        const result = await db.delete(surveySlides).where(eq7(surveySlides.id, id));
+        const result = await db.delete(surveySlides).where(eq3(surveySlides.id, id));
         return result.rowCount ? result.rowCount > 0 : false;
       }
       async reorderSurveySlides(updates) {
         await Promise.all(
           updates.map(
-            ({ id, order }) => db.update(surveySlides).set({ order, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(surveySlides.id, id))
+            ({ id, order }) => db.update(surveySlides).set({ order, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(surveySlides.id, id))
           )
         );
       }
       // Survey Fields
       async getSurveyFields(surveyId) {
-        return await db.select().from(surveyFields).where(eq7(surveyFields.surveyId, surveyId)).orderBy(asc2(surveyFields.order));
+        return await db.select().from(surveyFields).where(eq3(surveyFields.surveyId, surveyId)).orderBy(asc(surveyFields.order));
       }
       async getSurveyFieldsBySlide(slideId) {
-        return await db.select().from(surveyFields).where(eq7(surveyFields.slideId, slideId)).orderBy(asc2(surveyFields.order));
+        return await db.select().from(surveyFields).where(eq3(surveyFields.slideId, slideId)).orderBy(asc(surveyFields.order));
       }
       async getSurveyField(id) {
-        const [field] = await db.select().from(surveyFields).where(eq7(surveyFields.id, id)).limit(1);
+        const [field] = await db.select().from(surveyFields).where(eq3(surveyFields.id, id)).limit(1);
         return field;
       }
       async createSurveyField(data) {
@@ -14333,42 +13792,42 @@ var init_storage = __esm({
         return field;
       }
       async updateSurveyField(id, data) {
-        const [updated] = await db.update(surveyFields).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(surveyFields.id, id)).returning();
+        const [updated] = await db.update(surveyFields).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(surveyFields.id, id)).returning();
         return updated;
       }
       async deleteSurveyField(id) {
-        const result = await db.delete(surveyFields).where(eq7(surveyFields.id, id));
+        const result = await db.delete(surveyFields).where(eq3(surveyFields.id, id));
         return result.rowCount ? result.rowCount > 0 : false;
       }
       async reorderSurveyFields(updates) {
         await Promise.all(
           updates.map(
-            ({ id, order }) => db.update(surveyFields).set({ order, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(surveyFields.id, id))
+            ({ id, order }) => db.update(surveyFields).set({ order, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(surveyFields.id, id))
           )
         );
       }
       // Survey Logic Rules
       async getSurveyLogicRules(surveyId) {
-        return await db.select().from(surveyLogicRules).where(eq7(surveyLogicRules.surveyId, surveyId)).orderBy(asc2(surveyLogicRules.order));
+        return await db.select().from(surveyLogicRules).where(eq3(surveyLogicRules.surveyId, surveyId)).orderBy(asc(surveyLogicRules.order));
       }
       async createSurveyLogicRule(data) {
         const [rule] = await db.insert(surveyLogicRules).values(data).returning();
         return rule;
       }
       async updateSurveyLogicRule(id, data) {
-        const [updated] = await db.update(surveyLogicRules).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(surveyLogicRules.id, id)).returning();
+        const [updated] = await db.update(surveyLogicRules).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(surveyLogicRules.id, id)).returning();
         return updated;
       }
       async deleteSurveyLogicRule(id) {
-        const result = await db.delete(surveyLogicRules).where(eq7(surveyLogicRules.id, id));
+        const result = await db.delete(surveyLogicRules).where(eq3(surveyLogicRules.id, id));
         return result.rowCount ? result.rowCount > 0 : false;
       }
       // Survey Submissions
       async getSurveySubmissions(surveyId) {
-        return await db.select().from(surveySubmissions).where(eq7(surveySubmissions.surveyId, surveyId)).orderBy(desc2(surveySubmissions.createdAt));
+        return await db.select().from(surveySubmissions).where(eq3(surveySubmissions.surveyId, surveyId)).orderBy(desc(surveySubmissions.createdAt));
       }
       async getSurveySubmission(id) {
-        const [submission] = await db.select().from(surveySubmissions).where(eq7(surveySubmissions.id, id)).limit(1);
+        const [submission] = await db.select().from(surveySubmissions).where(eq3(surveySubmissions.id, id)).limit(1);
         return submission;
       }
       async createSurveySubmission(data) {
@@ -14376,16 +13835,16 @@ var init_storage = __esm({
         return submission;
       }
       async updateSurveySubmission(id, data) {
-        const [updated] = await db.update(surveySubmissions).set(data).where(eq7(surveySubmissions.id, id)).returning();
+        const [updated] = await db.update(surveySubmissions).set(data).where(eq3(surveySubmissions.id, id)).returning();
         return updated;
       }
       async deleteSurveySubmission(id) {
-        const result = await db.delete(surveySubmissions).where(eq7(surveySubmissions.id, id));
+        const result = await db.delete(surveySubmissions).where(eq3(surveySubmissions.id, id));
         return result.rowCount ? result.rowCount > 0 : false;
       }
       // Survey Submission Answers
       async getSurveySubmissionAnswers(submissionId) {
-        return await db.select().from(surveySubmissionAnswers).where(eq7(surveySubmissionAnswers.submissionId, submissionId));
+        return await db.select().from(surveySubmissionAnswers).where(eq3(surveySubmissionAnswers.submissionId, submissionId));
       }
       async createSurveySubmissionAnswer(data) {
         const [answer] = await db.insert(surveySubmissionAnswers).values(data).returning();
@@ -14408,14 +13867,14 @@ var init_storage = __esm({
       }
       // PX Meetings
       async getPxMeetings() {
-        const meetings = await db.select().from(pxMeetings).orderBy(desc2(pxMeetings.meetingDate), desc2(pxMeetings.meetingTime));
+        const meetings = await db.select().from(pxMeetings).orderBy(desc(pxMeetings.meetingDate), desc(pxMeetings.meetingTime));
         if (meetings.length === 0) return [];
         const meetingIds = meetings.map((m) => m.id);
-        const attendeeRows = await db.execute(sql4`
+        const attendeeRows = await db.execute(sql3`
       SELECT pma.meeting_id as "meetingId", s.id, s.first_name as "firstName", s.last_name as "lastName"
       FROM px_meeting_attendees pma
       INNER JOIN staff s ON pma.user_id::uuid = s.id
-      WHERE pma.meeting_id IN (${sql4.join(meetingIds.map((id) => sql4`${id}`), sql4`, `)})
+      WHERE pma.meeting_id IN (${sql3.join(meetingIds.map((id) => sql3`${id}`), sql3`, `)})
     `);
         const attendeesByMeeting = /* @__PURE__ */ new Map();
         for (const row of attendeeRows.rows) {
@@ -14429,9 +13888,9 @@ var init_storage = __esm({
         }));
       }
       async getPxMeeting(id) {
-        const [meeting] = await db.select().from(pxMeetings).where(eq7(pxMeetings.id, id)).limit(1);
+        const [meeting] = await db.select().from(pxMeetings).where(eq3(pxMeetings.id, id)).limit(1);
         if (!meeting) return void 0;
-        const attendeeRows = await db.execute(sql4`
+        const attendeeRows = await db.execute(sql3`
       SELECT s.id, s.first_name as "firstName", s.last_name as "lastName"
       FROM px_meeting_attendees pma
       INNER JOIN staff s ON pma.user_id::uuid = s.id
@@ -14458,10 +13917,10 @@ var init_storage = __esm({
         return meeting;
       }
       async updatePxMeeting(id, data, attendeeIds) {
-        const [updated] = await db.update(pxMeetings).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(pxMeetings.id, id)).returning();
+        const [updated] = await db.update(pxMeetings).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(pxMeetings.id, id)).returning();
         if (!updated) return void 0;
         if (attendeeIds !== void 0) {
-          await db.delete(pxMeetingAttendees).where(eq7(pxMeetingAttendees.meetingId, id));
+          await db.delete(pxMeetingAttendees).where(eq3(pxMeetingAttendees.meetingId, id));
           if (attendeeIds.length > 0) {
             await db.insert(pxMeetingAttendees).values(
               attendeeIds.map((userId2) => ({
@@ -14474,11 +13933,660 @@ var init_storage = __esm({
         return updated;
       }
       async deletePxMeeting(id) {
-        const result = await db.delete(pxMeetings).where(eq7(pxMeetings.id, id));
+        const result = await db.delete(pxMeetings).where(eq3(pxMeetings.id, id));
         return result.rowCount ? result.rowCount > 0 : false;
       }
     };
     storage2 = new DbStorage();
+  }
+});
+
+// server/taskGenerationEngine.ts
+import { eq as eq6, and as and5, asc as asc2, inArray as inArray4 } from "drizzle-orm";
+import { format } from "date-fns";
+async function generateTasksFromTemplates(params) {
+  const {
+    clientId,
+    items,
+    generationType,
+    cycleNumber,
+    cycleStartDate = /* @__PURE__ */ new Date(),
+    targetWeek
+  } = params;
+  const summary = {
+    totalTasksCreated: 0,
+    onboardingTasks: 0,
+    recurringTasks: 0,
+    errors: [],
+    generationIds: []
+  };
+  const [clientRow] = await db.select({ name: clients.name, company: clients.company, website: clients.website, email: clients.email, customFieldValues: clients.customFieldValues }).from(clients).where(eq6(clients.id, clientId));
+  if (!clientRow) {
+    summary.errors.push(`Client ${clientId} not found`);
+    return summary;
+  }
+  const allCustomFields = await db.select({ id: customFields.id, name: customFields.name }).from(customFields);
+  const customFieldMap = {};
+  if (clientRow.customFieldValues && typeof clientRow.customFieldValues === "object") {
+    const cfValues = clientRow.customFieldValues;
+    for (const field of allCustomFields) {
+      const key = `custom.${field.name.replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_|_$/g, "").toLowerCase()}`;
+      const value = cfValues[field.id];
+      if (value !== void 0 && value !== null) {
+        customFieldMap[key] = Array.isArray(value) ? value.join(", ") : String(value);
+      }
+    }
+  }
+  const validStaffIds = /* @__PURE__ */ new Set();
+  const activeStaff = await db.select({ id: staff.id }).from(staff).where(eq6(staff.isActive, true));
+  activeStaff.forEach((s) => validStaffIds.add(s.id));
+  const productNameCache = {};
+  const lookupProductName = async (productId) => {
+    if (productNameCache[productId]) return productNameCache[productId];
+    const [row] = await db.select({ name: products.name }).from(products).where(eq6(products.id, productId));
+    const name = row?.name || "Unknown Product";
+    productNameCache[productId] = name;
+    return name;
+  };
+  const bundleNameCache = {};
+  const lookupBundleName = async (bundleId) => {
+    if (bundleNameCache[bundleId]) return bundleNameCache[bundleId];
+    const [row] = await db.select({ name: productBundles.name }).from(productBundles).where(eq6(productBundles.id, bundleId));
+    const name = row?.name || "Unknown Bundle";
+    bundleNameCache[bundleId] = name;
+    return name;
+  };
+  const packageNameCache = {};
+  const lookupPackageName = async (packageId) => {
+    if (packageNameCache[packageId]) return packageNameCache[packageId];
+    const [row] = await db.select({ name: productPackages.name }).from(productPackages).where(eq6(productPackages.id, packageId));
+    const name = row?.name || "Unknown Package";
+    packageNameCache[packageId] = name;
+    return name;
+  };
+  const resolveVariables = (text2, vars) => {
+    if (!text2) return "";
+    return text2.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (match, key) => {
+      return vars[key] !== void 0 ? vars[key] : match;
+    });
+  };
+  const expandedItems = [];
+  for (const item of items) {
+    expandedItems.push(item);
+    if (item.bundleId) {
+      const bps = await db.select({ productId: bundleProducts.productId, quantity: bundleProducts.quantity }).from(bundleProducts).where(eq6(bundleProducts.bundleId, item.bundleId));
+      for (const bp of bps) {
+        expandedItems.push({ productId: bp.productId, quantity: bp.quantity || 1 });
+      }
+    }
+    if (item.packageId) {
+      const pkgItems = await db.select().from(packageItems).where(eq6(packageItems.packageId, item.packageId));
+      for (const pi of pkgItems) {
+        if (pi.itemType === "product" && pi.productId) {
+          expandedItems.push({ productId: pi.productId, quantity: pi.quantity || 1 });
+        } else if (pi.itemType === "bundle" && pi.bundleId) {
+          expandedItems.push({ bundleId: pi.bundleId, quantity: pi.quantity || 1 });
+          const bps = await db.select({ productId: bundleProducts.productId, quantity: bundleProducts.quantity }).from(bundleProducts).where(eq6(bundleProducts.bundleId, pi.bundleId));
+          for (const bp of bps) {
+            expandedItems.push({ productId: bp.productId, quantity: bp.quantity || 1 });
+          }
+        }
+      }
+    }
+  }
+  const processedKeys = /* @__PURE__ */ new Set();
+  for (const item of expandedItems) {
+    const dedupeKey = `${item.productId || ""}_${item.bundleId || ""}_${item.packageId || ""}`;
+    if (processedKeys.has(dedupeKey)) continue;
+    processedKeys.add(dedupeKey);
+    try {
+      const conditions = [
+        eq6(productTaskTemplates.taskType, generationType),
+        eq6(productTaskTemplates.status, "active")
+      ];
+      if (item.productId) {
+        conditions.push(eq6(productTaskTemplates.productId, item.productId));
+      } else if (item.bundleId) {
+        conditions.push(eq6(productTaskTemplates.bundleId, item.bundleId));
+      } else if (item.packageId) {
+        conditions.push(eq6(productTaskTemplates.packageId, item.packageId));
+      } else {
+        continue;
+      }
+      const itemIdConditions = [
+        eq6(clientTaskGenerations.clientId, clientId),
+        eq6(clientTaskGenerations.generationType, generationType)
+      ];
+      if (item.productId) itemIdConditions.push(eq6(clientTaskGenerations.productId, item.productId));
+      else if (item.bundleId) itemIdConditions.push(eq6(clientTaskGenerations.bundleId, item.bundleId));
+      else if (item.packageId) itemIdConditions.push(eq6(clientTaskGenerations.packageId, item.packageId));
+      if (cycleNumber !== void 0) {
+        itemIdConditions.push(eq6(clientTaskGenerations.cycleNumber, cycleNumber));
+      }
+      const existingGeneration = await db.select({ id: clientTaskGenerations.id }).from(clientTaskGenerations).where(and5(...itemIdConditions)).limit(1);
+      if (existingGeneration.length > 0) {
+        const itemDesc = item.productId || item.bundleId || item.packageId || "unknown";
+        console.log(`[TaskGen] Skipping item ${itemDesc} \u2014 already generated for this ${generationType}${cycleNumber ? ` cycle ${cycleNumber}` : ""}`);
+        continue;
+      }
+      let templates = await db.select().from(productTaskTemplates).where(and5(...conditions)).orderBy(asc2(productTaskTemplates.sortOrder));
+      if (generationType === "onboarding" && targetWeek !== void 0 && targetWeek !== null) {
+        templates = templates.filter((t) => {
+          const tw = t.onboardingWeek;
+          return tw === null || tw === void 0 || tw === targetWeek;
+        });
+      }
+      if (templates.length === 0) continue;
+      let itemName = "Unknown";
+      if (item.productId) itemName = await lookupProductName(item.productId);
+      else if (item.bundleId) itemName = await lookupBundleName(item.bundleId);
+      else if (item.packageId) itemName = await lookupPackageName(item.packageId);
+      const templateToTaskIds = {};
+      const templateToFirstTaskId = {};
+      for (const template of templates) {
+        try {
+          const taskCount = template.quantityMode === "once" ? 1 : Math.max(1, item.quantity || 1);
+          const createdTaskIds = [];
+          for (let unitNum = 1; unitNum <= taskCount; unitNum++) {
+            const dueDate = /* @__PURE__ */ new Date();
+            dueDate.setHours(0, 0, 0, 0);
+            dueDate.setDate(dueDate.getDate() + (template.dueDateOffset ?? 7));
+            let taskTitle = template.name;
+            if (template.quantityMode === "per_unit_named") {
+              taskTitle = `${template.name} ${unitNum} of ${item.quantity}`;
+            }
+            const vars = {
+              "client.name": clientRow.company || clientRow.name,
+              "client.email": clientRow.email || "",
+              "client.domain": clientRow.website || "",
+              "product.name": itemName,
+              quantity: String(item.quantity),
+              "cycle.number": String(cycleNumber || 1),
+              "cycle.startDate": format(cycleStartDate, "yyyy-MM-dd"),
+              "unit.number": String(unitNum),
+              "unit.total": String(item.quantity),
+              ...customFieldMap
+            };
+            const resolvedTitle = resolveVariables(taskTitle, vars);
+            const resolvedDescription = resolveVariables(
+              template.description,
+              vars
+            );
+            let assignedTo = template.assignedStaffId || null;
+            if (assignedTo && !validStaffIds.has(assignedTo)) {
+              console.warn(
+                `[TaskGen] Template ${template.id} references inactive/deleted staff ${assignedTo}, creating unassigned`
+              );
+              summary.errors.push(`Template "${template.name}" references inactive staff \u2014 task created unassigned`);
+              assignedTo = null;
+            }
+            const priorityMap = {
+              low: "low",
+              medium: "normal",
+              high: "high",
+              urgent: "urgent"
+            };
+            const templateOnboardingWeek = template.onboardingWeek ?? null;
+            const [newTask] = await db.insert(tasks).values({
+              title: resolvedTitle,
+              description: resolvedDescription || void 0,
+              status: "todo",
+              priority: priorityMap[template.priority || "medium"] || "normal",
+              assignedTo,
+              clientId,
+              categoryId: template.categoryId || template.departmentId || void 0,
+              workflowId: template.workflowId || void 0,
+              dueDate,
+              timeEstimate: template.estimatedHours ? Math.round(parseFloat(template.estimatedHours) * 60) : void 0,
+              sourceTemplateId: template.id,
+              onboardingWeek: generationType === "onboarding" ? templateOnboardingWeek : void 0,
+              visibleToClient: template.visibleToClient ?? false
+            }).returning({ id: tasks.id });
+            createdTaskIds.push(newTask.id);
+            summary.totalTasksCreated++;
+            if (generationType === "onboarding") {
+              summary.onboardingTasks++;
+            } else {
+              summary.recurringTasks++;
+            }
+          }
+          templateToTaskIds[template.id] = createdTaskIds;
+          if (createdTaskIds.length > 0) {
+            templateToFirstTaskId[template.id] = createdTaskIds[0];
+          }
+        } catch (taskError) {
+          summary.errors.push(
+            `Failed to create tasks for template "${template.name}": ${taskError.message}`
+          );
+        }
+      }
+      for (const template of templates) {
+        if (template.dependsOnTemplateId && templateToFirstTaskId[template.dependsOnTemplateId]) {
+          const dependsOnTaskId = templateToFirstTaskId[template.dependsOnTemplateId];
+          const tasksForThisTemplate = templateToTaskIds[template.id] || [];
+          for (const taskId of tasksForThisTemplate) {
+            try {
+              await db.insert(taskDependencies).values({
+                taskId,
+                dependsOnTaskId,
+                dependencyType: "finish_to_start"
+              });
+            } catch (depError) {
+              summary.errors.push(
+                `Failed to set dependency for template "${template.name}": ${depError.message}`
+              );
+            }
+          }
+        }
+      }
+      for (const template of templates) {
+        const taskIds = templateToTaskIds[template.id];
+        if (!taskIds || taskIds.length === 0) continue;
+        try {
+          const [genRecord] = await db.insert(clientTaskGenerations).values({
+            clientId,
+            productId: item.productId || null,
+            bundleId: item.bundleId || null,
+            packageId: item.packageId || null,
+            templateId: template.id,
+            generationType,
+            cycleNumber: cycleNumber || null,
+            cycleStartDate,
+            taskIds
+          }).returning({ id: clientTaskGenerations.id });
+          summary.generationIds.push(genRecord.id);
+          await db.update(tasks).set({ generationId: genRecord.id }).where(inArray4(tasks.id, taskIds));
+        } catch (genError) {
+          summary.errors.push(
+            `Failed to create generation record for template "${template.name}": ${genError.message}`
+          );
+        }
+      }
+    } catch (itemError) {
+      const itemDesc = item.productId || item.bundleId || item.packageId || "unknown";
+      summary.errors.push(
+        `Failed to process item ${itemDesc}: ${itemError.message}`
+      );
+    }
+  }
+  return summary;
+}
+var init_taskGenerationEngine = __esm({
+  "server/taskGenerationEngine.ts"() {
+    "use strict";
+    init_db();
+    init_schema();
+  }
+});
+
+// server/services/leadConversionService.ts
+import { eq as eq7, and as and6, desc as desc2, sql as sql4 } from "drizzle-orm";
+import { randomUUID as randomUUID3 } from "crypto";
+async function convertLeadToClient(leadId, triggeredBy, options) {
+  console.log(`[LeadConversion] Starting conversion for lead ${leadId} (trigger: ${triggeredBy})`);
+  const [lead] = await db.select().from(leads).where(eq7(leads.id, leadId)).limit(1);
+  if (!lead) {
+    throw new Error(`Lead ${leadId} not found`);
+  }
+  console.log(`[LeadConversion] Lead found: "${lead.name}" (email: ${lead.email}, assignedTo: ${lead.assignedTo}, isConverted: ${lead.isConverted}, clientId: ${lead.clientId})`);
+  if (lead.isConverted && lead.clientId) {
+    console.log(`[LeadConversion] Path 1: Lead already converted \u2192 clientId=${lead.clientId}`);
+    return { success: true, clientId: lead.clientId, alreadyConverted: true };
+  }
+  const existingClient = await db.select().from(clients).where(eq7(clients.email, lead.email)).limit(1);
+  if (existingClient.length > 0) {
+    console.log(`[LeadConversion] Path 2: Existing client found by email "${lead.email}" \u2192 clientId=${existingClient[0].id}, name="${existingClient[0].name}"`);
+    await db.update(leads).set({
+      isConverted: true,
+      convertedAt: /* @__PURE__ */ new Date(),
+      clientId: existingClient[0].id,
+      convertedBy: triggeredBy,
+      status: "Won"
+    }).where(eq7(leads.id, leadId));
+    return { success: true, clientId: existingClient[0].id, alreadyConverted: true };
+  }
+  console.log(`[LeadConversion] Path 3: No existing client found, creating new client via transaction`);
+  const result = await db.transaction(async (tx) => {
+    const [client] = await tx.insert(clients).values({
+      id: randomUUID3(),
+      name: lead.name,
+      email: lead.email,
+      phone: lead.phone || null,
+      company: lead.company || null,
+      status: "active",
+      contactType: "client",
+      contactSource: lead.source || null,
+      contactOwner: lead.assignedTo || null,
+      notes: lead.notes || null,
+      tags: lead.tags || [],
+      onboardingStartDate: /* @__PURE__ */ new Date(),
+      onboardingWeekReleased: 1,
+      createdAt: /* @__PURE__ */ new Date()
+    }).returning();
+    console.log(`[LeadConversion] Client created: ${client.id} ("${client.name}")`);
+    let quote = null;
+    if (options?.quoteId) {
+      const [selected] = await tx.select().from(quotes).where(eq7(quotes.id, options.quoteId)).limit(1);
+      quote = selected || null;
+    } else {
+      const acceptedQuotes = await tx.select().from(quotes).where(
+        and6(
+          eq7(quotes.leadId, leadId),
+          sql4`${quotes.status} IN ('accepted', 'signed', 'completed')`
+        )
+      ).orderBy(desc2(quotes.createdAt)).limit(1);
+      quote = acceptedQuotes.length > 0 ? acceptedQuotes[0] : null;
+    }
+    console.log(`[LeadConversion] Quote lookup result: ${quote ? `found quote ${quote.id} (status: ${quote.status})` : "no qualifying quote found"}`);
+    if (quote) {
+      if (quote.status !== "accepted") {
+        await tx.update(quotes).set({ status: "accepted" }).where(eq7(quotes.id, quote.id));
+      }
+      await tx.update(quotes).set({ clientId: client.id }).where(eq7(quotes.id, quote.id));
+      const existingDeal = await tx.select().from(deals).where(eq7(deals.leadId, leadId)).limit(1);
+      if (existingDeal.length === 0) {
+        let dealAssignedTo = lead.assignedTo;
+        if (!dealAssignedTo) {
+          const [firstStaff] = await tx.select({ id: staff.id }).from(staff).where(eq7(staff.role, "admin")).limit(1);
+          dealAssignedTo = firstStaff?.id || null;
+          console.log(`[LeadConversion] Lead has no assignedTo, using fallback staff: ${dealAssignedTo}`);
+        }
+        if (dealAssignedTo) {
+          const dealValue = quote.totalCost || lead.value || "0";
+          const dealData = {
+            leadId,
+            clientId: client.id,
+            name: `${client.name || lead.name} - ${lead.company || "Deal"}`,
+            assignedTo: dealAssignedTo,
+            value: dealValue,
+            mrr: "0",
+            wonDate: /* @__PURE__ */ new Date(),
+            notes: `Deal created from quote #${quote.id}. Total value: $${dealValue}`
+          };
+          await tx.insert(deals).values(dealData);
+          console.log(
+            `\u2705 [LeadConversion] Created deal for client ${client.id} from quote ${quote.id}`
+          );
+        } else {
+          console.warn(`\u26A0\uFE0F [LeadConversion] Skipped deal creation: no assignedTo available for lead ${leadId}`);
+        }
+      }
+      const items = await tx.select().from(quoteItems).where(eq7(quoteItems.quoteId, quote.id));
+      console.log(`[LeadConversion] Found ${items.length} quote items to transfer`);
+      let transferredCount = 0;
+      for (const item of items) {
+        console.log(`[LeadConversion] Processing item: type=${item.itemType}, productId=${item.productId}, bundleId=${item.bundleId}, packageId=${item.packageId}, qty=${item.quantity}, customQuantities=${JSON.stringify(item.customQuantities)}`);
+        if (item.itemType === "product" && item.productId) {
+          const existing = await tx.select().from(clientProducts).where(
+            and6(
+              eq7(clientProducts.clientId, client.id),
+              eq7(clientProducts.productId, item.productId)
+            )
+          ).limit(1);
+          if (existing.length === 0) {
+            await tx.insert(clientProducts).values({
+              clientId: client.id,
+              productId: item.productId
+            });
+            transferredCount++;
+          }
+        } else if (item.itemType === "bundle" && item.bundleId) {
+          const existing = await tx.select().from(clientBundles).where(
+            and6(
+              eq7(clientBundles.clientId, client.id),
+              eq7(clientBundles.bundleId, item.bundleId)
+            )
+          ).limit(1);
+          if (existing.length === 0) {
+            let bundleCustomQtys = item.customQuantities;
+            const bps = await tx.select({ productId: bundleProducts.productId, quantity: bundleProducts.quantity }).from(bundleProducts).where(eq7(bundleProducts.bundleId, item.bundleId));
+            const normalizedQtys = {};
+            for (const bp of bps) {
+              normalizedQtys[bp.productId] = bundleCustomQtys?.[bp.productId] ?? bp.quantity ?? 1;
+            }
+            bundleCustomQtys = Object.keys(normalizedQtys).length > 0 ? normalizedQtys : null;
+            console.log(`[LeadConversion] Inserting client bundle ${item.bundleId} with normalized customQuantities: ${JSON.stringify(bundleCustomQtys)}`);
+            await tx.insert(clientBundles).values({
+              clientId: client.id,
+              bundleId: item.bundleId,
+              customQuantities: bundleCustomQtys
+            });
+            transferredCount++;
+          }
+        } else if (item.itemType === "package" && item.packageId) {
+          console.log(`[LeadConversion] Expanding package ${item.packageId} into individual bundles/products (not adding as package to avoid double-counting)`);
+          const pkgCustomQtys = item.customQuantities || {};
+          const pkgItems = await tx.select().from(packageItems).where(eq7(packageItems.packageId, item.packageId));
+          for (const pkgItem of pkgItems) {
+            if (pkgItem.itemType === "bundle" && pkgItem.bundleId) {
+              const existingBundle = await tx.select().from(clientBundles).where(
+                and6(
+                  eq7(clientBundles.clientId, client.id),
+                  eq7(clientBundles.bundleId, pkgItem.bundleId)
+                )
+              ).limit(1);
+              if (existingBundle.length === 0) {
+                const itemKey = pkgItem.id || `${pkgItem.itemType}-${pkgItem.bundleId}`;
+                const bundleProductQtys = {};
+                const bps = await tx.select({ productId: bundleProducts.productId }).from(bundleProducts).where(eq7(bundleProducts.bundleId, pkgItem.bundleId));
+                for (const bp of bps) {
+                  const bpKey = `${itemKey}_bp_${bp.productId}`;
+                  if (pkgCustomQtys[bpKey] !== void 0) {
+                    bundleProductQtys[bp.productId] = Number(pkgCustomQtys[bpKey]);
+                  }
+                  if (pkgCustomQtys[bp.productId] !== void 0) {
+                    bundleProductQtys[bp.productId] = Number(pkgCustomQtys[bp.productId]);
+                  }
+                }
+                const bpsAll = await tx.select({ productId: bundleProducts.productId, quantity: bundleProducts.quantity }).from(bundleProducts).where(eq7(bundleProducts.bundleId, pkgItem.bundleId));
+                const normalizedBundleQtys = {};
+                for (const bp of bpsAll) {
+                  normalizedBundleQtys[bp.productId] = bundleProductQtys[bp.productId] ?? bp.quantity ?? 1;
+                }
+                const finalBundleQtys = Object.keys(normalizedBundleQtys).length > 0 ? normalizedBundleQtys : null;
+                console.log(`[LeadConversion] Package bundle ${pkgItem.bundleId} normalized customQuantities: ${JSON.stringify(finalBundleQtys)}`);
+                await tx.insert(clientBundles).values({
+                  clientId: client.id,
+                  bundleId: pkgItem.bundleId,
+                  customQuantities: finalBundleQtys
+                });
+                transferredCount++;
+              }
+            } else if (pkgItem.itemType === "product" && pkgItem.productId) {
+              const existingProd = await tx.select().from(clientProducts).where(
+                and6(
+                  eq7(clientProducts.clientId, client.id),
+                  eq7(clientProducts.productId, pkgItem.productId)
+                )
+              ).limit(1);
+              if (existingProd.length === 0) {
+                await tx.insert(clientProducts).values({
+                  clientId: client.id,
+                  productId: pkgItem.productId
+                });
+                transferredCount++;
+              }
+            }
+          }
+        }
+      }
+      console.log(
+        `\u2705 [LeadConversion] Transferred ${transferredCount} items from quote ${quote.id} to client ${client.id}`
+      );
+    }
+    const closedWonStage = await tx.select().from(leadPipelineStages).where(sql4`LOWER(${leadPipelineStages.name}) = 'closed won'`).limit(1);
+    const leadUpdateData = {
+      status: "Won",
+      isConverted: true,
+      convertedAt: /* @__PURE__ */ new Date(),
+      clientId: client.id,
+      convertedBy: triggeredBy
+    };
+    if (closedWonStage.length > 0) {
+      leadUpdateData.stageId = closedWonStage[0].id;
+      console.log(
+        `\u2705 [LeadConversion] Moving lead ${leadId} to "Closed Won" stage`
+      );
+    }
+    await tx.update(leads).set(leadUpdateData).where(eq7(leads.id, leadId));
+    console.log(
+      `\u2705 [LeadConversion] Lead ${leadId} converted to client ${client.id} (triggered by: ${triggeredBy})`
+    );
+    const [cycleLengthSetting] = await tx.select().from(taskSettings).where(
+      eq7(taskSettings.settingKey, "task_mapping_default_cycle_length")
+    );
+    const defaultCycleLength = cycleLengthSetting?.settingValue?.value ?? 30;
+    const [advanceGenSetting] = await tx.select().from(taskSettings).where(
+      eq7(
+        taskSettings.settingKey,
+        "task_mapping_default_advance_generation_days"
+      )
+    );
+    const defaultAdvanceDays = advanceGenSetting?.settingValue?.value ?? 3;
+    const existingConfig = await tx.select().from(clientRecurringConfig).where(eq7(clientRecurringConfig.clientId, client.id)).limit(1);
+    if (existingConfig.length === 0) {
+      await tx.insert(clientRecurringConfig).values({
+        clientId: client.id,
+        cycleStartDate: /* @__PURE__ */ new Date(),
+        cycleLengthDays: defaultCycleLength,
+        advanceGenerationDays: defaultAdvanceDays,
+        status: "active"
+      });
+      console.log(
+        `\u2705 [LeadConversion] Created recurring config for client ${client.id}`
+      );
+    }
+    return {
+      success: true,
+      clientId: client.id,
+      alreadyConverted: false,
+      quoteId: quote?.id || null
+    };
+  });
+  console.log(`[LeadConversion] Transaction completed. clientId=${result.clientId}, alreadyConverted=${result.alreadyConverted}`);
+  if (!result.alreadyConverted) {
+    try {
+      const [autoGenSetting] = await db.select().from(taskSettings).where(
+        eq7(taskSettings.settingKey, "task_mapping_auto_generate_on_conversion")
+      );
+      const autoGenerateEnabled = autoGenSetting?.settingValue?.value ?? true;
+      if (autoGenerateEnabled) {
+        const assignedProducts = await db.select({ productId: clientProducts.productId }).from(clientProducts).where(eq7(clientProducts.clientId, result.clientId));
+        const assignedBundles = await db.select({ bundleId: clientBundles.bundleId }).from(clientBundles).where(eq7(clientBundles.clientId, result.clientId));
+        const assignedPackages = await db.select({ packageId: clientPackages.packageId }).from(clientPackages).where(eq7(clientPackages.clientId, result.clientId));
+        const generationItems = [];
+        for (const cp of assignedProducts) {
+          let qty = 1;
+          if (result.quoteId) {
+            const [qi] = await db.select({ quantity: quoteItems.quantity }).from(quoteItems).where(
+              and6(
+                eq7(quoteItems.quoteId, result.quoteId),
+                eq7(quoteItems.productId, cp.productId),
+                eq7(quoteItems.itemType, "product")
+              )
+            ).limit(1);
+            if (qi) qty = qi.quantity;
+          }
+          generationItems.push({ productId: cp.productId, quantity: qty });
+        }
+        for (const cb of assignedBundles) {
+          let qty = 1;
+          if (result.quoteId) {
+            const [qi] = await db.select({ quantity: quoteItems.quantity }).from(quoteItems).where(
+              and6(
+                eq7(quoteItems.quoteId, result.quoteId),
+                eq7(quoteItems.bundleId, cb.bundleId),
+                eq7(quoteItems.itemType, "bundle")
+              )
+            ).limit(1);
+            if (qi) qty = qi.quantity;
+          }
+          generationItems.push({ bundleId: cb.bundleId, quantity: qty });
+        }
+        for (const cpkg of assignedPackages) {
+          let qty = 1;
+          if (result.quoteId) {
+            const [qi] = await db.select({ quantity: quoteItems.quantity }).from(quoteItems).where(
+              and6(
+                eq7(quoteItems.quoteId, result.quoteId),
+                eq7(quoteItems.packageId, cpkg.packageId),
+                eq7(quoteItems.itemType, "package")
+              )
+            ).limit(1);
+            if (qi) qty = qi.quantity;
+          }
+          generationItems.push({ packageId: cpkg.packageId, quantity: qty });
+        }
+        if (generationItems.length > 0) {
+          const summary = await generateTasksFromTemplates({
+            clientId: result.clientId,
+            items: generationItems,
+            generationType: "onboarding",
+            cycleStartDate: /* @__PURE__ */ new Date(),
+            targetWeek: 1
+          });
+          console.log(
+            `\u2705 [LeadConversion] Task generation for client ${result.clientId}: ${summary.totalTasksCreated} week-1 onboarding tasks created`
+          );
+          if (summary.errors.length > 0) {
+            console.warn(
+              `\u26A0\uFE0F [LeadConversion] Task generation warnings:`,
+              summary.errors
+            );
+          }
+        } else {
+          console.log(`[LeadConversion] No products/bundles/packages to generate tasks for`);
+        }
+      } else {
+        console.log(`[LeadConversion] Auto task generation is disabled`);
+      }
+    } catch (taskGenError) {
+      console.error(
+        "[LeadConversion] Error generating onboarding tasks (non-blocking):",
+        taskGenError
+      );
+    }
+  }
+  if (!result.alreadyConverted) {
+    try {
+      const sections = await db.select().from(clientBriefSections);
+      for (const section of sections) {
+        if (section.defaultTemplate && section.isEnabled) {
+          const coreKeyMap = {
+            background: "briefBackground",
+            objectives: "briefObjectives",
+            brand_info: "briefBrandInfo",
+            audience_info: "briefAudienceInfo",
+            products_services: "briefProductsServices",
+            competitors: "briefCompetitors",
+            marketing_tech: "briefMarketingTech",
+            miscellaneous: "briefMiscellaneous"
+          };
+          if (section.scope === "core" && section.key && coreKeyMap[section.key]) {
+            const col = coreKeyMap[section.key];
+            await db.update(clients).set({ [col]: section.defaultTemplate }).where(eq7(clients.id, result.clientId));
+          } else {
+            await db.insert(clientBriefValues).values({
+              clientId: result.clientId,
+              sectionId: section.id,
+              value: section.defaultTemplate
+            }).onConflictDoNothing();
+          }
+        }
+      }
+    } catch (templateError) {
+      console.error("[LeadConversion] Error applying default brief templates (non-blocking):", templateError);
+    }
+  }
+  console.log(`[LeadConversion] Conversion complete. Returning clientId=${result.clientId}`);
+  return { success: result.success, clientId: result.clientId, alreadyConverted: result.alreadyConverted };
+}
+var init_leadConversionService = __esm({
+  "server/services/leadConversionService.ts"() {
+    "use strict";
+    init_db();
+    init_schema();
+    init_taskGenerationEngine();
   }
 });
 
@@ -21470,23 +21578,34 @@ async function runRecurringTaskCheck() {
     const today = /* @__PURE__ */ new Date();
     let totalGenerated = 0;
     let clientsProcessed = 0;
+    console.log(`[RecurringTasks] Evaluating ${configs.length} active configs...`);
     for (const config of configs) {
       try {
         if (!config.cycleStartDate) {
+          console.log(`[RecurringTasks] Client ${config.clientId}: skipped \u2014 no cycleStartDate`);
           continue;
         }
         const cycleStartMs = new Date(config.cycleStartDate).getTime();
         const cycleLengthMs = (config.cycleLengthDays || 30) * 24 * 60 * 60 * 1e3;
         const elapsedMs = today.getTime() - cycleStartMs;
-        if (elapsedMs < 0) continue;
+        if (elapsedMs < 0) {
+          console.log(`[RecurringTasks] Client ${config.clientId}: skipped \u2014 cycleStartDate is in the future`);
+          continue;
+        }
         const currentCycleNumber = Math.floor(elapsedMs / cycleLengthMs) + 1;
         const lastGenerated = config.lastGeneratedCycle || 0;
-        if (lastGenerated >= currentCycleNumber) continue;
+        if (lastGenerated >= currentCycleNumber) {
+          console.log(`[RecurringTasks] Client ${config.clientId}: skipped \u2014 already generated cycle ${lastGenerated} (current cycle: ${currentCycleNumber})`);
+          continue;
+        }
         const nextCycleToGenerate = lastGenerated + 1;
         const nextCycleStartDate = new Date(cycleStartMs + (nextCycleToGenerate - 1) * cycleLengthMs);
         const advanceDays = config.advanceGenerationDays || 3;
         const generateByDate = new Date(nextCycleStartDate.getTime() - advanceDays * 24 * 60 * 60 * 1e3);
-        if (today < generateByDate) continue;
+        if (today < generateByDate) {
+          console.log(`[RecurringTasks] Client ${config.clientId}: skipped \u2014 too early for advance window (generate by: ${generateByDate.toISOString().slice(0, 10)}, next cycle: ${nextCycleStartDate.toISOString().slice(0, 10)})`);
+          continue;
+        }
         const existingGenerations = await db.select({ id: clientTaskGenerations.id }).from(clientTaskGenerations).where(
           and25(
             eq28(clientTaskGenerations.clientId, config.clientId),
@@ -21495,6 +21614,7 @@ async function runRecurringTaskCheck() {
           )
         ).limit(1);
         if (existingGenerations.length > 0) {
+          console.log(`[RecurringTasks] Client ${config.clientId}: skipped \u2014 generation record already exists for cycle ${nextCycleToGenerate}, syncing lastGeneratedCycle`);
           await db.update(clientRecurringConfig).set({ lastGeneratedCycle: nextCycleToGenerate, updatedAt: /* @__PURE__ */ new Date() }).where(eq28(clientRecurringConfig.id, config.id));
           continue;
         }
@@ -21505,7 +21625,10 @@ async function runRecurringTaskCheck() {
         for (const cp of assignedProducts) items.push({ productId: cp.productId, quantity: 1 });
         for (const cb of assignedBundles) items.push({ bundleId: cb.bundleId, quantity: 1 });
         for (const cpkg of assignedPkgs) items.push({ packageId: cpkg.packageId, quantity: 1 });
-        if (items.length === 0) continue;
+        if (items.length === 0) {
+          console.log(`[RecurringTasks] Client ${config.clientId}: skipped \u2014 no products/bundles/packages assigned`);
+          continue;
+        }
         const [clientRow] = await db.select({ name: clients.name, company: clients.company }).from(clients).where(eq28(clients.id, config.clientId));
         const clientName = clientRow?.company || clientRow?.name || config.clientId;
         const summary = await generateTasksFromTemplates({
@@ -22366,8 +22489,8 @@ init_schema();
 init_encryption();
 init_googleCalendarUtils();
 import { google as google2 } from "googleapis";
-import { eq as eq3, and as and2 } from "drizzle-orm";
-import { randomUUID } from "crypto";
+import { eq as eq4, and as and3 } from "drizzle-orm";
+import { randomUUID as randomUUID2 } from "crypto";
 
 // server/fathomService.ts
 async function findFathomRecording(apiKey, eventStartTime, eventEndTime, eventTitle) {
@@ -22462,6 +22585,7 @@ async function findFathomRecording(apiKey, eventStartTime, eventEndTime, eventTi
 }
 
 // server/googleCalendarCreateEvent.ts
+init_storage();
 async function createCalendarEvent(req, res) {
   try {
     const userId2 = req.session?.userId;
@@ -22477,9 +22601,9 @@ async function createCalendarEvent(req, res) {
     let googleHangoutLink = null;
     let googleHtmlLink = null;
     let syncedToGoogle = false;
-    const [connection] = await db.select().from(calendarConnections).where(and2(
-      eq3(calendarConnections.userId, userId2),
-      eq3(calendarConnections.syncEnabled, true)
+    const [connection] = await db.select().from(calendarConnections).where(and3(
+      eq4(calendarConnections.userId, userId2),
+      eq4(calendarConnections.syncEnabled, true)
     )).limit(1);
     if (connection && syncToGoogle) {
       try {
@@ -22502,7 +22626,7 @@ async function createCalendarEvent(req, res) {
             if (tokens.refresh_token) {
               updateData.refreshToken = EncryptionService.encrypt(tokens.refresh_token);
             }
-            await db.update(calendarConnections).set(updateData).where(eq3(calendarConnections.id, connection.id));
+            await db.update(calendarConnections).set(updateData).where(eq4(calendarConnections.id, connection.id));
             console.log("[CreateEvent] Updated tokens in database");
           }
         });
@@ -22530,7 +22654,7 @@ async function createCalendarEvent(req, res) {
         if (addGoogleMeet && connection.twoWaySync) {
           eventResource.conferenceData = {
             createRequest: {
-              requestId: randomUUID(),
+              requestId: randomUUID2(),
               conferenceSolutionKey: {
                 type: "hangoutsMeet"
               }
@@ -22557,7 +22681,7 @@ async function createCalendarEvent(req, res) {
           });
           const attendeeEmails = guests?.map((g) => g.email) || [];
           const newCalendarEvent = await db.insert(calendarEvents).values({
-            id: randomUUID(),
+            id: randomUUID2(),
             connectionId: connection.id,
             googleEventId,
             clientId: clientId || null,
@@ -22594,7 +22718,7 @@ async function createCalendarEvent(req, res) {
           await db.update(calendarConnections).set({
             syncEnabled: false,
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq3(calendarConnections.id, connection.id));
+          }).where(eq4(calendarConnections.id, connection.id));
           console.log("[CreateEvent] Google Calendar auth expired - connection disabled");
           return res.status(401).json({
             error: "Your Google Calendar connection has expired. Please disconnect and reconnect your Google Calendar in Settings.",
@@ -22604,10 +22728,10 @@ async function createCalendarEvent(req, res) {
         console.log("[CreateEvent] Falling back to local event creation due to error:", googleError.message);
       }
     }
-    let [defaultCalendar] = await db.select().from(calendars).where(eq3(calendars.createdBy, userId2)).limit(1);
+    let [defaultCalendar] = await db.select().from(calendars).where(eq4(calendars.createdBy, userId2)).limit(1);
     if (!defaultCalendar) {
       const newCalendar = await db.insert(calendars).values({
-        id: randomUUID(),
+        id: randomUUID2(),
         name: "My Calendar",
         description: "Default calendar",
         type: "personal",
@@ -22620,7 +22744,7 @@ async function createCalendarEvent(req, res) {
       defaultCalendar = newCalendar[0];
     }
     const newAppointment = await db.insert(calendarAppointments).values({
-      id: randomUUID(),
+      id: randomUUID2(),
       calendarId: defaultCalendar.id,
       clientId: clientId || null,
       assignedTo: userId2,
@@ -22666,26 +22790,26 @@ async function updateCalendarEventStatus(req, res) {
       return res.status(400).json({ error: "Valid appointment status is required (confirmed, showed, no_show, cancelled)" });
     }
     console.log("[UpdateEventStatus] Updating event status:", { userId: userId2, eventId, appointmentStatus });
-    const [existingEvent] = await db.select().from(calendarEvents).where(eq3(calendarEvents.id, eventId)).limit(1);
+    const [existingEvent] = await db.select().from(calendarEvents).where(eq4(calendarEvents.id, eventId)).limit(1);
     if (!existingEvent) {
       return res.status(404).json({ error: "Calendar event not found" });
     }
-    const [connection] = await db.select().from(calendarConnections).where(eq3(calendarConnections.id, existingEvent.connectionId)).limit(1);
+    const [connection] = await db.select().from(calendarConnections).where(eq4(calendarConnections.id, existingEvent.connectionId)).limit(1);
     if (!connection || connection.userId !== userId2) {
       return res.status(403).json({ error: "You do not have permission to update this event" });
     }
     const [updatedEvent] = await db.update(calendarEvents).set({
       appointmentStatus,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq3(calendarEvents.id, eventId)).returning();
+    }).where(eq4(calendarEvents.id, eventId)).returning();
     if (appointmentStatus === "showed" && !existingEvent.timeEntryCreated) {
       try {
         const startTime = new Date(existingEvent.startTime);
         const endTime = new Date(existingEvent.endTime);
         const durationMs = endTime.getTime() - startTime.getTime();
         const durationMinutes = Math.round(durationMs / (1e3 * 60));
-        const taskId = randomUUID();
-        const timeEntryId = randomUUID();
+        const taskId = randomUUID2();
+        const timeEntryId = randomUUID2();
         const eventTitle = existingEvent.summary || "Untitled Event";
         const timeEntry = {
           id: timeEntryId,
@@ -22700,7 +22824,7 @@ async function updateCalendarEventStatus(req, res) {
         };
         let fathomRecordingUrl = null;
         try {
-          const [staffRecord] = await db.select().from(staff).where(eq3(staff.id, userId2)).limit(1);
+          const [staffRecord] = await db.select().from(staff).where(eq4(staff.id, userId2)).limit(1);
           if (staffRecord?.fathomApiKey) {
             console.log("[UpdateEventStatus] Searching for Fathom recording...");
             fathomRecordingUrl = await findFathomRecording(
@@ -22720,7 +22844,7 @@ async function updateCalendarEventStatus(req, res) {
         }
         let linkedMeetingId = null;
         try {
-          const [linkedMeeting] = await db.select({ id: oneOnOneMeetings.id, recordingLink: oneOnOneMeetings.recordingLink }).from(oneOnOneMeetings).where(eq3(oneOnOneMeetings.calendarEventId, existingEvent.googleEventId)).limit(1);
+          const [linkedMeeting] = await db.select({ id: oneOnOneMeetings.id, recordingLink: oneOnOneMeetings.recordingLink }).from(oneOnOneMeetings).where(eq4(oneOnOneMeetings.calendarEventId, existingEvent.googleEventId)).limit(1);
           if (linkedMeeting) {
             linkedMeetingId = linkedMeeting.id;
             console.log("[UpdateEventStatus] Found linked 1-on-1 meeting:", linkedMeetingId);
@@ -22728,7 +22852,7 @@ async function updateCalendarEventStatus(req, res) {
               await db.update(oneOnOneMeetings).set({
                 recordingLink: fathomRecordingUrl,
                 updatedAt: /* @__PURE__ */ new Date()
-              }).where(eq3(oneOnOneMeetings.id, linkedMeetingId));
+              }).where(eq4(oneOnOneMeetings.id, linkedMeetingId));
               console.log("[UpdateEventStatus] Updated 1-on-1 meeting with Fathom recording link");
             }
           }
@@ -22748,12 +22872,24 @@ async function updateCalendarEventStatus(req, res) {
           startDate: startTime,
           timeEstimate: durationMinutes,
           timeTracked: durationMinutes,
-          timeEntries: [timeEntry],
           visibleToClient: false,
           fathomRecordingUrl,
           calendarEventId: eventId,
           oneOnOneMeetingId: linkedMeetingId
         }).returning();
+        await storage2.appendTaskTimeEntry({
+          id: timeEntry.id,
+          taskId,
+          userId: userId2,
+          taskTitle: `Meeting: ${eventTitle}`,
+          userName: timeEntry.userName,
+          startTime,
+          endTime,
+          duration: durationMinutes,
+          isRunning: false,
+          source: "auto",
+          notes: timeEntry.description
+        });
         await db.insert(eventTimeEntries).values({
           id: timeEntryId,
           calendarEventId: eventId,
@@ -22771,7 +22907,7 @@ async function updateCalendarEventStatus(req, res) {
         await db.update(calendarEvents).set({
           timeEntryCreated: true,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq3(calendarEvents.id, eventId));
+        }).where(eq4(calendarEvents.id, eventId));
         console.log("[UpdateEventStatus] Auto-created task with time tracking:", {
           taskId: createdTask.id,
           taskTitle: createdTask.title,
@@ -22813,7 +22949,7 @@ async function getEventTimeEntries(req, res) {
     }
     const { startDate, endDate, clientId } = req.query;
     console.log("[GetEventTimeEntries] Fetching entries:", { userId: userId2, startDate, endDate, clientId });
-    let query = db.select().from(eventTimeEntries).where(eq3(eventTimeEntries.userId, userId2));
+    let query = db.select().from(eventTimeEntries).where(eq4(eventTimeEntries.userId, userId2));
     const entries = await query;
     let filteredEntries = entries;
     if (startDate) {
@@ -22842,10 +22978,10 @@ async function createOneOnOneMeetingCalendarEvent(params) {
   const { userId: userId2, meetingDate, meetingTime, meetingDuration, managerName, directReportName, directReportEmail } = params;
   console.log("[CreateOneOnOneEvent] Creating calendar event for 1-on-1 meeting:", params);
   try {
-    const [connection] = await db.select().from(calendarConnections).where(and2(
-      eq3(calendarConnections.userId, userId2),
-      eq3(calendarConnections.syncEnabled, true),
-      eq3(calendarConnections.twoWaySync, true)
+    const [connection] = await db.select().from(calendarConnections).where(and3(
+      eq4(calendarConnections.userId, userId2),
+      eq4(calendarConnections.syncEnabled, true),
+      eq4(calendarConnections.twoWaySync, true)
     )).limit(1);
     if (!connection) {
       console.log("[CreateOneOnOneEvent] No Google Calendar connection with two-way sync found for user");
@@ -22870,7 +23006,7 @@ async function createOneOnOneMeetingCalendarEvent(params) {
         if (tokens.refresh_token) {
           updateData.refreshToken = EncryptionService.encrypt(tokens.refresh_token);
         }
-        await db.update(calendarConnections).set(updateData).where(eq3(calendarConnections.id, connection.id));
+        await db.update(calendarConnections).set(updateData).where(eq4(calendarConnections.id, connection.id));
         console.log("[CreateOneOnOneEvent] Updated tokens in database");
       }
     });
@@ -22895,7 +23031,7 @@ Created by AgencyBoost CRM.`,
       },
       conferenceData: {
         createRequest: {
-          requestId: randomUUID(),
+          requestId: randomUUID2(),
           conferenceSolutionKey: {
             type: "hangoutsMeet"
           }
@@ -22926,7 +23062,7 @@ Created by AgencyBoost CRM.`,
         htmlLink: googleEvent.data.htmlLink
       });
       await db.insert(calendarEvents).values({
-        id: randomUUID(),
+        id: randomUUID2(),
         connectionId: connection.id,
         googleEventId,
         clientId: null,
@@ -22962,9 +23098,9 @@ Created by AgencyBoost CRM.`,
       await db.update(calendarConnections).set({
         syncEnabled: false,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(and2(
-        eq3(calendarConnections.userId, userId2),
-        eq3(calendarConnections.syncEnabled, true)
+      }).where(and3(
+        eq4(calendarConnections.userId, userId2),
+        eq4(calendarConnections.syncEnabled, true)
       ));
       return { success: false, error: "Google Calendar authentication expired. Please reconnect your calendar." };
     }
@@ -22975,7 +23111,7 @@ Created by AgencyBoost CRM.`,
 // server/oneOnOneMeetingService.ts
 init_db();
 init_schema();
-import { eq as eq4, and as and3 } from "drizzle-orm";
+import { eq as eq5, and as and4 } from "drizzle-orm";
 
 // server/googleCalendar.ts
 import { google as google3 } from "googleapis";
@@ -23076,9 +23212,9 @@ async function deleteAppointmentFromGoogleCalendar(googleEventId) {
 import { fromZonedTime } from "date-fns-tz";
 var MEETING_TIMEZONE = "America/New_York";
 async function findOrCreatePersonalCalendar(userId2) {
-  const existingCalendar = await db.select().from(calendars).innerJoin(calendarStaff, eq4(calendars.id, calendarStaff.calendarId)).where(and3(
-    eq4(calendarStaff.staffId, userId2),
-    eq4(calendars.type, "personal")
+  const existingCalendar = await db.select().from(calendars).innerJoin(calendarStaff, eq5(calendars.id, calendarStaff.calendarId)).where(and4(
+    eq5(calendarStaff.staffId, userId2),
+    eq5(calendars.type, "personal")
   )).limit(1);
   if (existingCalendar.length > 0) {
     return existingCalendar[0].calendars.id;
@@ -23106,8 +23242,8 @@ async function createOneOnOneMeetingCalendars(params) {
   let managerAppointmentId = null;
   let directReportAppointmentId = null;
   try {
-    const [manager] = await db.select().from(staff).where(eq4(staff.id, managerId));
-    const [directReport] = await db.select().from(staff).where(eq4(staff.id, directReportId));
+    const [manager] = await db.select().from(staff).where(eq5(staff.id, managerId));
+    const [directReport] = await db.select().from(staff).where(eq5(staff.id, directReportId));
     if (!manager || !directReport) {
       return { success: false, error: "Manager or direct report not found" };
     }
@@ -23153,10 +23289,10 @@ async function createOneOnOneMeetingCalendars(params) {
     const [updatedMeeting] = await db.update(oneOnOneMeetings).set({
       calendarAppointmentId: managerAppointment.id,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq4(oneOnOneMeetings.id, meetingId)).returning();
+    }).where(eq5(oneOnOneMeetings.id, meetingId)).returning();
     if (!updatedMeeting) {
-      await db.delete(calendarAppointments).where(eq4(calendarAppointments.id, managerAppointment.id));
-      await db.delete(calendarAppointments).where(eq4(calendarAppointments.id, drAppointment.id));
+      await db.delete(calendarAppointments).where(eq5(calendarAppointments.id, managerAppointment.id));
+      await db.delete(calendarAppointments).where(eq5(calendarAppointments.id, drAppointment.id));
       managerAppointmentId = null;
       directReportAppointmentId = null;
       return { success: false, error: "Failed to link appointment to meeting" };
@@ -23180,17 +23316,17 @@ async function createOneOnOneMeetingCalendars(params) {
         const [updated] = await db.update(oneOnOneMeetings).set({
           calendarEventId: googleResult.calendarEventId,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq4(oneOnOneMeetings.id, meetingId)).returning();
+        }).where(eq5(oneOnOneMeetings.id, meetingId)).returning();
         await db.update(calendarAppointments).set({
           googleEventId: googleResult.calendarEventId,
           syncedToGoogle: true,
           meetingLink: googleResult.meetLink || null,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq4(calendarAppointments.id, managerAppointment.id));
+        }).where(eq5(calendarAppointments.id, managerAppointment.id));
         await db.update(calendarAppointments).set({
           meetingLink: googleResult.meetLink || null,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq4(calendarAppointments.id, drAppointment.id));
+        }).where(eq5(calendarAppointments.id, drAppointment.id));
         googleEventId = googleResult.calendarEventId;
         meetLink = googleResult.meetLink;
         if (updated) {
@@ -23216,7 +23352,7 @@ async function createOneOnOneMeetingCalendars(params) {
     console.error("[1-on-1 Meeting] Calendar creation failed:", error);
     if (managerAppointmentId) {
       try {
-        await db.delete(calendarAppointments).where(eq4(calendarAppointments.id, managerAppointmentId));
+        await db.delete(calendarAppointments).where(eq5(calendarAppointments.id, managerAppointmentId));
         console.log(`[1-on-1 Meeting] Cleaned up orphaned manager appointment: ${managerAppointmentId}`);
       } catch (cleanupError) {
         console.error("[1-on-1 Meeting] Failed to cleanup orphaned manager appointment:", cleanupError);
@@ -23224,7 +23360,7 @@ async function createOneOnOneMeetingCalendars(params) {
     }
     if (directReportAppointmentId) {
       try {
-        await db.delete(calendarAppointments).where(eq4(calendarAppointments.id, directReportAppointmentId));
+        await db.delete(calendarAppointments).where(eq5(calendarAppointments.id, directReportAppointmentId));
         console.log(`[1-on-1 Meeting] Cleaned up orphaned direct report appointment: ${directReportAppointmentId}`);
       } catch (cleanupError) {
         console.error("[1-on-1 Meeting] Failed to cleanup orphaned direct report appointment:", cleanupError);
@@ -23254,16 +23390,16 @@ async function deleteOneOnOneMeetingCalendars(meeting) {
       }
     }
     if (meeting.calendarAppointmentId) {
-      const [managerAppointment] = await db.select().from(calendarAppointments).where(eq4(calendarAppointments.id, meeting.calendarAppointmentId));
+      const [managerAppointment] = await db.select().from(calendarAppointments).where(eq5(calendarAppointments.id, meeting.calendarAppointmentId));
       if (managerAppointment) {
-        await db.delete(calendarAppointments).where(and3(
-          eq4(calendarAppointments.title, managerAppointment.title),
-          eq4(calendarAppointments.startTime, managerAppointment.startTime),
-          eq4(calendarAppointments.assignedTo, meeting.directReportId)
+        await db.delete(calendarAppointments).where(and4(
+          eq5(calendarAppointments.title, managerAppointment.title),
+          eq5(calendarAppointments.startTime, managerAppointment.startTime),
+          eq5(calendarAppointments.assignedTo, meeting.directReportId)
         ));
         console.log(`[1-on-1 Meeting] Deleted direct report's calendar appointment`);
       }
-      await db.delete(calendarAppointments).where(eq4(calendarAppointments.id, meeting.calendarAppointmentId));
+      await db.delete(calendarAppointments).where(eq5(calendarAppointments.id, meeting.calendarAppointmentId));
       console.log(`[1-on-1 Meeting] Deleted manager's calendar appointment: ${meeting.calendarAppointmentId}`);
     }
     return {
@@ -23283,8 +23419,8 @@ async function updateOneOnOneMeetingCalendars(params) {
   const { meetingId, managerId, directReportId, calendarAppointmentId, calendarEventId, meetingDate, meetingTime, meetingDuration } = params;
   let googleSyncError;
   try {
-    const [manager] = await db.select().from(staff).where(eq4(staff.id, managerId));
-    const [directReport] = await db.select().from(staff).where(eq4(staff.id, directReportId));
+    const [manager] = await db.select().from(staff).where(eq5(staff.id, managerId));
+    const [directReport] = await db.select().from(staff).where(eq5(staff.id, directReportId));
     if (!manager || !directReport) {
       return { success: false, error: "Manager or direct report not found" };
     }
@@ -23296,7 +23432,7 @@ async function updateOneOnOneMeetingCalendars(params) {
     const startTime = fromZonedTime(isoDateTimeString, MEETING_TIMEZONE);
     const endTime = new Date(startTime.getTime() + meetingDuration * 60 * 1e3);
     if (calendarAppointmentId) {
-      const [currentAppointment] = await db.select().from(calendarAppointments).where(eq4(calendarAppointments.id, calendarAppointmentId));
+      const [currentAppointment] = await db.select().from(calendarAppointments).where(eq5(calendarAppointments.id, calendarAppointmentId));
       if (currentAppointment) {
         await db.update(calendarAppointments).set({
           startTime,
@@ -23304,7 +23440,7 @@ async function updateOneOnOneMeetingCalendars(params) {
           title: appointmentTitle,
           description: appointmentDescription,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq4(calendarAppointments.id, calendarAppointmentId));
+        }).where(eq5(calendarAppointments.id, calendarAppointmentId));
         console.log(`[1-on-1 Meeting] Updated manager's calendar appointment`);
         await db.update(calendarAppointments).set({
           startTime,
@@ -23312,10 +23448,10 @@ async function updateOneOnOneMeetingCalendars(params) {
           title: appointmentTitle,
           description: appointmentDescription,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(and3(
-          eq4(calendarAppointments.title, currentAppointment.title),
-          eq4(calendarAppointments.startTime, currentAppointment.startTime),
-          eq4(calendarAppointments.assignedTo, directReportId)
+        }).where(and4(
+          eq5(calendarAppointments.title, currentAppointment.title),
+          eq5(calendarAppointments.startTime, currentAppointment.startTime),
+          eq5(calendarAppointments.assignedTo, directReportId)
         ));
         console.log(`[1-on-1 Meeting] Updated direct report's calendar appointment`);
       }
@@ -26216,12 +26352,12 @@ AgencyBoost CRM`
         const d = new Date(dateInput);
         return d.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
       };
-      const taskTimeEntries = await storage2.getTimeEntriesByDateRange(dateFrom, dateTo);
+      const taskTimeEntries2 = await storage2.getTimeEntriesByDateRange(dateFrom, dateTo);
       const minutesMap = {};
       const userNames = {};
       const userDepartments = {};
       const clientNames = {};
-      for (const task of taskTimeEntries) {
+      for (const task of taskTimeEntries2) {
         if (!task.timeEntries || task.timeEntries.length === 0) continue;
         const taskClientId = task.clientId || "__no_client__";
         if (task.clientId) {
@@ -26465,13 +26601,14 @@ AgencyBoost CRM`
       }
       const { taskId, entryId } = req.params;
       const { duration, startTime, endTime } = req.body;
-      console.log("[TIME_ENTRY_PATCH] calling updateTimeEntry:", JSON.stringify({ taskId, entryId, duration }));
-      const updatedTask = await storage2.updateTimeEntry(taskId, entryId, { duration, startTime, endTime });
-      console.log("[TIME_ENTRY_PATCH] updatedTask result:", updatedTask ? "FOUND" : "NOT FOUND");
-      if (!updatedTask) {
+      console.log("[TIME_ENTRY_PATCH] calling updateTaskTimeEntryById:", JSON.stringify({ taskId, entryId, duration }));
+      const result = await storage2.updateTaskTimeEntryById(taskId, entryId, { duration, startTime, endTime });
+      console.log("[TIME_ENTRY_PATCH] update result:", result ? "FOUND" : "NOT FOUND");
+      if (!result) {
         console.log("[TIME_ENTRY_PATCH] ERROR: time entry not found - taskId:", taskId, "entryId:", entryId);
         return res.status(404).json({ error: "Time entry not found" });
       }
+      const updatedTask = result.task;
       await storage2.createAuditLog({
         userId: userId2 || "unknown",
         userName: user?.email || "Unknown",
@@ -26487,6 +26624,65 @@ AgencyBoost CRM`
     } catch (error) {
       console.error("[TIME_ENTRY_PATCH] EXCEPTION:", error);
       res.status(500).json({ error: "Failed to update time entry" });
+    }
+  });
+  app2.delete("/api/reports/time-entries/:taskId/:entryId", requireAuth(), async (req, res) => {
+    try {
+      const user = req.session?.user;
+      const userId2 = req.session?.userId || user?.id || user?.staffId;
+      let userRoleName = null;
+      if (userId2) {
+        const staffWithRole = await db.select({
+          id: staff.id,
+          roleId: staff.roleId,
+          roleName: roles.name
+        }).from(staff).leftJoin(roles, eq20(staff.roleId, roles.id)).where(eq20(staff.id, userId2)).limit(1);
+        if (staffWithRole.length > 0 && staffWithRole[0].roleName) {
+          userRoleName = staffWithRole[0].roleName;
+        }
+      }
+      const isAdminOrManager = !!(userRoleName && (userRoleName.toLowerCase() === "admin" || userRoleName.toLowerCase() === "manager"));
+      let hasTimesheetEditPermission = isAdminOrManager;
+      if (!hasTimesheetEditPermission && userId2) {
+        const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq20(userRoles.userId, userId2));
+        const roleIds = userRolesList.map((ur) => ur.roleId).filter(Boolean);
+        const staffRecord = await db.select({ roleId: staff.roleId }).from(staff).where(eq20(staff.id, userId2)).limit(1);
+        if (staffRecord.length > 0 && staffRecord[0].roleId && !roleIds.includes(staffRecord[0].roleId)) {
+          roleIds.push(staffRecord[0].roleId);
+        }
+        if (roleIds.length > 0) {
+          const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
+            and18(
+              inArray7(granularPermissions.roleId, roleIds),
+              eq20(granularPermissions.permissionKey, "reports.timesheet.edit_all"),
+              eq20(granularPermissions.enabled, true)
+            )
+          );
+          hasTimesheetEditPermission = perms.length > 0;
+        }
+      }
+      if (!hasTimesheetEditPermission) {
+        return res.status(403).json({ error: "Only admins and managers can delete time entries" });
+      }
+      const { taskId, entryId } = req.params;
+      const result = await storage2.deleteTaskTimeEntryById(taskId, entryId);
+      if (!result) {
+        return res.status(404).json({ error: "Time entry not found" });
+      }
+      await storage2.createAuditLog({
+        userId: userId2 || "unknown",
+        userName: user?.email || "Unknown",
+        action: "delete",
+        entityType: "task",
+        entityId: taskId,
+        entityName: result.task?.title || "Time Entry",
+        details: `Deleted time entry ${entryId}`,
+        timestamp: /* @__PURE__ */ new Date()
+      });
+      res.json({ success: true, task: result.task, totalTracked: result.totalTracked });
+    } catch (error) {
+      console.error("[TIME_ENTRY_DELETE] EXCEPTION:", error);
+      res.status(500).json({ error: "Failed to delete time entry" });
     }
   });
   app2.post("/api/reports/stage-analytics", requireAuth(), requirePermission("reporting", "canView"), async (req, res) => {
@@ -26980,6 +27176,20 @@ AgencyBoost CRM`
         }
       } catch (taskGenError) {
         console.error("Error generating onboarding tasks (non-blocking):", taskGenError);
+      }
+      try {
+        const briefSections = await storage2.listBriefSections();
+        const clientBrief = await storage2.getClientBrief(client.id);
+        for (const section of briefSections) {
+          if (section.defaultTemplate && section.isEnabled) {
+            const existing = clientBrief.find((b) => b.id === section.id);
+            if (!existing?.value || existing.value.trim() === "") {
+              await storage2.setClientBriefValue(client.id, section.id, section.defaultTemplate);
+            }
+          }
+        }
+      } catch (templateError) {
+        console.error("Error applying default brief templates (non-blocking):", templateError);
       }
       await createAuditLog(
         "created",
@@ -33847,6 +34057,27 @@ AgencyBoost CRM`
       res.json({});
     }
   });
+  app2.get("/api/public/client-portal-logo", async (req, res) => {
+    try {
+      const [setting] = await db.select().from(taskSettings).where(eq20(taskSettings.settingKey, "client_portal_branding"));
+      const logoUrl = setting?.settingValue?.logoUrl;
+      if (!logoUrl || typeof logoUrl !== "string") {
+        return res.sendStatus(404);
+      }
+      const { ObjectStorageService: ObjectStorageService2 } = await Promise.resolve().then(() => (init_objectStorage(), objectStorage_exports));
+      const objectStorageService = new ObjectStorageService2();
+      const objectFile = await objectStorageService.getObjectEntityFile(logoUrl);
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      await objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error serving client portal logo:", error);
+      const { ObjectNotFoundError: ObjectNotFoundError2 } = await Promise.resolve().then(() => (init_objectStorage(), objectStorage_exports));
+      if (error instanceof ObjectNotFoundError2) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
+  });
   app2.get("/objects/:objectPath(*)", requireAuth(), async (req, res) => {
     try {
       console.log("Serving object for path:", req.path);
@@ -40650,12 +40881,24 @@ ${appointment.description || ""}
             startDate: startTime,
             timeEstimate: durationMinutes,
             timeTracked: durationMinutes,
-            timeEntries: [timeEntry],
             visibleToClient: false,
             fathomRecordingUrl,
             calendarEventId: id,
             oneOnOneMeetingId: linkedMeetingId
           }).returning();
+          await storage2.appendTaskTimeEntry({
+            id: timeEntry.id,
+            taskId,
+            userId: userId2,
+            taskTitle: `Meeting: ${eventTitle}`,
+            userName: timeEntry.userName,
+            startTime,
+            endTime,
+            duration: durationMinutes,
+            isRunning: false,
+            source: "auto",
+            notes: timeEntry.description
+          });
           await db.insert(eventTimeEntries).values({
             id: timeEntryId,
             calendarEventId: id,
@@ -47991,10 +48234,8 @@ ${appointment.description || ""}
           )
         );
         let taskId;
-        let existingEntries = [];
         if (existingTasks.length > 0) {
           taskId = existingTasks[0].id;
-          existingEntries = existingTasks[0].timeEntries || [];
         } else {
           const [newTask] = await db.insert(tasks).values({
             title: taskTitle,
@@ -48007,22 +48248,17 @@ ${appointment.description || ""}
           }).returning();
           taskId = newTask.id;
         }
-        const timeEntry = {
+        await storage2.appendTaskTimeEntry({
           id: `1on1-${meetingId}-${staffId}-${Date.now()}`,
           taskId,
-          taskTitle,
-          startTime: startTime.toISOString(),
-          endTime: now.toISOString(),
           userId: staffId,
+          taskTitle,
+          startTime,
+          endTime: now,
+          duration: durationMinutes,
           isRunning: false,
-          duration: durationMinutes
-        };
-        const updatedEntries = [...existingEntries, timeEntry];
-        const totalTracked = updatedEntries.reduce((sum, e) => sum + (e.duration || 0), 0);
-        await db.update(tasks).set({
-          timeEntries: updatedEntries,
-          timeTracked: totalTracked
-        }).where(eq20(tasks.id, taskId));
+          source: "auto"
+        });
       }
       let nextMeeting = null;
       if (meeting.isRecurring && meeting.recurringFrequency) {
@@ -48997,36 +49233,27 @@ ${appointment.description || ""}
       if (isAdmin) {
         applications = await db.select().from(jobApplications).orderBy(desc5(jobApplications.appliedAt));
       } else {
-        const hiringManagerApps = await db.select({
+        const nonAdminFields = {
           id: jobApplications.id,
           applicantName: jobApplications.applicantName,
           applicantEmail: jobApplications.applicantEmail,
           applicantPhone: jobApplications.applicantPhone,
           positionTitle: jobApplications.positionTitle,
+          positionId: jobApplications.positionId,
           stage: jobApplications.stage,
           rating: jobApplications.rating,
           appliedAt: jobApplications.appliedAt,
+          lastUpdated: jobApplications.lastUpdated,
           resumeUrl: jobApplications.resumeUrl,
-          coverLetter: jobApplications.coverLetter,
+          coverLetterUrl: jobApplications.coverLetterUrl,
+          portfolioUrl: jobApplications.portfolioUrl,
           notes: jobApplications.notes,
-          customFields: jobApplications.customFields,
-          jobOpeningId: jobApplications.jobOpeningId
-        }).from(jobApplications).innerJoin(jobOpenings, eq20(jobApplications.jobOpeningId, jobOpenings.id)).where(eq20(jobOpenings.hiringManagerId, currentUserId2)).orderBy(desc5(jobApplications.appliedAt));
-        const watchedApps = await db.select({
-          id: jobApplications.id,
-          applicantName: jobApplications.applicantName,
-          applicantEmail: jobApplications.applicantEmail,
-          applicantPhone: jobApplications.applicantPhone,
-          positionTitle: jobApplications.positionTitle,
-          stage: jobApplications.stage,
-          rating: jobApplications.rating,
-          appliedAt: jobApplications.appliedAt,
-          resumeUrl: jobApplications.resumeUrl,
-          coverLetter: jobApplications.coverLetter,
-          notes: jobApplications.notes,
-          customFields: jobApplications.customFields,
-          jobOpeningId: jobApplications.jobOpeningId
-        }).from(jobApplications).innerJoin(jobApplicationWatchers, eq20(jobApplications.id, jobApplicationWatchers.applicationId)).where(eq20(jobApplicationWatchers.staffId, currentUserId2)).orderBy(desc5(jobApplications.appliedAt));
+          customFieldData: jobApplications.customFieldData,
+          experience: jobApplications.experience,
+          source: jobApplications.source
+        };
+        const hiringManagerApps = await db.select(nonAdminFields).from(jobApplications).innerJoin(jobOpenings, eq20(jobApplications.positionId, jobOpenings.id)).where(eq20(jobOpenings.hiringManagerId, currentUserId2)).orderBy(desc5(jobApplications.appliedAt));
+        const watchedApps = await db.select(nonAdminFields).from(jobApplications).innerJoin(jobApplicationWatchers, eq20(jobApplications.id, jobApplicationWatchers.applicationId)).where(eq20(jobApplicationWatchers.staffId, currentUserId2)).orderBy(desc5(jobApplications.appliedAt));
         const applicationMap = /* @__PURE__ */ new Map();
         [...hiringManagerApps, ...watchedApps].forEach((app3) => {
           applicationMap.set(app3.id, app3);
@@ -49364,14 +49591,21 @@ ${appointment.description || ""}
   if (!httpServer) {
     httpServer = createServer(app2);
   }
-  app2.get("/api/hr/job-applications/:id", async (req, res) => {
+  app2.get("/api/hr/job-applications/:id", requireAuth(), async (req, res) => {
     try {
       const { id } = req.params;
+      const userId2 = req.session?.userId;
       const [application] = await db.select().from(jobApplications).where(eq20(jobApplications.id, id));
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
       }
-      res.json(application);
+      const canManageApplications = userId2 ? await hasGranularPermission(userId2, "hr.applications.manage") : false;
+      const responseData = { ...application };
+      if (!canManageApplications && application.salaryExpectation != null && application.salaryExpectation !== "") {
+        responseData.salaryExpectation = null;
+        responseData.salaryHidden = true;
+      }
+      res.json(responseData);
     } catch (error) {
       console.error("Error fetching job application:", error);
       res.status(500).json({ message: "Failed to fetch application" });
@@ -49451,7 +49685,14 @@ ${appointment.description || ""}
           (err) => console.error("Hired notification error:", err)
         );
       }
-      res.json(updatedApplication);
+      const userIdForPerm = req.session?.userId;
+      const canManageApplications = userIdForPerm ? await hasGranularPermission(userIdForPerm, "hr.applications.manage") : false;
+      const responseData = { ...updatedApplication };
+      if (!canManageApplications && updatedApplication.salaryExpectation != null && updatedApplication.salaryExpectation !== "") {
+        responseData.salaryExpectation = null;
+        responseData.salaryHidden = true;
+      }
+      res.json(responseData);
     } catch (error) {
       console.error("Error updating job application:", error);
       res.status(500).json({ message: "Failed to update application" });
@@ -52373,26 +52614,158 @@ ${appointment.description || ""}
     try {
       const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!authenticatedUserId) return;
-      const allTasks = await storage2.getTasks();
-      for (const task of allTasks) {
-        if (task.timeEntries && Array.isArray(task.timeEntries)) {
-          const runningEntry = task.timeEntries.find(
-            (entry) => entry.isRunning && entry.userId === authenticatedUserId
-          );
-          if (runningEntry) {
-            res.json({
-              ...runningEntry,
-              taskId: task.id,
-              taskTitle: task.title
-            });
-            return;
-          }
-        }
+      const running = await storage2.getRunningTaskTimerForUser(authenticatedUserId);
+      if (!running) {
+        return res.json(null);
       }
-      res.json(null);
+      const startTimeIso = running.startTime instanceof Date ? running.startTime.toISOString() : String(running.startTime);
+      res.json({
+        id: running.id,
+        taskId: running.taskId,
+        taskTitle: running.taskTitle || running.task?.title || "",
+        startTime: startTimeIso,
+        userId: running.userId,
+        userName: running.userName || void 0,
+        isRunning: true
+      });
     } catch (error) {
       console.error("Error checking for running timer:", error);
       res.status(500).json({ error: "Failed to check for running timer" });
+    }
+  });
+  const timerLocks = /* @__PURE__ */ new Map();
+  const acquireTimerLock = (userId2) => {
+    const prev = timerLocks.get(userId2) || Promise.resolve();
+    let release;
+    const lock = new Promise((resolve) => {
+      release = resolve;
+    });
+    timerLocks.set(userId2, prev.then(() => lock));
+    return prev.then(() => release);
+  };
+  app2.post("/api/time-entries/start", requireAuth(), async (req, res) => {
+    const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
+    if (!authenticatedUserId) return;
+    const releaseLock = await acquireTimerLock(authenticatedUserId);
+    try {
+      const { taskId, taskTitle } = req.body;
+      if (!taskId) {
+        return res.status(400).json({ error: "taskId is required" });
+      }
+      const existing = await storage2.getRunningTaskTimerForUser(authenticatedUserId);
+      if (existing) {
+        return res.status(409).json({
+          error: "Timer already running",
+          existingTimer: {
+            id: existing.id,
+            taskId: existing.taskId,
+            taskTitle: existing.taskTitle || existing.task?.title || "",
+            startTime: existing.startTime instanceof Date ? existing.startTime.toISOString() : String(existing.startTime),
+            userId: existing.userId,
+            isRunning: true
+          }
+        });
+      }
+      const task = await storage2.getTask(taskId);
+      if (!task) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      const staffMember = await storage2.getStaffMember(authenticatedUserId);
+      const userName = staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown";
+      const newEntry = await storage2.startTaskTimer({
+        taskId,
+        userId: authenticatedUserId,
+        taskTitle: taskTitle || task.title,
+        userName
+      });
+      console.log(`[TimeTracker] Timer started for user ${authenticatedUserId} on task ${taskId}`);
+      res.json({
+        id: newEntry.id,
+        taskId: newEntry.taskId,
+        taskTitle: newEntry.taskTitle,
+        startTime: newEntry.startTime instanceof Date ? newEntry.startTime.toISOString() : String(newEntry.startTime),
+        userId: newEntry.userId,
+        userName: newEntry.userName,
+        isRunning: true
+      });
+    } catch (error) {
+      console.error("Error starting timer:", error);
+      res.status(500).json({ error: "Failed to start timer" });
+    } finally {
+      releaseLock();
+    }
+  });
+  app2.post("/api/time-entries/stop", requireAuth(), async (req, res) => {
+    const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
+    if (!authenticatedUserId) return;
+    const releaseLock = await acquireTimerLock(authenticatedUserId);
+    try {
+      const result = await storage2.stopTaskTimerForUser(authenticatedUserId);
+      if (!result) {
+        return res.status(404).json({ error: "No running timer found" });
+      }
+      const { entry, task, totalTracked } = result;
+      console.log(`[TimeTracker] Timer stopped for user ${authenticatedUserId} on task ${task.id} \u2014 ${entry.duration} minutes`);
+      res.json({
+        id: entry.id,
+        taskId: task.id,
+        taskTitle: entry.taskTitle || task.title,
+        startTime: entry.startTime instanceof Date ? entry.startTime.toISOString() : String(entry.startTime),
+        endTime: entry.endTime instanceof Date ? entry.endTime?.toISOString() : entry.endTime,
+        userId: entry.userId,
+        userName: entry.userName,
+        isRunning: false,
+        duration: entry.duration,
+        totalTracked
+      });
+    } catch (error) {
+      console.error("Error stopping timer:", error);
+      res.status(500).json({ error: "Failed to stop timer" });
+    } finally {
+      releaseLock();
+    }
+  });
+  app2.post("/api/time-entries/manual", requireAuth(), async (req, res) => {
+    const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
+    if (!authenticatedUserId) return;
+    try {
+      const { taskId, durationMinutes, entryDate, notes: notes2 } = req.body || {};
+      if (!taskId || typeof durationMinutes !== "number" || durationMinutes <= 0) {
+        return res.status(400).json({ error: "taskId and positive durationMinutes are required" });
+      }
+      const task = await storage2.getTask(taskId);
+      if (!task) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      const staffMember = await storage2.getStaffMember(authenticatedUserId);
+      const userName = staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown";
+      const date2 = entryDate ? new Date(entryDate) : /* @__PURE__ */ new Date();
+      const { entry, totalTracked } = await storage2.addManualTaskTimeEntry({
+        taskId,
+        userId: authenticatedUserId,
+        userName,
+        taskTitle: task.title,
+        entryDate: date2,
+        durationMinutes,
+        notes: notes2 || void 0
+      });
+      res.json({
+        id: entry.id,
+        taskId: entry.taskId,
+        taskTitle: entry.taskTitle,
+        startTime: entry.startTime instanceof Date ? entry.startTime.toISOString() : String(entry.startTime),
+        endTime: entry.endTime instanceof Date ? entry.endTime?.toISOString() : entry.endTime,
+        userId: entry.userId,
+        userName: entry.userName,
+        isRunning: false,
+        duration: entry.duration,
+        source: entry.source,
+        notes: entry.notes,
+        totalTracked
+      });
+    } catch (error) {
+      console.error("Error adding manual time entry:", error);
+      res.status(500).json({ error: "Failed to add manual time entry" });
     }
   });
   app2.get("/api/reports/time-entries", requireAuth(), requirePermission("reporting", "canView"), async (req, res) => {
@@ -55424,7 +55797,6 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
         let existingEntries = [];
         if (existingTasks.length > 0) {
           taskId = existingTasks[0].id;
-          existingEntries = existingTasks[0].timeEntries || [];
         } else {
           const [newTask] = await db.insert(tasks).values({
             title: taskTitle,
@@ -55438,22 +55810,17 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
           }).returning();
           taskId = newTask.id;
         }
-        const timeEntry = {
+        await storage2.appendTaskTimeEntry({
           id: `px-${meetingId}-${staffId}-${Date.now()}`,
           taskId,
-          taskTitle,
-          startTime: startTime.toISOString(),
-          endTime: now.toISOString(),
           userId: staffId,
+          taskTitle,
+          startTime,
+          endTime: now,
+          duration: Math.floor(durationSeconds / 60),
           isRunning: false,
-          duration: Math.floor(durationSeconds / 60)
-        };
-        const updatedEntries = [...existingEntries, timeEntry];
-        const totalTracked = updatedEntries.reduce((sum, e) => sum + (e.duration || 0), 0);
-        await db.update(tasks).set({
-          timeEntries: updatedEntries,
-          timeTracked: totalTracked
-        }).where(eq20(tasks.id, taskId));
+          source: "auto"
+        });
       }
       let nextMeeting = null;
       if (meeting.isRecurring && meeting.recurringFrequency) {
@@ -58788,6 +59155,70 @@ Thank you!`,
       res.status(500).json({ error: "Failed to load signed document." });
     }
   });
+  app2.get("/api/sticky-notes", requireAuth(), async (req, res) => {
+    try {
+      const userId2 = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId2) return;
+      const rows = await db.select().from(stickyNotes).where(eq20(stickyNotes.userId, userId2)).orderBy(asc5(stickyNotes.position), desc5(stickyNotes.updatedAt));
+      res.json(rows);
+    } catch (err) {
+      console.error("GET /api/sticky-notes error:", err);
+      res.status(500).json({ error: "Failed to load sticky notes" });
+    }
+  });
+  app2.post("/api/sticky-notes", requireAuth(), async (req, res) => {
+    try {
+      const userId2 = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId2) return;
+      const parsed = insertStickyNoteSchema.omit({ userId: true }).safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+      }
+      const [maxRow] = await db.select({ max: sql11`COALESCE(MAX(${stickyNotes.position}), -1)` }).from(stickyNotes).where(eq20(stickyNotes.userId, userId2));
+      const nextPosition = (maxRow?.max ?? -1) + 1;
+      const [created] = await db.insert(stickyNotes).values({ ...parsed.data, userId: userId2, position: nextPosition }).returning();
+      res.json(created);
+    } catch (err) {
+      console.error("POST /api/sticky-notes error:", err);
+      res.status(500).json({ error: "Failed to create sticky note" });
+    }
+  });
+  app2.patch("/api/sticky-notes/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId2 = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId2) return;
+      const { id } = req.params;
+      const existing = await db.select().from(stickyNotes).where(eq20(stickyNotes.id, id)).limit(1);
+      if (existing.length === 0 || existing[0].userId !== userId2) {
+        return res.status(404).json({ error: "Sticky note not found" });
+      }
+      const parsed = insertStickyNoteSchema.omit({ userId: true }).partial().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+      }
+      const [updated] = await db.update(stickyNotes).set({ ...parsed.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq20(stickyNotes.id, id)).returning();
+      res.json(updated);
+    } catch (err) {
+      console.error("PATCH /api/sticky-notes/:id error:", err);
+      res.status(500).json({ error: "Failed to update sticky note" });
+    }
+  });
+  app2.delete("/api/sticky-notes/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId2 = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId2) return;
+      const { id } = req.params;
+      const existing = await db.select().from(stickyNotes).where(eq20(stickyNotes.id, id)).limit(1);
+      if (existing.length === 0 || existing[0].userId !== userId2) {
+        return res.status(404).json({ error: "Sticky note not found" });
+      }
+      await db.delete(stickyNotes).where(eq20(stickyNotes.id, id));
+      res.json({ success: true });
+    } catch (err) {
+      console.error("DELETE /api/sticky-notes/:id error:", err);
+      res.status(500).json({ error: "Failed to delete sticky note" });
+    }
+  });
   return httpServer;
 }
 
@@ -58932,6 +59363,7 @@ function getSession() {
     ttl: sessionTtl,
     tableName: "sessions"
   });
+  const isProduction = process.env.NODE_ENV === "production";
   return session({
     secret: process.env.SESSION_SECRET,
     store: sessionStore,
@@ -58939,8 +59371,8 @@ function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: sessionTtl
     }
   });
@@ -59630,6 +60062,18 @@ async function ensureClientBriefColumns() {
   } catch (error) {
     log(`Migration error: ${error.message}`);
     log("WARNING: Client brief columns migration failed - server will continue but brief sections may not work correctly");
+  }
+}
+async function ensureDefaultTemplateColumn() {
+  try {
+    log("Running startup migration: ensureDefaultTemplateColumn");
+    await db.execute(sql16`
+      ALTER TABLE client_brief_sections
+      ADD COLUMN IF NOT EXISTS default_template text;
+    `);
+    log("Default template column migration completed successfully");
+  } catch (error) {
+    log(`Default template column migration error: ${error.message}`);
   }
 }
 async function initializeDefaultAutomationTriggers() {
@@ -61615,6 +62059,7 @@ async function ensureOnboardingWeekColumns() {
     await db.execute(sql16`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
     await db.execute(sql16`ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
     await db.execute(sql16`ALTER TABLE product_task_templates ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
+    await db.execute(sql16`ALTER TABLE product_task_templates ADD COLUMN IF NOT EXISTS visible_to_client BOOLEAN DEFAULT false`);
     log("Onboarding week columns migration completed successfully");
   } catch (error) {
     log(`Onboarding week columns migration error: ${error.message}`);
@@ -61642,6 +62087,98 @@ async function fixJoeEmailInProduction() {
     log(`\u26A0\uFE0F fixJoeEmailInProduction error: ${error}`);
   }
 }
+async function ensureStickyNotesTable() {
+  try {
+    await db.execute(sql16`
+      CREATE TABLE IF NOT EXISTS sticky_notes (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR NOT NULL,
+        title VARCHAR(255) NOT NULL DEFAULT '',
+        content TEXT NOT NULL DEFAULT '',
+        color VARCHAR(32) NOT NULL DEFAULT 'yellow',
+        position INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql16`CREATE INDEX IF NOT EXISTS sticky_notes_user_id_idx ON sticky_notes(user_id)`);
+    log("\u2705 Sticky notes table ensured");
+  } catch (error) {
+    log(`\u26A0\uFE0F ensureStickyNotesTable error: ${error}`);
+  }
+}
+async function ensureTaskTimeEntriesTable() {
+  try {
+    log("Running startup migration: ensureTaskTimeEntriesTable");
+    await db.execute(sql16`
+      CREATE TABLE IF NOT EXISTS task_time_entries (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        task_id VARCHAR NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        user_id VARCHAR NOT NULL,
+        task_title TEXT,
+        user_name TEXT,
+        start_time TIMESTAMP NOT NULL,
+        end_time TIMESTAMP,
+        duration INTEGER,
+        is_running BOOLEAN NOT NULL DEFAULT false,
+        source TEXT NOT NULL DEFAULT 'timer',
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql16`CREATE INDEX IF NOT EXISTS idx_task_time_entries_task ON task_time_entries(task_id)`);
+    await db.execute(sql16`CREATE INDEX IF NOT EXISTS idx_task_time_entries_user ON task_time_entries(user_id)`);
+    await db.execute(sql16`CREATE INDEX IF NOT EXISTS idx_task_time_entries_start ON task_time_entries(start_time)`);
+    await db.execute(sql16`CREATE INDEX IF NOT EXISTS idx_task_time_entries_user_running ON task_time_entries(user_id, is_running)`);
+    const result = await db.execute(sql16`
+      INSERT INTO task_time_entries (id, task_id, user_id, task_title, user_name, start_time, end_time, duration, is_running, source, notes)
+      SELECT
+        COALESCE(NULLIF(entry->>'id', ''), gen_random_uuid()::varchar),
+        t.id,
+        entry->>'userId',
+        COALESCE(entry->>'taskTitle', t.title),
+        entry->>'userName',
+        (entry->>'startTime')::timestamp,
+        CASE WHEN (entry->>'endTime') IS NOT NULL AND (entry->>'endTime') <> '' THEN (entry->>'endTime')::timestamp ELSE NULL END,
+        CASE WHEN (entry->>'duration') IS NOT NULL AND (entry->>'duration') <> '' THEN (entry->>'duration')::int ELSE NULL END,
+        COALESCE((entry->>'isRunning')::boolean, false),
+        COALESCE(NULLIF(entry->>'source', ''), 'legacy'),
+        entry->>'notes'
+      FROM tasks t,
+           LATERAL jsonb_array_elements(COALESCE(t.time_entries, '[]'::jsonb)) AS entry
+      WHERE entry->>'userId' IS NOT NULL
+        AND entry->>'startTime' IS NOT NULL
+        AND entry->>'startTime' <> ''
+      ON CONFLICT (id) DO NOTHING
+    `);
+    log(`\u2705 task_time_entries table ensured (backfill rows inserted: ${result?.rowCount ?? "n/a"})`);
+  } catch (error) {
+    log(`\u26A0\uFE0F ensureTaskTimeEntriesTable error: ${error}`);
+  }
+}
+async function ensureCallCenterTimeEditPermissions() {
+  try {
+    await db.execute(sql16`
+      INSERT INTO granular_permissions (role_id, permission_key, module, enabled)
+      SELECT DISTINCT gp.role_id, key, 'call_center', true
+      FROM granular_permissions gp
+      CROSS JOIN (VALUES
+        ('call_center.time_tracking.add_time'),
+        ('call_center.time_tracking.edit_time')
+      ) AS keys(key)
+      WHERE gp.permission_key = 'call_center.time_tracking.view_all'
+        AND gp.enabled = true
+        AND NOT EXISTS (
+          SELECT 1 FROM granular_permissions gp2
+          WHERE gp2.role_id = gp.role_id AND gp2.permission_key = keys.key
+        )
+    `);
+    log("\u2705 Call center time add/edit permissions seeded for view_all roles");
+  } catch (error) {
+    log(`\u26A0\uFE0F ensureCallCenterTimeEditPermissions error: ${error}`);
+  }
+}
 async function runStartupMigrations() {
   log("Starting background migrations...");
   try {
@@ -61652,6 +62189,7 @@ async function runStartupMigrations() {
     await ensureLeadProjectedCloseDate();
     await ensureTicketExternalSubmissionColumns();
     await ensureFormsTablesExist();
+    await ensureDefaultTemplateColumn();
     await initializeCoreClientBriefSections();
     await initializeDefaultAutomationTriggers();
     await initializeDefaultAutomationActions();
@@ -61671,6 +62209,9 @@ async function runStartupMigrations() {
     await ensurePxMeetingsObjectivesColumn();
     await ensureScheduledHiredEmailsTable();
     await ensureOnboardingWeekColumns();
+    await ensureCallCenterTimeEditPermissions();
+    await ensureStickyNotesTable();
+    await ensureTaskTimeEntriesTable();
     log("\u2705 All startup migrations completed successfully");
   } catch (error) {
     log(`\u26A0\uFE0F Startup migrations encountered an error: ${error}`);

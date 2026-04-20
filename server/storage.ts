@@ -733,6 +733,35 @@ export interface IStorage {
   deletePxMeeting(id: string): Promise<boolean>;
 }
 
+// Map a brief section.key (which may be camelCase like "briefAudienceInfo" or
+// snake_case like "audience_info") to the corresponding `clients` column.
+// Returns null if the key doesn't correspond to a known core brief column.
+function mapBriefSectionKeyToClientColumn(rawKey: string): keyof InsertClient | null {
+  const map: Record<string, keyof InsertClient> = {
+    background: 'briefBackground',
+    briefBackground: 'briefBackground',
+    objectives: 'briefObjectives',
+    briefObjectives: 'briefObjectives',
+    brand_info: 'briefBrandInfo',
+    brandInfo: 'briefBrandInfo',
+    briefBrandInfo: 'briefBrandInfo',
+    audience_info: 'briefAudienceInfo',
+    audienceInfo: 'briefAudienceInfo',
+    briefAudienceInfo: 'briefAudienceInfo',
+    products_services: 'briefProductsServices',
+    productsServices: 'briefProductsServices',
+    briefProductsServices: 'briefProductsServices',
+    competitors: 'briefCompetitors',
+    briefCompetitors: 'briefCompetitors',
+    marketing_tech: 'briefMarketingTech',
+    marketingTech: 'briefMarketingTech',
+    briefMarketingTech: 'briefMarketingTech',
+    miscellaneous: 'briefMiscellaneous',
+    briefMiscellaneous: 'briefMiscellaneous',
+  };
+  return map[rawKey] ?? null;
+}
+
 function taskTimeEntryToLegacy(entry: TaskTimeEntry, taskTitle?: string): import("@shared/schema").TimeEntry {
   return {
     id: entry.id,
@@ -4553,34 +4582,15 @@ export class MemStorage implements IStorage {
       const [client] = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
       if (client) {
         const updateData: Partial<InsertClient> = {};
-        
-        switch (section.key) {
-          case 'background':
-            updateData.briefBackground = value;
-            break;
-          case 'objectives':
-            updateData.briefObjectives = value;
-            break;
-          case 'brand_info':
-            updateData.briefBrandInfo = value;
-            break;
-          case 'audience_info':
-            updateData.briefAudienceInfo = value;
-            break;
-          case 'products_services':
-            updateData.briefProductsServices = value;
-            break;
-          case 'competitors':
-            updateData.briefCompetitors = value;
-            break;
-          case 'marketing_tech':
-            updateData.briefMarketingTech = value;
-            break;
-          case 'miscellaneous':
-            updateData.briefMiscellaneous = value;
-            break;
+        const column = mapBriefSectionKeyToClientColumn(section.key);
+        if (column) {
+          (updateData as any)[column] = value;
         }
-        
+        if (Object.keys(updateData).length === 0) {
+          console.warn(`[setClientBriefValue] No client column mapping for core section key: ${section.key}`);
+          return;
+        }
+
         await this.updateClient(clientId, updateData);
       }
     } else {
@@ -8140,35 +8150,13 @@ export class DbStorage implements IStorage {
         .where(eq(clientBriefValues.clientId, clientId));
       
       return sections.map(section => {
-        let value = undefined;
-        
+        let value: string | undefined = undefined;
+
         // Get value from core client data if it's a core section
         if (client && section.key && (section.isCoreSection || section.scope === 'core')) {
-          switch (section.key) {
-            case 'background':
-              value = client.briefBackground || undefined;
-              break;
-            case 'objectives':
-              value = client.briefObjectives || undefined;
-              break;
-            case 'brand_info':
-              value = client.briefBrandInfo || undefined;
-              break;
-            case 'audience_info':
-              value = client.briefAudienceInfo || undefined;
-              break;
-            case 'products_services':
-              value = client.briefProductsServices || undefined;
-              break;
-            case 'competitors':
-              value = client.briefCompetitors || undefined;
-              break;
-            case 'marketing_tech':
-              value = client.briefMarketingTech || undefined;
-              break;
-            case 'miscellaneous':
-              value = client.briefMiscellaneous || undefined;
-              break;
+          const column = mapBriefSectionKeyToClientColumn(section.key);
+          if (column) {
+            value = ((client as any)[column] as string | null) || undefined;
           }
         }
 
@@ -8199,34 +8187,15 @@ export class DbStorage implements IStorage {
       // If it's a core section, update client directly
       if (section.key && (section.isCoreSection || section.scope === 'core')) {
         const updateData: Partial<InsertClient> = {};
-        
-        switch (section.key) {
-          case 'background':
-            updateData.briefBackground = value;
-            break;
-          case 'objectives':
-            updateData.briefObjectives = value;
-            break;
-          case 'brand_info':
-            updateData.briefBrandInfo = value;
-            break;
-          case 'audience_info':
-            updateData.briefAudienceInfo = value;
-            break;
-          case 'products_services':
-            updateData.briefProductsServices = value;
-            break;
-          case 'competitors':
-            updateData.briefCompetitors = value;
-            break;
-          case 'marketing_tech':
-            updateData.briefMarketingTech = value;
-            break;
-          case 'miscellaneous':
-            updateData.briefMiscellaneous = value;
-            break;
+        const column = mapBriefSectionKeyToClientColumn(section.key);
+        if (column) {
+          (updateData as any)[column] = value;
         }
-        
+        if (Object.keys(updateData).length === 0) {
+          console.warn(`[setClientBriefValue] No client column mapping for core section key: ${section.key}`);
+          return;
+        }
+
         await this.updateClient(clientId, updateData);
       } else {
         // Custom section, store in clientBriefValues
