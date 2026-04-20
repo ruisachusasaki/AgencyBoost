@@ -112,3 +112,8 @@ defaultBucketID = "replit-objstore-b3f7e038-92b6-4869-8fa4-401cadf44271"
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.production]
+BASE_URL = "https://agencyboost.app"
