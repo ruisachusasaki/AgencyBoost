@@ -9034,42 +9034,12 @@ var init_storage = __esm({
         return sections.map((section) => {
           let value = void 0;
           if (client && section.key) {
-            switch (section.key) {
-              case "background":
-                value = client.briefBackground || void 0;
-                break;
-              case "objectives":
-                value = client.briefObjectives || void 0;
-                break;
-              case "brand_info":
-                value = client.briefBrandInfo || void 0;
-                break;
-              case "audience_info":
-                value = client.briefAudienceInfo || void 0;
-                break;
-              case "products_services":
-                value = client.briefProductsServices || void 0;
-                break;
-              case "competitors":
-                value = client.briefCompetitors || void 0;
-                break;
-              case "marketing_tech":
-                value = client.briefMarketingTech || void 0;
-                break;
-              case "miscellaneous":
-                value = client.briefMiscellaneous || void 0;
-                break;
+            const column = mapBriefSectionKeyToClientColumn(section.key);
+            if (column) {
+              value = client[column] || void 0;
             }
           }
-          if (!value) {
-            const briefValueKey = `${clientId}-${section.id}`;
-            const briefValue = this.clientBriefValues.get(briefValueKey);
-            value = briefValue?.value;
-          }
-          return {
-            ...section,
-            value
-          };
+          return { ...section, value };
         });
       }
       async setClientBriefValue(clientId, sectionId, value) {
@@ -14552,18 +14522,8 @@ async function convertLeadToClient(leadId, triggeredBy, options) {
       const sections = await db.select().from(clientBriefSections);
       for (const section of sections) {
         if (section.defaultTemplate && section.isEnabled) {
-          const coreKeyMap = {
-            background: "briefBackground",
-            objectives: "briefObjectives",
-            brand_info: "briefBrandInfo",
-            audience_info: "briefAudienceInfo",
-            products_services: "briefProductsServices",
-            competitors: "briefCompetitors",
-            marketing_tech: "briefMarketingTech",
-            miscellaneous: "briefMiscellaneous"
-          };
-          if (section.scope === "core" && section.key && coreKeyMap[section.key]) {
-            const col = coreKeyMap[section.key];
+          const col = section.key ? mapBriefSectionKeyToClientColumn(section.key) : null;
+          if (section.scope === "core" && col) {
             await db.update(clients).set({ [col]: section.defaultTemplate }).where(eq7(clients.id, result.clientId));
           } else {
             await db.insert(clientBriefValues).values({
@@ -14586,6 +14546,7 @@ var init_leadConversionService = __esm({
     "use strict";
     init_db();
     init_schema();
+    init_storage();
     init_taskGenerationEngine();
   }
 });
@@ -21282,7 +21243,7 @@ __export(longRunningTimerService_exports, {
   startLongRunningTimerCheck: () => startLongRunningTimerCheck,
   stopLongRunningTimerCheck: () => stopLongRunningTimerCheck
 });
-import { eq as eq26, and as and23 } from "drizzle-orm";
+import { eq as eq26, and as and23, sql as sql15 } from "drizzle-orm";
 function startLongRunningTimerCheck() {
   if (checkIntervalId2) {
     console.log("[LongRunningTimerCheck] Already running");
@@ -21308,30 +21269,38 @@ function stopLongRunningTimerCheck() {
     console.log("[LongRunningTimerCheck] Stopped long-running timer check service");
   }
 }
-async function getThresholdHours() {
+async function getSettingValue(key) {
   try {
-    const [setting] = await db.select().from(taskSettings).where(eq26(taskSettings.settingKey, "long_running_timer_threshold_hours"));
-    if (setting && setting.settingValue) {
-      const val = typeof setting.settingValue === "object" ? setting.settingValue.value : setting.settingValue;
-      const parsed = parseFloat(String(val));
-      if (!isNaN(parsed) && parsed > 0) return parsed;
+    const [setting] = await db.select().from(taskSettings).where(eq26(taskSettings.settingKey, key));
+    if (setting && setting.settingValue !== null && setting.settingValue !== void 0) {
+      return typeof setting.settingValue === "object" ? setting.settingValue.value : setting.settingValue;
     }
   } catch (err) {
-    console.error("[LongRunningTimerCheck] Error fetching threshold:", err);
+    console.error(`[LongRunningTimerCheck] Error fetching setting ${key}:`, err);
   }
+  return void 0;
+}
+async function getThresholdHours() {
+  const val = await getSettingValue("long_running_timer_threshold_hours");
+  const parsed = parseFloat(String(val));
+  if (!isNaN(parsed) && parsed > 0) return parsed;
   return DEFAULT_THRESHOLD_HOURS;
 }
 async function isAlertEnabled() {
-  try {
-    const [setting] = await db.select().from(taskSettings).where(eq26(taskSettings.settingKey, "long_running_timer_alerts_enabled"));
-    if (setting && setting.settingValue !== null && setting.settingValue !== void 0) {
-      const val = typeof setting.settingValue === "object" ? setting.settingValue.value : setting.settingValue;
-      return val === true || val === "true";
-    }
-  } catch (err) {
-    console.error("[LongRunningTimerCheck] Error fetching alert setting:", err);
-  }
-  return true;
+  const val = await getSettingValue("long_running_timer_alerts_enabled");
+  if (val === void 0) return true;
+  return val === true || val === "true";
+}
+async function isAutoStopEnabled() {
+  const val = await getSettingValue("auto_stop_timer_enabled");
+  if (val === void 0) return false;
+  return val === true || val === "true";
+}
+async function getAutoStopThresholdHours() {
+  const val = await getSettingValue("auto_stop_timer_threshold_hours");
+  const parsed = parseFloat(String(val));
+  if (!isNaN(parsed) && parsed > 0) return parsed;
+  return DEFAULT_AUTO_STOP_THRESHOLD_HOURS;
 }
 async function getAdminUserIds() {
   try {
@@ -21353,43 +21322,47 @@ async function runLongRunningTimerCheck() {
   isRunning3 = true;
   try {
     const enabled = await isAlertEnabled();
-    if (!enabled) {
+    const autoStopEnabled = await isAutoStopEnabled();
+    if (!enabled && !autoStopEnabled) {
       return;
     }
     const thresholdHours = await getThresholdHours();
     const thresholdMs = thresholdHours * 60 * 60 * 1e3;
+    const autoStopThresholdHours = await getAutoStopThresholdHours();
+    const autoStopThresholdMs = autoStopThresholdHours * 60 * 60 * 1e3;
     const now = Date.now();
-    const allTasks = await db.select({
-      id: enhancedTasks.id,
-      title: enhancedTasks.title,
-      timeEntries: enhancedTasks.timeEntries
-    }).from(enhancedTasks);
+    const matchPattern = JSON.stringify([{ isRunning: true }]);
+    const candidateTasks = await db.select({ id: tasks.id, title: tasks.title, timeEntries: tasks.timeEntries }).from(tasks).where(sql15`${tasks.timeEntries} @> ${matchPattern}::jsonb`);
     const longRunningTimers = [];
-    for (const task of allTasks) {
+    const autoStopTimers = [];
+    for (const task of candidateTasks) {
       if (!task.timeEntries || !Array.isArray(task.timeEntries)) continue;
-      for (const entry of task.timeEntries) {
+      const entries = task.timeEntries;
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
         if (!entry.isRunning || !entry.startTime || !entry.userId) continue;
         const startMs = new Date(entry.startTime).getTime();
         const elapsed = now - startMs;
-        if (elapsed >= thresholdMs) {
+        const candidate = {
+          taskId: task.id,
+          taskTitle: task.title,
+          userId: entry.userId,
+          startTime: entry.startTime,
+          durationMs: elapsed,
+          entryId: entry.id || `${task.id}-${entry.userId}-${entry.startTime}`,
+          entryIndex: i,
+          allEntries: entries
+        };
+        if (autoStopEnabled && elapsed >= autoStopThresholdMs) {
+          autoStopTimers.push(candidate);
+        } else if (enabled && elapsed >= thresholdMs) {
           const timerKey = `${task.id}-${entry.userId}-${entry.startTime}`;
           if (!alertedTimers.has(timerKey)) {
-            longRunningTimers.push({
-              taskId: task.id,
-              taskTitle: task.title,
-              userId: entry.userId,
-              startTime: entry.startTime,
-              durationMs: elapsed,
-              entryId: entry.id || timerKey
-            });
+            longRunningTimers.push(candidate);
           }
         }
       }
     }
-    if (longRunningTimers.length === 0) {
-      return;
-    }
-    console.log(`[LongRunningTimerCheck] Found ${longRunningTimers.length} long-running timer(s) exceeding ${thresholdHours}h`);
     const notificationService = new NotificationService(storage2);
     const adminIds = await getAdminUserIds();
     const staffMembers = await db.select({
@@ -21398,38 +21371,97 @@ async function runLongRunningTimerCheck() {
       lastName: staff.lastName
     }).from(staff);
     const staffMap = new Map(staffMembers.map((s) => [s.id, `${s.firstName} ${s.lastName}`]));
-    for (const timer of longRunningTimers) {
-      const timerKey = `${timer.taskId}-${timer.userId}-${timer.startTime}`;
-      const staffName = staffMap.get(timer.userId) || "Unknown";
-      const hours = Math.round(timer.durationMs / (1e3 * 60 * 60) * 10) / 10;
-      await notificationService.notify({
-        userId: timer.userId,
-        type: "task_assigned",
-        title: "Long-Running Timer Alert",
-        message: `Your timer on "${timer.taskTitle}" has been running for ${hours} hours. Please stop or review it if needed.`,
-        entityType: "task",
-        entityId: String(timer.taskId),
-        actionUrl: `/tasks?taskId=${timer.taskId}`,
-        actionText: "View Task",
-        priority: "high"
-      });
-      for (const adminId of adminIds) {
-        if (adminId === timer.userId) continue;
+    for (const timer of autoStopTimers) {
+      try {
+        const startMs = new Date(timer.startTime).getTime();
+        const cappedEndMs = startMs + autoStopThresholdMs;
+        const endIso = new Date(cappedEndMs).toISOString();
+        const durationMinutes = Math.floor(autoStopThresholdMs / 1e3 / 60);
+        const updatedEntries = [...timer.allEntries];
+        const original = updatedEntries[timer.entryIndex];
+        updatedEntries[timer.entryIndex] = {
+          ...original,
+          isRunning: false,
+          endTime: endIso,
+          duration: durationMinutes,
+          stoppedBy: "system",
+          stopReason: "auto-stopped",
+          autoStoppedAt: new Date(now).toISOString(),
+          autoStoppedThresholdHours: autoStopThresholdHours
+        };
+        const totalTracked = updatedEntries.reduce(
+          (total, e) => total + (e.duration || 0),
+          0
+        );
+        await db.update(tasks).set({ timeEntries: updatedEntries, timeTracked: totalTracked }).where(eq26(tasks.id, timer.taskId));
+        const staffName = staffMap.get(timer.userId) || "Unknown";
         await notificationService.notify({
-          userId: adminId,
+          userId: timer.userId,
+          type: "task_assigned",
+          title: "Timer Auto-Stopped",
+          message: `Your timer on "${timer.taskTitle}" was auto-stopped after running for over ${autoStopThresholdHours} hours. The entry was capped at ${autoStopThresholdHours}h \u2014 please review and adjust if needed.`,
+          entityType: "task",
+          entityId: String(timer.taskId),
+          actionUrl: `/tasks?taskId=${timer.taskId}`,
+          actionText: "Review Time Entry",
+          priority: "high"
+        });
+        for (const adminId of adminIds) {
+          if (adminId === timer.userId) continue;
+          await notificationService.notify({
+            userId: adminId,
+            type: "task_assigned",
+            title: "Timer Auto-Stopped",
+            message: `${staffName}'s timer on "${timer.taskTitle}" was auto-stopped after running for over ${autoStopThresholdHours} hours.`,
+            entityType: "task",
+            entityId: String(timer.taskId),
+            actionUrl: `/tasks?taskId=${timer.taskId}`,
+            actionText: "Review Time Entry",
+            priority: "high"
+          });
+        }
+        const timerKey = `${timer.taskId}-${timer.userId}-${timer.startTime}`;
+        alertedTimers.delete(timerKey);
+        console.log(`[LongRunningTimerCheck] Auto-stopped timer for user ${timer.userId} on task ${timer.taskId} (${autoStopThresholdHours}h cap)`);
+      } catch (err) {
+        console.error(`[LongRunningTimerCheck] Failed to auto-stop timer on task ${timer.taskId}:`, err);
+      }
+    }
+    if (longRunningTimers.length > 0) {
+      console.log(`[LongRunningTimerCheck] Found ${longRunningTimers.length} long-running timer(s) exceeding ${thresholdHours}h`);
+      for (const timer of longRunningTimers) {
+        const timerKey = `${timer.taskId}-${timer.userId}-${timer.startTime}`;
+        const staffName = staffMap.get(timer.userId) || "Unknown";
+        const hours = Math.round(timer.durationMs / (1e3 * 60 * 60) * 10) / 10;
+        await notificationService.notify({
+          userId: timer.userId,
           type: "task_assigned",
           title: "Long-Running Timer Alert",
-          message: `${staffName}'s timer on "${timer.taskTitle}" has been running for ${hours} hours.`,
+          message: `Your timer on "${timer.taskTitle}" has been running for ${hours} hours. Please stop or review it if needed.`,
           entityType: "task",
           entityId: String(timer.taskId),
           actionUrl: `/tasks?taskId=${timer.taskId}`,
           actionText: "View Task",
           priority: "high"
         });
+        for (const adminId of adminIds) {
+          if (adminId === timer.userId) continue;
+          await notificationService.notify({
+            userId: adminId,
+            type: "task_assigned",
+            title: "Long-Running Timer Alert",
+            message: `${staffName}'s timer on "${timer.taskTitle}" has been running for ${hours} hours.`,
+            entityType: "task",
+            entityId: String(timer.taskId),
+            actionUrl: `/tasks?taskId=${timer.taskId}`,
+            actionText: "View Task",
+            priority: "high"
+          });
+        }
+        alertedTimers.add(timerKey);
       }
-      alertedTimers.add(timerKey);
+      console.log(`[LongRunningTimerCheck] Sent alerts for ${longRunningTimers.length} timer(s)`);
     }
-    console.log(`[LongRunningTimerCheck] Sent alerts for ${longRunningTimers.length} timer(s)`);
   } catch (error) {
     console.error("[LongRunningTimerCheck] Error during check:", error);
   } finally {
@@ -21439,7 +21471,7 @@ async function runLongRunningTimerCheck() {
 function clearAlertedTimers() {
   alertedTimers.clear();
 }
-var CHECK_INTERVAL_MS2, DEFAULT_THRESHOLD_HOURS, checkIntervalId2, isRunning3, alertedTimers;
+var CHECK_INTERVAL_MS2, DEFAULT_THRESHOLD_HOURS, DEFAULT_AUTO_STOP_THRESHOLD_HOURS, checkIntervalId2, isRunning3, alertedTimers;
 var init_longRunningTimerService = __esm({
   "server/longRunningTimerService.ts"() {
     "use strict";
@@ -21449,6 +21481,7 @@ var init_longRunningTimerService = __esm({
     init_storage();
     CHECK_INTERVAL_MS2 = 15 * 60 * 1e3;
     DEFAULT_THRESHOLD_HOURS = 8;
+    DEFAULT_AUTO_STOP_THRESHOLD_HOURS = 12;
     checkIntervalId2 = null;
     isRunning3 = false;
     alertedTimers = /* @__PURE__ */ new Set();
@@ -21460,7 +21493,7 @@ var proposalReminderService_exports = {};
 __export(proposalReminderService_exports, {
   startProposalReminderService: () => startProposalReminderService
 });
-import { eq as eq27, and as and24, lt as lt5, isNull as isNull5, lte as lte6, isNotNull as isNotNull4 } from "drizzle-orm";
+import { eq as eq27, and as and24, lt as lt5, isNull as isNull5, lte as lte6, isNotNull as isNotNull3 } from "drizzle-orm";
 function startProposalReminderService() {
   console.log("[ProposalReminder] Service started - checking every hour");
   const check = async () => {
@@ -21472,7 +21505,7 @@ function startProposalReminderService() {
         and24(
           eq27(quotes.status, "sent"),
           isNull5(quotes.signedAt),
-          isNotNull4(quotes.publicToken),
+          isNotNull3(quotes.publicToken),
           lte6(quotes.sentAt, threeDaysAgo),
           lt5(quotes.reminderCount, MAX_REMINDERS)
         )
@@ -21530,7 +21563,7 @@ __export(recurringTaskService_exports, {
   startRecurringTaskService: () => startRecurringTaskService,
   stopRecurringTaskService: () => stopRecurringTaskService
 });
-import { eq as eq28, and as and25, isNotNull as isNotNull5 } from "drizzle-orm";
+import { eq as eq28, and as and25, isNotNull as isNotNull4 } from "drizzle-orm";
 function startRecurringTaskService() {
   if (checkIntervalId3) {
     console.log("[RecurringTasks] Already running");
@@ -21680,7 +21713,7 @@ async function processOnboardingWeekReleases() {
       company: clients.company,
       onboardingStartDate: clients.onboardingStartDate,
       onboardingWeekReleased: clients.onboardingWeekReleased
-    }).from(clients).where(isNotNull5(clients.onboardingStartDate));
+    }).from(clients).where(isNotNull4(clients.onboardingStartDate));
     if (onboardingClients.length === 0) {
       console.log("[OnboardingWeeks] No clients with onboarding start dates found");
       return;
@@ -21765,7 +21798,7 @@ __export(onboardingNotificationService_exports, {
   startOnboardingNotificationService: () => startOnboardingNotificationService,
   stopOnboardingNotificationService: () => stopOnboardingNotificationService
 });
-import { eq as eq29, and as and26, sql as sql15, lte as lte7 } from "drizzle-orm";
+import { eq as eq29, and as and26, sql as sql16, lte as lte7 } from "drizzle-orm";
 function getBusinessDaysElapsed(startDate, today) {
   let count2 = 0;
   const current = new Date(startDate);
@@ -21850,8 +21883,8 @@ async function _runDayUnlockNotifications() {
       const [existing] = await db.select({ id: notifications.id }).from(notifications).where(and26(
         eq29(notifications.userId, instance.staffId),
         eq29(notifications.title, expectedTitle),
-        sql15`${notifications.createdAt} >= ${todayStart}`,
-        sql15`${notifications.createdAt} < ${todayEnd}`
+        sql16`${notifications.createdAt} >= ${todayStart}`,
+        sql16`${notifications.createdAt} < ${todayEnd}`
       )).limit(1);
       if (existing) continue;
       const dayItems = await db.select({ id: onboardingInstanceItems.id }).from(onboardingInstanceItems).where(and26(
@@ -21936,10 +21969,10 @@ async function _runBehindScheduleAlerts() {
       todayEnd.setDate(todayEnd.getDate() + 1);
       const [existingAlert] = await db.select({ id: notifications.id }).from(notifications).where(and26(
         eq29(notifications.userId, managerId),
-        sql15`${notifications.title} LIKE ${"%" + hireName + "%"}`,
+        sql16`${notifications.title} LIKE ${"%" + hireName + "%"}`,
         eq29(notifications.type, "onboarding_behind_schedule"),
-        sql15`${notifications.createdAt} >= ${todayStart}`,
-        sql15`${notifications.createdAt} < ${todayEnd}`
+        sql16`${notifications.createdAt} >= ${todayStart}`,
+        sql16`${notifications.createdAt} < ${todayEnd}`
       )).limit(1);
       if (existingAlert) continue;
       const notificationService = getNotificationService();
@@ -52725,6 +52758,35 @@ ${appointment.description || ""}
       releaseLock();
     }
   });
+  app2.get("/api/time-entries/recent-auto-stopped", requireAuth(), async (req, res) => {
+    try {
+      const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!authenticatedUserId) return;
+      const matchPattern = JSON.stringify([{ stoppedBy: "system", userId: authenticatedUserId }]);
+      const candidateTasks = await db.select({ id: tasks.id, title: tasks.title, timeEntries: tasks.timeEntries }).from(tasks).where(sql11`${tasks.timeEntries} @> ${matchPattern}::jsonb`).limit(50);
+      const cutoff = Date.now() - 60 * 60 * 1e3;
+      let latest = null;
+      for (const task of candidateTasks) {
+        if (!task.timeEntries || !Array.isArray(task.timeEntries)) continue;
+        for (const entry of task.timeEntries) {
+          if (entry.stoppedBy === "system" && entry.userId === authenticatedUserId && entry.autoStoppedAt) {
+            const ts = new Date(entry.autoStoppedAt).getTime();
+            if (ts >= cutoff && (!latest || ts > latest._ts)) {
+              latest = { ...entry, taskId: task.id, taskTitle: task.title, _ts: ts };
+            }
+          }
+        }
+      }
+      if (!latest) {
+        return res.json(null);
+      }
+      const { _ts, ...rest } = latest;
+      res.json(rest);
+    } catch (error) {
+      console.error("Error fetching recent auto-stopped entry:", error);
+      res.status(500).json({ error: "Failed to fetch recent auto-stopped entry" });
+    }
+  });
   app2.post("/api/time-entries/manual", requireAuth(), async (req, res) => {
     const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
     if (!authenticatedUserId) return;
@@ -60029,11 +60091,11 @@ function setupGoogleCalendar(app2) {
 // server/index.ts
 init_db();
 init_schema();
-import { sql as sql16, eq as eq30, and as and27 } from "drizzle-orm";
+import { sql as sql17, eq as eq30, and as and27 } from "drizzle-orm";
 async function ensureClientBriefColumns() {
   try {
     log("Running startup migration: ensureClientBriefColumns");
-    await db.execute(sql16`
+    await db.execute(sql17`
       ALTER TABLE clients 
       ADD COLUMN IF NOT EXISTS brief_background text,
       ADD COLUMN IF NOT EXISTS brief_objectives text,
@@ -60045,7 +60107,7 @@ async function ensureClientBriefColumns() {
       ADD COLUMN IF NOT EXISTS brief_miscellaneous text;
     `);
     try {
-      await db.execute(sql16`
+      await db.execute(sql17`
         UPDATE clients 
         SET brief_background = COALESCE(brief_background, client_brief) 
         WHERE brief_background IS NULL AND client_brief IS NOT NULL;
@@ -60067,7 +60129,7 @@ async function ensureClientBriefColumns() {
 async function ensureDefaultTemplateColumn() {
   try {
     log("Running startup migration: ensureDefaultTemplateColumn");
-    await db.execute(sql16`
+    await db.execute(sql17`
       ALTER TABLE client_brief_sections
       ADD COLUMN IF NOT EXISTS default_template text;
     `);
@@ -61100,8 +61162,8 @@ async function generateAnniversaryAndBirthdayEvents() {
         and27(
           eq30(calendarAppointments.title, eventData.title),
           eq30(calendarAppointments.calendarId, eventData.calendarId),
-          sql16`${calendarAppointments.startTime} >= ${yearStart}`,
-          sql16`${calendarAppointments.startTime} <= ${yearEnd}`
+          sql17`${calendarAppointments.startTime} >= ${yearStart}`,
+          sql17`${calendarAppointments.startTime} <= ${yearEnd}`
         )
       ).limit(1);
       if (existing.length === 0) {
@@ -61118,7 +61180,7 @@ async function generateAnniversaryAndBirthdayEvents() {
 async function initializeDefaultTeamPositions() {
   try {
     log("Running startup migration: initializeDefaultTeamPositions");
-    await db.execute(sql16`
+    await db.execute(sql17`
       CREATE TABLE IF NOT EXISTS team_positions (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
         key text NOT NULL UNIQUE,
@@ -61130,7 +61192,7 @@ async function initializeDefaultTeamPositions() {
         updated_at timestamp DEFAULT now()
       );
     `);
-    await db.execute(sql16`
+    await db.execute(sql17`
       CREATE TABLE IF NOT EXISTS client_team_assignments (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
         client_id varchar NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
@@ -61495,7 +61557,7 @@ async function initializeActivityAlertsWidgets() {
 async function initializeDefaultProgressionStatuses() {
   try {
     log("Running startup migration: initializeDefaultProgressionStatuses");
-    await db.execute(sql16`
+    await db.execute(sql17`
       CREATE TABLE IF NOT EXISTS one_on_one_progression_statuses (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
         value varchar(100) NOT NULL UNIQUE,
@@ -61837,7 +61899,7 @@ async function syncStaffRolesToUserRoles() {
     }).from(staff).where(
       and27(
         eq30(staff.isActive, true),
-        sql16`${staff.roleId} IS NOT NULL`
+        sql17`${staff.roleId} IS NOT NULL`
       )
     );
     let syncedCount = 0;
@@ -61866,7 +61928,7 @@ async function syncStaffRolesToUserRoles() {
 async function ensureQuotesProposalColumns() {
   try {
     log("Running startup migration: ensureQuotesProposalColumns");
-    await db.execute(sql16`
+    await db.execute(sql17`
       ALTER TABLE quotes
       ADD COLUMN IF NOT EXISTS public_token varchar,
       ADD COLUMN IF NOT EXISTS signed_at timestamp,
@@ -61897,7 +61959,7 @@ async function ensureQuotesProposalColumns() {
 async function ensureQuotesCostBreakdownColumns() {
   try {
     log("Running startup migration: ensureQuotesCostBreakdownColumns");
-    await db.execute(sql16`
+    await db.execute(sql17`
       ALTER TABLE quotes
       ADD COLUMN IF NOT EXISTS one_time_cost decimal(10,2) DEFAULT '0',
       ADD COLUMN IF NOT EXISTS monthly_cost decimal(10,2) DEFAULT '0';
@@ -61910,7 +61972,7 @@ async function ensureQuotesCostBreakdownColumns() {
 async function ensureLeadProjectedCloseDate() {
   try {
     log("Running startup migration: ensureLeadProjectedCloseDate");
-    await db.execute(sql16`
+    await db.execute(sql17`
       ALTER TABLE leads
       ADD COLUMN IF NOT EXISTS projected_close_date TIMESTAMP
     `);
@@ -61922,13 +61984,13 @@ async function ensureLeadProjectedCloseDate() {
 async function ensureTicketExternalSubmissionColumns() {
   try {
     log("Running startup migration: ensureTicketExternalSubmissionColumns");
-    await db.execute(sql16`
+    await db.execute(sql17`
       ALTER TABLE tickets
       ADD COLUMN IF NOT EXISTS submitter_name text,
       ADD COLUMN IF NOT EXISTS submitter_email text,
       ADD COLUMN IF NOT EXISTS platform text;
     `);
-    await db.execute(sql16`
+    await db.execute(sql17`
       ALTER TABLE tickets ALTER COLUMN submitted_by DROP NOT NULL;
     `);
     log("Ticket external submission columns migration completed successfully");
@@ -61939,7 +62001,7 @@ async function ensureTicketExternalSubmissionColumns() {
 async function ensureFormsTablesExist() {
   try {
     log("Running startup migration: ensureFormsTablesExist");
-    await db.execute(sql16`
+    await db.execute(sql17`
       CREATE TABLE IF NOT EXISTS custom_forms (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
         name text NOT NULL,
@@ -61960,7 +62022,7 @@ async function ensureFormsTablesExist() {
       CREATE INDEX IF NOT EXISTS idx_custom_forms_short_code ON custom_forms(short_code);
       CREATE INDEX IF NOT EXISTS idx_custom_forms_created_by ON custom_forms(created_by);
     `);
-    await db.execute(sql16`
+    await db.execute(sql17`
       CREATE TABLE IF NOT EXISTS custom_form_fields (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
         form_id varchar NOT NULL REFERENCES custom_forms(id) ON DELETE CASCADE,
@@ -61979,7 +62041,7 @@ async function ensureFormsTablesExist() {
       CREATE INDEX IF NOT EXISTS idx_custom_form_fields_form ON custom_form_fields(form_id);
       CREATE INDEX IF NOT EXISTS idx_custom_form_fields_order ON custom_form_fields(form_id, "order");
     `);
-    await db.execute(sql16`
+    await db.execute(sql17`
       CREATE TABLE IF NOT EXISTS custom_form_submissions (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
         form_id varchar NOT NULL REFERENCES custom_forms(id) ON DELETE CASCADE,
@@ -62004,7 +62066,7 @@ async function ensureFormsTablesExist() {
 async function ensureTaskCommentsClientPortalColumn() {
   try {
     log("Running startup migration: ensureTaskCommentsClientPortalColumn");
-    await db.execute(sql16`
+    await db.execute(sql17`
       ALTER TABLE task_comments 
       ADD COLUMN IF NOT EXISTS client_portal_user_id varchar REFERENCES client_portal_users(id);
     `);
@@ -62016,7 +62078,7 @@ async function ensureTaskCommentsClientPortalColumn() {
 async function ensurePxMeetingsObjectivesColumn() {
   try {
     log("Running startup migration: ensurePxMeetingsObjectivesColumn");
-    await db.execute(sql16`
+    await db.execute(sql17`
       ALTER TABLE px_meetings 
       ADD COLUMN IF NOT EXISTS objectives text;
     `);
@@ -62028,7 +62090,7 @@ async function ensurePxMeetingsObjectivesColumn() {
 async function ensureScheduledHiredEmailsTable() {
   try {
     log("Running startup migration: ensureScheduledHiredEmailsTable");
-    await db.execute(sql16`
+    await db.execute(sql17`
       CREATE TABLE IF NOT EXISTS scheduled_hired_emails (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
         application_id varchar NOT NULL REFERENCES job_applications(id),
@@ -62054,12 +62116,12 @@ async function ensureScheduledHiredEmailsTable() {
 async function ensureOnboardingWeekColumns() {
   try {
     log("Running startup migration: ensureOnboardingWeekColumns");
-    await db.execute(sql16`ALTER TABLE clients ADD COLUMN IF NOT EXISTS onboarding_start_date TIMESTAMP`);
-    await db.execute(sql16`ALTER TABLE clients ADD COLUMN IF NOT EXISTS onboarding_week_released INTEGER DEFAULT 0`);
-    await db.execute(sql16`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
-    await db.execute(sql16`ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
-    await db.execute(sql16`ALTER TABLE product_task_templates ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
-    await db.execute(sql16`ALTER TABLE product_task_templates ADD COLUMN IF NOT EXISTS visible_to_client BOOLEAN DEFAULT false`);
+    await db.execute(sql17`ALTER TABLE clients ADD COLUMN IF NOT EXISTS onboarding_start_date TIMESTAMP`);
+    await db.execute(sql17`ALTER TABLE clients ADD COLUMN IF NOT EXISTS onboarding_week_released INTEGER DEFAULT 0`);
+    await db.execute(sql17`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
+    await db.execute(sql17`ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
+    await db.execute(sql17`ALTER TABLE product_task_templates ADD COLUMN IF NOT EXISTS onboarding_week INTEGER`);
+    await db.execute(sql17`ALTER TABLE product_task_templates ADD COLUMN IF NOT EXISTS visible_to_client BOOLEAN DEFAULT false`);
     log("Onboarding week columns migration completed successfully");
   } catch (error) {
     log(`Onboarding week columns migration error: ${error.message}`);
@@ -62089,7 +62151,7 @@ async function fixJoeEmailInProduction() {
 }
 async function ensureStickyNotesTable() {
   try {
-    await db.execute(sql16`
+    await db.execute(sql17`
       CREATE TABLE IF NOT EXISTS sticky_notes (
         id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id VARCHAR NOT NULL,
@@ -62101,7 +62163,7 @@ async function ensureStickyNotesTable() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    await db.execute(sql16`CREATE INDEX IF NOT EXISTS sticky_notes_user_id_idx ON sticky_notes(user_id)`);
+    await db.execute(sql17`CREATE INDEX IF NOT EXISTS sticky_notes_user_id_idx ON sticky_notes(user_id)`);
     log("\u2705 Sticky notes table ensured");
   } catch (error) {
     log(`\u26A0\uFE0F ensureStickyNotesTable error: ${error}`);
@@ -62110,7 +62172,7 @@ async function ensureStickyNotesTable() {
 async function ensureTaskTimeEntriesTable() {
   try {
     log("Running startup migration: ensureTaskTimeEntriesTable");
-    await db.execute(sql16`
+    await db.execute(sql17`
       CREATE TABLE IF NOT EXISTS task_time_entries (
         id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
         task_id VARCHAR NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
@@ -62127,11 +62189,11 @@ async function ensureTaskTimeEntriesTable() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    await db.execute(sql16`CREATE INDEX IF NOT EXISTS idx_task_time_entries_task ON task_time_entries(task_id)`);
-    await db.execute(sql16`CREATE INDEX IF NOT EXISTS idx_task_time_entries_user ON task_time_entries(user_id)`);
-    await db.execute(sql16`CREATE INDEX IF NOT EXISTS idx_task_time_entries_start ON task_time_entries(start_time)`);
-    await db.execute(sql16`CREATE INDEX IF NOT EXISTS idx_task_time_entries_user_running ON task_time_entries(user_id, is_running)`);
-    const result = await db.execute(sql16`
+    await db.execute(sql17`CREATE INDEX IF NOT EXISTS idx_task_time_entries_task ON task_time_entries(task_id)`);
+    await db.execute(sql17`CREATE INDEX IF NOT EXISTS idx_task_time_entries_user ON task_time_entries(user_id)`);
+    await db.execute(sql17`CREATE INDEX IF NOT EXISTS idx_task_time_entries_start ON task_time_entries(start_time)`);
+    await db.execute(sql17`CREATE INDEX IF NOT EXISTS idx_task_time_entries_user_running ON task_time_entries(user_id, is_running)`);
+    const result = await db.execute(sql17`
       INSERT INTO task_time_entries (id, task_id, user_id, task_title, user_name, start_time, end_time, duration, is_running, source, notes)
       SELECT
         COALESCE(NULLIF(entry->>'id', ''), gen_random_uuid()::varchar),
@@ -62159,7 +62221,7 @@ async function ensureTaskTimeEntriesTable() {
 }
 async function ensureCallCenterTimeEditPermissions() {
   try {
-    await db.execute(sql16`
+    await db.execute(sql17`
       INSERT INTO granular_permissions (role_id, permission_key, module, enabled)
       SELECT DISTINCT gp.role_id, key, 'call_center', true
       FROM granular_permissions gp

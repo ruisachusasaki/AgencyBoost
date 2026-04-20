@@ -18,6 +18,7 @@ import {
   staff,
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
+import { mapBriefSectionKeyToClientColumn } from "../storage";
 import { randomUUID } from "crypto";
 import { generateTasksFromTemplates } from "../taskGenerationEngine";
 
