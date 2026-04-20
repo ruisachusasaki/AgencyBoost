@@ -28730,8 +28730,22 @@ AgencyBoost CRM`
       if (error instanceof Error && error.message.includes("Section not found")) {
         return res.status(404).json({ message: "Client brief section not found" });
       }
-      console.error("Error setting client brief value:", error);
-      res.status(500).json({ message: "Failed to set client brief value" });
+      console.error("[PUT /brief] Error setting client brief value:", {
+        clientId: req.params.id,
+        sectionId: req.params.sectionId,
+        errorMessage: error?.message,
+        errorCode: error?.code,
+        errorDetail: error?.detail,
+        errorPosition: error?.position,
+        errorQuery: error?.query,
+        errorStack: error?.stack?.split("\n").slice(0, 5).join("\n")
+      });
+      const detail = error?.message || String(error);
+      res.status(500).json({
+        message: `Failed to set client brief value: ${detail}`,
+        code: error?.code,
+        detail: error?.detail
+      });
     }
   });
   app2.get("/api/clients/:clientId/roadmap-comments", requireAuth(), requirePermission("clients", "canView"), async (req, res) => {
