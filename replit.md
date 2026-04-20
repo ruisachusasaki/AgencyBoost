@@ -52,7 +52,7 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 - **Team Workload Reports**: Analytics for staff workload.
 - **Activity & Comments**: Global timer, activity logging, and a threaded comments system with @mentions and emoji picker.
 - **Time Entry Editing**: Admins and managers can edit time entries.
-- **Long-Running Timer Alerts**: Background service for timers exceeding a threshold.
+- **Long-Running Timer Alerts**: Background service for timers exceeding a threshold. Also supports an optional **auto-stop** mode (Settings > Tasks > Long-Running Timer Alerts > "Auto-Stop Abandoned Timers"): when enabled, timers running past the auto-stop threshold are automatically stopped server-side, with recorded duration capped at the threshold and the entry tagged `stoppedBy: 'system'` / `stopReason: 'auto-stopped'`. The team member and admins receive an "Auto-Stopped" notification, the TimerContext on the client surfaces a toast on next sync (via `/api/time-entries/recent-auto-stopped`), and reports show an "Auto-stopped" badge on affected entries. This addresses mobile/laptop tab eviction leaving phantom running timers.
 - **Weekly Hours System Alerts**: Background service notifies managers/admins if team members log fewer than a configurable threshold of hours weekly.
 - **File & Media**: Advanced uploads, inline display, voice recording, secure object storage, and collaborative annotation.
 - **Knowledge Base**: Notion-like platform with categories, hierarchy, RBAC, search, draft/published workflow, version history, and auto-generated Table of Contents.

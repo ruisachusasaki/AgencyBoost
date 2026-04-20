@@ -37001,6 +37001,51 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  // Returns the most recent auto-stopped time entry for the current user
+  // within the last hour, so the client can surface a toast when its previously
+  // running timer was stopped server-side (e.g. mobile tab eviction).
+  app.get("/api/time-entries/recent-auto-stopped", requireAuth(), async (req, res) => {
+    try {
+      const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!authenticatedUserId) return;
+
+      const matchPattern = JSON.stringify([{ stoppedBy: 'system', userId: authenticatedUserId }]);
+      const candidateTasks = await db
+        .select({ id: tasks.id, title: tasks.title, timeEntries: tasks.timeEntries })
+        .from(tasks)
+        .where(sql`${tasks.timeEntries} @> ${matchPattern}::jsonb`)
+        .limit(50);
+
+      const cutoff = Date.now() - 60 * 60 * 1000;
+      let latest: any = null;
+
+      for (const task of candidateTasks) {
+        if (!task.timeEntries || !Array.isArray(task.timeEntries)) continue;
+        for (const entry of task.timeEntries as any[]) {
+          if (
+            entry.stoppedBy === 'system' &&
+            entry.userId === authenticatedUserId &&
+            entry.autoStoppedAt
+          ) {
+            const ts = new Date(entry.autoStoppedAt).getTime();
+            if (ts >= cutoff && (!latest || ts > latest._ts)) {
+              latest = { ...entry, taskId: task.id, taskTitle: task.title, _ts: ts };
+            }
+          }
+        }
+      }
+
+      if (!latest) {
+        return res.json(null);
+      }
+      const { _ts, ...rest } = latest;
+      res.json(rest);
+    } catch (error) {
+      console.error("Error fetching recent auto-stopped entry:", error);
+      res.status(500).json({ error: "Failed to fetch recent auto-stopped entry" });
+    }
+  });
+
   // Atomically append a manual (already-completed) time entry to a task as a
   // single INSERT. Concurrent writes against the same task no longer race —
   // each manual entry is its own row.

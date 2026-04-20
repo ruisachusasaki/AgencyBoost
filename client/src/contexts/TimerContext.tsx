@@ -137,9 +137,32 @@ export function TimerProvider({ children }: TimerProviderProps) {
         if (!response.ok) return;
         const runningEntry = await response.json();
         if (!runningEntry) {
+          const stoppedTaskTitle = currentTimerRef.current?.taskTitle;
           localStorage.removeItem(`activeTimer_${currentUser.id}`);
           setCurrentTimer(null);
           setElapsedTime(0);
+
+          // Check whether the timer was auto-stopped by the server (e.g. mobile
+          // tab eviction or laptop sleep) and surface a toast so the user knows.
+          try {
+            const seenKey = `lastSeenAutoStop_${currentUser.id}`;
+            const autoRes = await fetch('/api/time-entries/recent-auto-stopped', { credentials: 'include' });
+            if (autoRes.ok) {
+              const autoEntry = await autoRes.json();
+              if (autoEntry && autoEntry.autoStoppedAt) {
+                const lastSeen = localStorage.getItem(seenKey);
+                if (lastSeen !== autoEntry.autoStoppedAt) {
+                  localStorage.setItem(seenKey, autoEntry.autoStoppedAt);
+                  const hours = autoEntry.autoStoppedThresholdHours ?? '';
+                  toast({
+                    title: 'Timer Auto-Stopped',
+                    description: `Your timer on "${autoEntry.taskTitle || stoppedTaskTitle || 'a task'}" was auto-stopped after running too long${hours ? ` (over ${hours}h)` : ''}. Please review the entry and adjust if needed.`,
+                    variant: 'destructive',
+                  });
+                }
+              }
+            }
+          } catch {}
         } else if (runningEntry.userId === currentUser.id && runningEntry.id !== currentTimer.id) {
           setCurrentTimer(runningEntry as TimeEntry);
           setElapsedTime(0);

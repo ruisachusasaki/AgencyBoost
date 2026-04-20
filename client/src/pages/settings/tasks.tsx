@@ -381,16 +381,22 @@ function LongRunningTimerSettings() {
 
   const alertsEnabled = settings?.long_running_timer_alerts_enabled?.value ?? true;
   const thresholdHours = settings?.long_running_timer_threshold_hours?.value ?? 8;
+  const autoStopEnabled = settings?.auto_stop_timer_enabled?.value ?? false;
+  const autoStopThresholdHours = settings?.auto_stop_timer_threshold_hours?.value ?? 12;
 
   const [localThreshold, setLocalThreshold] = useState<string>(String(thresholdHours));
   const [localEnabled, setLocalEnabled] = useState<boolean>(alertsEnabled);
+  const [localAutoStopEnabled, setLocalAutoStopEnabled] = useState<boolean>(autoStopEnabled);
+  const [localAutoStopThreshold, setLocalAutoStopThreshold] = useState<string>(String(autoStopThresholdHours));
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     setLocalThreshold(String(thresholdHours));
     setLocalEnabled(alertsEnabled);
+    setLocalAutoStopEnabled(autoStopEnabled);
+    setLocalAutoStopThreshold(String(autoStopThresholdHours));
     setHasChanges(false);
-  }, [thresholdHours, alertsEnabled]);
+  }, [thresholdHours, alertsEnabled, autoStopEnabled, autoStopThresholdHours]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: { settingKey: string; settingValue: any }) => {
@@ -414,6 +420,14 @@ function LongRunningTimerSettings() {
       await saveMutation.mutateAsync({
         settingKey: "long_running_timer_threshold_hours",
         settingValue: { value: parseFloat(localThreshold) || 8 },
+      });
+      await saveMutation.mutateAsync({
+        settingKey: "auto_stop_timer_enabled",
+        settingValue: { value: localAutoStopEnabled },
+      });
+      await saveMutation.mutateAsync({
+        settingKey: "auto_stop_timer_threshold_hours",
+        settingValue: { value: parseFloat(localAutoStopThreshold) || 12 },
       });
       setHasChanges(false);
       toast({
@@ -486,6 +500,56 @@ function LongRunningTimerSettings() {
               disabled={!localEnabled}
             />
             <span className="text-sm text-muted-foreground">hours</span>
+          </div>
+        </div>
+
+        <div className="border-t pt-6 space-y-4">
+          <div>
+            <h4 className="font-medium text-sm">Auto-Stop Abandoned Timers</h4>
+            <p className="text-sm text-muted-foreground">
+              Mobile browsers and sleeping laptops can suspend background tabs, leaving timers running indefinitely on the server. When enabled, the system will automatically stop timers that have been running longer than the threshold and cap the recorded duration so reports stay accurate.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="auto-stop-enabled" className="font-medium">Enable Auto-Stop</Label>
+              <p className="text-sm text-muted-foreground">
+                Automatically stop timers exceeding the auto-stop threshold
+              </p>
+            </div>
+            <Switch
+              id="auto-stop-enabled"
+              checked={localAutoStopEnabled}
+              onCheckedChange={(checked) => {
+                setLocalAutoStopEnabled(checked);
+                setHasChanges(true);
+              }}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="auto-stop-threshold" className="font-medium">Auto-Stop Threshold (hours)</Label>
+            <p className="text-sm text-muted-foreground">
+              Timers running longer than this will be auto-stopped and marked as "Auto-stopped" in reports. Recorded duration is capped at this value.
+            </p>
+            <div className="flex items-center gap-3">
+              <Input
+                id="auto-stop-threshold"
+                type="number"
+                min="1"
+                max="48"
+                step="0.5"
+                value={localAutoStopThreshold}
+                onChange={(e) => {
+                  setLocalAutoStopThreshold(e.target.value);
+                  setHasChanges(true);
+                }}
+                className="w-32"
+                disabled={!localAutoStopEnabled}
+              />
+              <span className="text-sm text-muted-foreground">hours</span>
+            </div>
           </div>
         </div>
 

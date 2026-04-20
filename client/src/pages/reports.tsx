@@ -6384,7 +6384,14 @@ export default function Reports() {
               editingTimeEntry.entries.map((entry: any) => (
                 <div key={entry.id} className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
                   <div className="flex-1">
-                    <p className="font-medium text-sm text-slate-900">{entry.taskTitle}</p>
+                    <p className="font-medium text-sm text-slate-900 flex items-center gap-2">
+                      {entry.taskTitle}
+                      {entry.stoppedBy === 'system' && (
+                        <span className="text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200" title="This timer was auto-stopped by the system after running too long. Duration was capped at the auto-stop threshold.">
+                          Auto-stopped
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-slate-500">
                       {new Date(entry.startTime).toLocaleTimeString()} - {entry.endTime ? new Date(entry.endTime).toLocaleTimeString() : 'Running'}
                     </p>
