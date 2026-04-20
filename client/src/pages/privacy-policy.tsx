@@ -182,7 +182,66 @@ export default function PrivacyPolicyPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-3">12. Contact Us</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-3">12. Google API Services User Data Policy Disclosure</h2>
+              <p className="text-gray-700 leading-relaxed mb-4">
+                AgencyBoost's use and transfer of information received from Google APIs to any other
+                app will adhere to the{" "}
+                <a
+                  href="https://developers.google.com/terms/api-services-user-data-policy#additional_requirements_for_specific_api_scopes"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-teal-600 hover:underline"
+                >
+                  Google API Services User Data Policy
+                </a>
+                , including the Limited Use requirements.
+              </p>
+
+              <h3 className="text-xl font-semibold text-gray-900 mt-6 mb-2">What Google data we access</h3>
+              <p className="text-gray-700 leading-relaxed mb-2">
+                When you connect your Google account to AgencyBoost, we request the following scopes:
+              </p>
+              <ul className="list-disc list-inside text-gray-700 leading-relaxed space-y-1 mb-4">
+                <li><strong>Google Calendar (read &amp; write):</strong> calendar events, event details (titles, descriptions, times, attendees, locations), and calendar metadata.</li>
+                <li><strong>Basic profile (email &amp; name):</strong> used solely to identify your Google account within AgencyBoost.</li>
+              </ul>
+
+              <h3 className="text-xl font-semibold text-gray-900 mt-6 mb-2">How we use Google data</h3>
+              <ul className="list-disc list-inside text-gray-700 leading-relaxed space-y-1 mb-4">
+                <li>Display your Google Calendar events inside AgencyBoost's calendar views.</li>
+                <li>Create, update, and delete events in your Google Calendar when you book or modify appointments in AgencyBoost.</li>
+                <li>Check your real-time availability to prevent double-bookings.</li>
+                <li>Trigger AgencyBoost workflows based on calendar activity (only when you enable this).</li>
+              </ul>
+
+              <h3 className="text-xl font-semibold text-gray-900 mt-6 mb-2">Limited Use commitment</h3>
+              <p className="text-gray-700 leading-relaxed mb-2">We commit to the following:</p>
+              <ul className="list-disc list-inside text-gray-700 leading-relaxed space-y-1 mb-4">
+                <li>We do <strong>not</strong> use Google user data for advertising or to build advertising profiles.</li>
+                <li>We do <strong>not</strong> sell, rent, or share Google user data with third parties for their own purposes.</li>
+                <li>We do <strong>not</strong> allow humans to read your Google data, except: (a) with your explicit prior consent, (b) when necessary for security investigations or to comply with applicable law, or (c) when the data has been aggregated and anonymized.</li>
+                <li>We use Google user data <strong>only</strong> to provide and improve user-facing features of AgencyBoost — never for unrelated purposes.</li>
+              </ul>
+
+              <h3 className="text-xl font-semibold text-gray-900 mt-6 mb-2">Storage, retention, and deletion</h3>
+              <ul className="list-disc list-inside text-gray-700 leading-relaxed space-y-1 mb-4">
+                <li>OAuth access and refresh tokens are encrypted at rest in our database.</li>
+                <li>Calendar event data is stored only for as long as your Google account remains connected to AgencyBoost.</li>
+                <li>You can disconnect your Google Calendar at any time from <em>Settings &rarr; Calendar Settings &rarr; Integrations</em>. Disconnecting revokes our access tokens with Google and removes the cached calendar data from our system.</li>
+                <li>You can also revoke AgencyBoost's access directly at <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline">myaccount.google.com/permissions</a>.</li>
+                <li>To request full deletion of all data associated with your account, email <a href="mailto:support@themediaoptimizers.com" className="text-teal-600 hover:underline">support@themediaoptimizers.com</a>.</li>
+              </ul>
+
+              <h3 className="text-xl font-semibold text-gray-900 mt-6 mb-2">Security</h3>
+              <p className="text-gray-700 leading-relaxed mb-4">
+                Google data is transmitted over TLS, stored in an access-controlled PostgreSQL
+                database, and OAuth credentials are encrypted using industry-standard encryption
+                before being written to disk.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-3">13. Contact Us</h2>
               <p className="text-gray-700 leading-relaxed">
                 If you have any questions, concerns, or requests regarding this Privacy Policy or our 
                 data practices, please contact us at:
