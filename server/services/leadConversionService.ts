@@ -540,14 +540,8 @@ export async function convertLeadToClient(
       const sections = await db.select().from(clientBriefSections);
       for (const section of sections) {
         if (section.defaultTemplate && section.isEnabled) {
-          const coreKeyMap: Record<string, string> = {
-            background: 'briefBackground', objectives: 'briefObjectives',
-            brand_info: 'briefBrandInfo', audience_info: 'briefAudienceInfo',
-            products_services: 'briefProductsServices', competitors: 'briefCompetitors',
-            marketing_tech: 'briefMarketingTech', miscellaneous: 'briefMiscellaneous',
-          };
-          if (section.scope === 'core' && section.key && coreKeyMap[section.key]) {
-            const col = coreKeyMap[section.key];
+          const col = section.key ? mapBriefSectionKeyToClientColumn(section.key) : null;
+          if (section.scope === 'core' && col) {
             await db.update(clients).set({ [col]: section.defaultTemplate } as any).where(eq(clients.id, result.clientId));
           } else {
             await db.insert(clientBriefValues).values({

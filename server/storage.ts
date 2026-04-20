@@ -736,7 +736,7 @@ export interface IStorage {
 // Map a brief section.key (which may be camelCase like "briefAudienceInfo" or
 // snake_case like "audience_info") to the corresponding `clients` column.
 // Returns null if the key doesn't correspond to a known core brief column.
-function mapBriefSectionKeyToClientColumn(rawKey: string): keyof InsertClient | null {
+export function mapBriefSectionKeyToClientColumn(rawKey: string): keyof InsertClient | null {
   const map: Record<string, keyof InsertClient> = {
     background: 'briefBackground',
     briefBackground: 'briefBackground',
@@ -4525,51 +4525,18 @@ export class MemStorage implements IStorage {
   async getClientBrief(clientId: string): Promise<Array<ClientBriefSection & { value?: string }>> {
     const sections = await this.listBriefSections();
     const [client] = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
-    
+
     return sections.map(section => {
-      let value = undefined;
-      
-      // Get value from core client data if it's a core section
+      let value: string | undefined = undefined;
+
       if (client && section.key) {
-        switch (section.key) {
-          case 'background':
-            value = client.briefBackground || undefined;
-            break;
-          case 'objectives':
-            value = client.briefObjectives || undefined;
-            break;
-          case 'brand_info':
-            value = client.briefBrandInfo || undefined;
-            break;
-          case 'audience_info':
-            value = client.briefAudienceInfo || undefined;
-            break;
-          case 'products_services':
-            value = client.briefProductsServices || undefined;
-            break;
-          case 'competitors':
-            value = client.briefCompetitors || undefined;
-            break;
-          case 'marketing_tech':
-            value = client.briefMarketingTech || undefined;
-            break;
-          case 'miscellaneous':
-            value = client.briefMiscellaneous || undefined;
-            break;
+        const column = mapBriefSectionKeyToClientColumn(section.key);
+        if (column) {
+          value = ((client as any)[column] as string | null) || undefined;
         }
       }
 
-      // If no core value, check custom values
-      if (!value) {
-        const briefValueKey = `${clientId}-${section.id}`;
-        const briefValue = this.clientBriefValues.get(briefValueKey);
-        value = briefValue?.value;
-      }
-
-      return {
-        ...section,
-        value
-      };
+      return { ...section, value };
     });
   }
 
