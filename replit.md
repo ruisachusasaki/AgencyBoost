@@ -66,6 +66,20 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 - **Ticketing System**: Admin-only bug report and feature request tracking with CRUD, comments, status lifecycle, priority levels, type classification, response time analytics, screenshot uploads, Loom video field, automatic routing rules (with source-based matching), source tracking (`source` column — "AgencyBoost" for internal, form name for external), embeddable ticket intake forms (via Custom Forms system with field builder at Settings > Tickets > Forms tab), public ticket form page (`/public/ticket-form/:shortCode`), and Kanban view with drag-and-drop status updates.
 - **Call Center Time Tracking**: Simplified clock-in/clock-out interface for call center staff, with client selection, weekly summaries, client switching, and a dedicated "Call Center Cost" report.
 
+## Production Build (CRITICAL)
+
+**Production uses a two-process architecture**:
+1. `dist/prodEntry.js` — thin proxy/health check process (entry point from `.replit`).
+2. `dist/appWorker.js` — the actual application worker process. Serves ALL API routes.
+
+**`npm run build` is INSUFFICIENT on its own**. It only rebuilds `dist/index.js`, which production does not execute. If you only run `npm run build`, production will keep running whatever `dist/appWorker.js` was last committed — silently ignoring your server-side changes and appearing "deployed but broken."
+
+**Always run `bash scripts/build.sh` (not `npm run build`) before publishing** any change that touches `server/**`. That script:
+- Runs `npm run build` (frontend + `dist/index.js`)
+- Also runs `esbuild` on `server/appWorker.ts` and `server/prodEntry.ts` so `dist/appWorker.js` and `dist/prodEntry.js` are refreshed.
+
+Deployment config (`.replit [deployment] build = ["echo", "pre-built"]`) means Replit does NOT re-run the build on publish — it uses whatever is in `dist/` committed to git. So the committed worker bundles must be fresh before you click Publish.
+
 ## External Dependencies
 
 ### Database Services
