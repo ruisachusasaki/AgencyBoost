@@ -18503,7 +18503,7 @@ function registerProposalRoutes(app2, requireAuth2, requirePermission2, notifica
         return res.status(400).json({ message: "No recipient email found. Please provide recipientEmail." });
       }
       const publicToken = quote.publicToken || generatePublicToken();
-      const expiresAt = quote.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1e3);
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1e3);
       const updateData = {
         status: "sent",
         publicToken,

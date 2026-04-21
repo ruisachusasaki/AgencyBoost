@@ -242,7 +242,9 @@ export function registerProposalRoutes(
       }
 
       const publicToken = quote.publicToken || generatePublicToken();
-      const expiresAt = quote.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      // Always reset expiration to 30 days from now when sending, so re-sending
+      // a proposal that has a stale/expired date still gives the recipient a fresh window.
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
       const updateData: any = {
         status: "sent",
