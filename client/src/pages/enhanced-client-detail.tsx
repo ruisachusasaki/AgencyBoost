@@ -3136,6 +3136,7 @@ export default function EnhancedClientDetail() {
   const [taskStatusFilter, setTaskStatusFilter] = useState<string>("all");
   const [taskPriorityFilter, setTaskPriorityFilter] = useState<string>("all");
   const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<string>("all");
+  const [taskSearchQuery, setTaskSearchQuery] = useState<string>("");
   const [taskSortBy, setTaskSortBy] = useState<string>("dueDate");
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
@@ -3787,6 +3788,16 @@ export default function EnhancedClientDetail() {
       tasks = tasks.filter((task: any) => task.assignedTo === taskAssigneeFilter);
     }
 
+    // Apply search query (title + description)
+    const q = taskSearchQuery.trim().toLowerCase();
+    if (q) {
+      tasks = tasks.filter((task: any) => {
+        const title = (task.title || "").toLowerCase();
+        const description = (task.description || "").toLowerCase();
+        return title.includes(q) || description.includes(q);
+      });
+    }
+
     // Apply show completed filter
     if (!showCompletedTasks) {
       tasks = tasks.filter((task: any) => task.status !== 'completed');
@@ -3819,7 +3830,7 @@ export default function EnhancedClientDetail() {
     });
 
     return tasks;
-  }, [clientTasksData, taskStatusFilter, taskPriorityFilter, taskAssigneeFilter, showCompletedTasks, taskSortBy]);
+  }, [clientTasksData, taskStatusFilter, taskPriorityFilter, taskAssigneeFilter, taskSearchQuery, showCompletedTasks, taskSortBy]);
 
   // Fetch client documents data
   const { data: clientDocuments = [], isLoading: documentsLoading } = useQuery({
@@ -8520,6 +8531,29 @@ export default function EnhancedClientDetail() {
                           <Plus className="h-4 w-4" />
                         </Button>
                       </Link>
+                    </div>
+
+                    {/* Search */}
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                      <Input
+                        type="text"
+                        value={taskSearchQuery}
+                        onChange={(e) => setTaskSearchQuery(e.target.value)}
+                        placeholder="Search this client's tasks..."
+                        className="h-9 pl-8 pr-8"
+                        data-testid="input-task-search"
+                      />
+                      {taskSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setTaskSearchQuery("")}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          data-testid="button-clear-task-search"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
 
                     {/* Filters and Sorting */}
