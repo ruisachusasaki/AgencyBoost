@@ -8,9 +8,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Ticket, AlertCircle, Clock, Timer, CalendarDays, Bug, Lightbulb, Wrench, AlertTriangle, ArrowUp, ArrowDown, Minus, CalendarIcon, Users, Trophy, User } from "lucide-react";
+import { Ticket, AlertCircle, Clock, Timer, CalendarDays, Bug, Lightbulb, Wrench, AlertTriangle, ArrowUp, ArrowDown, Minus, CalendarIcon, Users, Trophy, User, TrendingUp, Activity, CircleDot } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, LineChart, Line } from "recharts";
 
 function parseLocalDate(dateStr: string): Date {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -22,10 +23,30 @@ interface TicketSummary {
   open: number;
   inProgress: number;
   resolved: number;
+  closed: number;
   onHold: number;
   byType: Record<string, number>;
   byPriority: Record<string, number>;
 }
+
+interface MonthlyTrendPoint {
+  month: string;
+  label: string;
+  created: number;
+  resolved: number;
+}
+
+interface MonthlyTrendResponse {
+  months: MonthlyTrendPoint[];
+}
+
+const statusOrder: { key: keyof Pick<TicketSummary, "open" | "inProgress" | "onHold" | "resolved" | "closed">; label: string; color: string }[] = [
+  { key: "open", label: "Open", color: "bg-amber-500" },
+  { key: "inProgress", label: "In Progress", color: "bg-blue-500" },
+  { key: "onHold", label: "On Hold", color: "bg-gray-400" },
+  { key: "resolved", label: "Resolved", color: "bg-green-500" },
+  { key: "closed", label: "Closed", color: "bg-slate-600" },
+];
 
 interface AgingBucket {
   label: string;
@@ -145,6 +166,22 @@ export default function TicketReports() {
       return res.json();
     },
   });
+
+  const { data: monthlyTrend, isLoading: monthlyTrendLoading } = useQuery<MonthlyTrendResponse>({
+    queryKey: ["/api/tickets/reports/monthly", startDate, endDate],
+    queryFn: async () => {
+      const res = await fetch(`/api/tickets/reports/monthly?${dateParams}`);
+      if (!res.ok) throw new Error("Failed to fetch monthly trend");
+      return res.json();
+    },
+  });
+
+  const statusEntries = summary
+    ? statusOrder.map(s => ({ ...s, count: summary[s.key] || 0 }))
+    : [];
+  const maxStatusCount = statusEntries.length > 0
+    ? Math.max(...statusEntries.map(s => s.count), 1)
+    : 1;
 
   const selectedUserStats = selectedUserId !== "all" && userBreakdown?.users
     ? userBreakdown.users.find(u => u.userId === selectedUserId) : null;
@@ -422,6 +459,108 @@ export default function TicketReports() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <CircleDot className="w-5 h-5 text-primary" />
+            Tickets by Status
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {summaryLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
+            </div>
+          ) : statusEntries.length > 0 ? (
+            <div className="space-y-3">
+              {statusEntries.map(s => (
+                <div key={s.key} className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 w-32 shrink-0">
+                    <span className={cn("w-2.5 h-2.5 rounded-full", s.color)} />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{s.label}</span>
+                  </div>
+                  <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-7 relative overflow-hidden">
+                    <div
+                      className={`${s.color} h-full rounded-full transition-all duration-300 flex items-center justify-end pr-2`}
+                      style={{ width: `${Math.max((s.count / maxStatusCount) * 100, s.count > 0 ? 8 : 0)}%` }}
+                    >
+                      {s.count > 0 && (
+                        <span className="text-xs font-medium text-white">{s.count}</span>
+                      )}
+                    </div>
+                    {s.count === 0 && (
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">0</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">No ticket data available.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <TrendingUp className="w-5 h-5 text-primary" />
+            Monthly Ticket Trend
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {monthlyTrendLoading ? (
+            <Skeleton className="h-72 w-full" />
+          ) : monthlyTrend?.months && monthlyTrend.months.length > 0 ? (
+            <div style={{ width: "100%", height: 300 }}>
+              <ResponsiveContainer>
+                <LineChart data={monthlyTrend.months} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="created" name="Tickets Created" stroke="hsl(179, 100%, 39%)" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">No ticket data for the selected range.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Activity className="w-5 h-5 text-primary" />
+            Monthly Activity
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {monthlyTrendLoading ? (
+            <Skeleton className="h-72 w-full" />
+          ) : monthlyTrend?.months && monthlyTrend.months.length > 0 ? (
+            <div style={{ width: "100%", height: 300 }}>
+              <ResponsiveContainer>
+                <BarChart data={monthlyTrend.months} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="created" name="Created" fill="hsl(179, 100%, 39%)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="resolved" name="Resolved" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">No activity for the selected range.</p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

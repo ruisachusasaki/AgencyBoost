@@ -42036,6 +42036,60 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  // GET /api/tickets/reports/monthly - Monthly trend (created vs resolved per month)
+  app.get("/api/tickets/reports/monthly", requireAuth(), requireGranularPermission("tickets.reports.view"), async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      const start = startDate ? new Date(startDate as string + "T00:00:00") : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate as string + "T23:59:59.999") : new Date();
+
+      const createdRows = await db.select({
+        month: sql<string>`to_char(date_trunc('month', ${tickets.createdAt}), 'YYYY-MM')`,
+        count: sql<number>`count(*)::int`,
+      })
+        .from(tickets)
+        .where(and(gte(tickets.createdAt, start), lte(tickets.createdAt, end)))
+        .groupBy(sql`date_trunc('month', ${tickets.createdAt})`);
+
+      const resolvedRows = await db.select({
+        month: sql<string>`to_char(date_trunc('month', ${tickets.resolvedAt}), 'YYYY-MM')`,
+        count: sql<number>`count(*)::int`,
+      })
+        .from(tickets)
+        .where(and(
+          sql`${tickets.resolvedAt} IS NOT NULL`,
+          gte(tickets.resolvedAt, start),
+          lte(tickets.resolvedAt, end),
+        ))
+        .groupBy(sql`date_trunc('month', ${tickets.resolvedAt})`);
+
+      const createdMap = new Map<string, number>();
+      for (const r of createdRows) createdMap.set(r.month, r.count);
+      const resolvedMap = new Map<string, number>();
+      for (const r of resolvedRows) resolvedMap.set(r.month, r.count);
+
+      const months: { month: string; label: string; created: number; resolved: number }[] = [];
+      const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+      const last = new Date(end.getFullYear(), end.getMonth(), 1);
+      while (cursor <= last) {
+        const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
+        const label = cursor.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+        months.push({
+          month: key,
+          label,
+          created: createdMap.get(key) || 0,
+          resolved: resolvedMap.get(key) || 0,
+        });
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+
+      res.json({ months });
+    } catch (error) {
+      console.error("Error fetching ticket monthly trend:", error);
+      res.status(500).json({ error: "Failed to fetch ticket monthly trend" });
+    }
+  });
+
   app.get("/api/tickets/sources", requireAuth(), requireGranularPermission("tickets.list.view"), async (req, res) => {
     try {
       const sources = await db.selectDistinct({ source: tickets.source }).from(tickets).where(sql`${tickets.source} IS NOT NULL`);
