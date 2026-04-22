@@ -7781,7 +7781,28 @@ export default function EnhancedClientDetail() {
                           
                           {showCC && (
                             <div>
-                              <Label htmlFor="email-cc">CC</Label>
+                              <div className="flex items-center gap-1.5">
+                                <Label htmlFor="email-cc">CC</Label>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                        aria-label="How to add multiple CC addresses"
+                                        data-testid="tooltip-cc-help"
+                                      >
+                                        <HelpCircle className="h-3.5 w-3.5" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs">
+                                      To add multiple CC recipients, separate each email address with a comma.
+                                      <br />
+                                      Example: <span className="font-mono text-xs">alice@example.com, bob@example.com</span>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
                               <Input
                                 id="email-cc"
                                 type="text"
@@ -7790,15 +7811,33 @@ export default function EnhancedClientDetail() {
                                 placeholder="cc1@email.com, cc2@email.com"
                                 data-testid="input-email-cc"
                               />
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Separate multiple addresses with commas.
-                              </p>
                             </div>
                           )}
                           
                           {showBCC && (
                             <div>
-                              <Label htmlFor="email-bcc">BCC</Label>
+                              <div className="flex items-center gap-1.5">
+                                <Label htmlFor="email-bcc">BCC</Label>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                        aria-label="How to add multiple BCC addresses"
+                                        data-testid="tooltip-bcc-help"
+                                      >
+                                        <HelpCircle className="h-3.5 w-3.5" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs">
+                                      To add multiple BCC recipients, separate each email address with a comma.
+                                      <br />
+                                      Example: <span className="font-mono text-xs">alice@example.com, bob@example.com</span>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
                               <Input
                                 id="email-bcc"
                                 type="text"
@@ -7807,9 +7846,6 @@ export default function EnhancedClientDetail() {
                                 placeholder="bcc1@email.com, bcc2@email.com"
                                 data-testid="input-email-bcc"
                               />
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Separate multiple addresses with commas.
-                              </p>
                             </div>
                           )}
                           
