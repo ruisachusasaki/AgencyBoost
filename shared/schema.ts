@@ -6020,6 +6020,7 @@ export const assetTypes = pgTable("asset_types", {
   agencyId: integer("agency_id").notNull().default(1),
   name: text("name").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
+  active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({

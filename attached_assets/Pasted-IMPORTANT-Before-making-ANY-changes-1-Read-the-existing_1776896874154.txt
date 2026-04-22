@@ -1,0 +1,45 @@
+IMPORTANT: Before making ANY changes:
+1. Read the existing Settings > Clients page component to understand tab structure
+2. Read an existing settings-with-list component (like Settings > Products or Settings > Lead Sources) to match CRUD UI patterns
+3. Check how drag-to-reorder is implemented if it exists elsewhere (if not, use @dnd-kit/sortable — already likely in package.json; if not, use a simple up/down arrow approach)
+
+DO NOT modify any existing settings tabs or their components. ONLY ADD a new tab.
+
+Add a new tab "Client Assets" to Settings > Clients.
+
+The tab has TWO sections, side-by-side on desktop (stacked on mobile):
+
+SECTION 1: Asset Types
+- Header: "Asset Types" + "Add Type" button (admin-only visible)
+- Sortable list of types (drag handle on left)
+- Each row: drag handle, name, edit icon, archive/unarchive toggle
+- Add/Edit modal: single "Name" text input, Save button
+- Archive confirmation: "Archiving this type hides it from new assets but preserves it on existing assets. Continue?"
+- Show "Inactive" badge on archived types (grayed out)
+- Toggle at top: "Show archived" (defaults off)
+
+SECTION 2: Asset Statuses
+- Same structure as Asset Types, PLUS:
+- Each row also shows a color swatch
+- Add/Edit modal includes a color picker (use react-colorful if available, or a simple preset palette of 8 colors including #10B981, #F59E0B, #00C9C6, #EF4444, #6B7280, #8B5CF6, #3B82F6, #EC4899)
+
+Data fetching:
+- Use TanStack Query v5 object form: useQuery({ queryKey: ['/api/asset-types?includeInactive=true'] })
+- Same for statuses
+- Mutations use useMutation + invalidate the matching queryKey on success
+
+Styling:
+- Primary teal for all buttons (hsl(179, 100%, 39%))
+- Toast: "default" on success, "destructive" on error (no "success" variant)
+- Use circular checkboxes only if needed (none expected here — use toggles instead)
+- Icons from lucide-react (GripVertical for drag, Pencil for edit, Archive for archive, ArchiveRestore for unarchive)
+
+Permissions:
+- If user is not admin, hide Add/Edit/Archive actions; show lists read-only
+- Follow existing admin-check pattern used elsewhere in settings
+
+Verify:
+- Existing Settings > Clients tabs still work
+- Drag-to-reorder persists across page refresh (calls reorder endpoint)
+- Archived items display with inactive styling when "Show archived" is on
+- Non-admins see read-only view

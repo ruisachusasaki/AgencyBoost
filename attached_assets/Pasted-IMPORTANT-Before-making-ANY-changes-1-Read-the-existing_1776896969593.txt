@@ -1,0 +1,49 @@
+IMPORTANT: Before making ANY changes:
+1. Read the existing Workflow builder code — find where triggers are registered and how events are emitted by other features (e.g., task status changes, client creation)
+2. Identify the event emission API / function used elsewhere (likely something like emitWorkflowEvent or workflowService.trigger)
+3. Confirm Prompt 6 is complete (placeholder event calls exist in client asset routes)
+
+DO NOT modify the Workflow builder core or any existing event emitters. ONLY ADD new events.
+
+Register the following client_asset events as available workflow triggers:
+
+1. client_asset.created
+   Payload: { assetId, clientId, assetName, assetTypeId, assetStatusId, ownerStaffId, triggeredByStaffId }
+
+2. client_asset.status_changed
+   Payload: { assetId, clientId, assetName, oldStatusId, newStatusId, oldStatusName, newStatusName, triggeredByStaffId }
+
+3. client_asset.owner_changed
+   Payload: { assetId, clientId, assetName, oldOwnerId, newOwnerId, oldOwnerName, newOwnerName, triggeredByStaffId }
+
+4. client_asset.link_updated
+   Payload: { assetId, clientId, assetName, oldLinkUrl, newLinkUrl, triggeredByStaffId }
+
+5. client_asset.portal_visibility_changed
+   Payload: { assetId, clientId, assetName, portalVisible, triggeredByStaffId }
+
+6. client_asset.deleted
+   Payload: { assetId, clientId, assetName, triggeredByStaffId }
+
+For the Workflow builder UI:
+- Register these events in the trigger registry (or equivalent mechanism used elsewhere)
+- Group them under a "Client Assets" category in the trigger picker
+- For status_changed, support a condition: "When status changes to [specific status]" — allow picking a specific asset_statuses record from the agency's list
+- For owner_changed, support condition: "When assigned to [specific staff member]"
+
+Wire up the actual emission:
+- Replace the placeholder calls in server/routes.ts (from Prompt 6) with real emitWorkflowEvent() calls
+- Ensure each call is wrapped in try/catch so workflow failures never break the underlying CRUD operation
+- Log workflow failures to the existing error logger
+
+BONUS (optional — include if existing workflow system supports scheduled triggers):
+7. client_asset.stale
+   - Scheduled trigger: emitted once daily for any asset where updatedAt is older than a configurable threshold (default: 30 days)
+   - Payload: { assetId, clientId, assetName, daysSinceUpdate, triggeredByStaffId: null }
+   - Config: agency-level setting "stale asset threshold in days" under Settings > Clients > Client Assets
+
+Verify:
+- Existing workflow triggers still fire correctly
+- Creating an asset emits client_asset.created (check logs or test workflow)
+- Changing status emits client_asset.status_changed with correct old/new values
+- A failed workflow does NOT cause the CRUD operation to fail

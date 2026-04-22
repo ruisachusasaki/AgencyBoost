@@ -1,0 +1,69 @@
+IMPORTANT: Before making ANY changes:
+1. Read the existing client detail page component (likely client/src/pages/ClientDetail.tsx or similar) to understand the tab structure
+2. Read an existing tab like "Products" or "Bundles" under a client to match table/modal patterns
+3. Confirm Prompt 6 is complete (API endpoints work)
+
+DO NOT modify existing tabs or their components. ONLY ADD a new tab.
+
+Add a new tab "Client Assets" to the client detail page, placed after existing tabs.
+
+TAB CONTENT:
+
+Header row:
+- Page title: "Client Assets"
+- Right-aligned: "Add Asset" button (visible if user has clients.canEdit)
+
+Filter bar:
+- Search input (filters by asset name, debounced 300ms)
+- Type dropdown (multi-select): lists active asset_types + "All Types"
+- Status dropdown (multi-select): lists active asset_statuses + "All Statuses"
+- Owner dropdown: staff members + "All Owners" + "Unassigned"
+
+Table columns:
+1. Name (clickable — opens edit modal, or opens link if clicks the link icon)
+2. Link (external link icon opening linkUrl in new tab, target="_blank", rel="noopener")
+3. Type (badge with neutral styling)
+4. Status (colored badge using the status.color value)
+5. Owner (avatar + name, or "Unassigned" in gray)
+6. Portal Visible (toggle icon — Eye/EyeOff, clickable to flip if user has clients.canEdit)
+7. Last Updated (relative time like "2 days ago", tooltip with full timestamp)
+8. Actions (kebab menu: Edit, Delete — only if clients.canEdit)
+
+Empty state:
+- Icon (FileText or similar from lucide-react)
+- "No assets yet"
+- "Add your first asset to track deliverables, strategy docs, and client-provided files."
+- "Add Asset" button
+
+Add/Edit Modal:
+- Name (text input, required)
+- Link URL (text input, required, validate as URL client-side)
+- Asset Type (dropdown, active types only, required)
+- Status (dropdown, active statuses only, required)
+- Owner (dropdown, staff list + "Unassigned" option, optional)
+- Portal Visible (toggle, default off, helper text: "When on, this asset appears in the client's portal view")
+- Save / Cancel
+
+Delete confirmation:
+- "Delete [asset name]? This cannot be undone."
+- Destructive variant button
+
+Data fetching:
+- useQuery({ queryKey: [`/api/clients/${clientId}/assets`] })
+- For filters, apply client-side (not via API query params, since data sets are small)
+- Invalidate query on all mutations
+
+Styling:
+- Primary teal for Add button, Save button, toggles
+- Toast variants: "default" / "destructive" only
+- Use lucide-react icons: ExternalLink, Pencil, Trash2, Eye, EyeOff, MoreVertical
+- Form validation with react-hook-form + zod (use the shared insertClientAssetSchema, extended with any client-side URL validation)
+- Date parsing: use new Date(dateString + "T00:00:00") if rendering any date picker
+
+Verify:
+- Existing client tabs still work
+- Adding an asset appears in the list immediately
+- Status badge uses the color from the status record
+- Portal Visible toggle persists via PUT request
+- Non-edit users see read-only view (no Add button, no actions menu)
+- Links open in new tab

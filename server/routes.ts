@@ -93,7 +93,8 @@ import {
   onboardingTemplates, onboardingTemplateItems, onboardingInstances, onboardingInstanceItems,
   insertOnboardingTemplateSchema, insertOnboardingTemplateItemSchema,
   icAgreementTemplates, jobOffers, offerSignatures, offerStatusLog,
-  scheduledHiredEmails
+  scheduledHiredEmails,
+  assetTypes, insertAssetTypeSchema
 } from "@shared/schema";
 import { spawnOnboardingChecklist } from "./services/onboardingSpawnService";
 import { sendHiredNotifications, getWelcomeEmailPreview, startScheduledEmailProcessor } from "./services/hiredNotificationService";
@@ -609,6 +610,168 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     } catch (error: any) {
       console.error("[backfill-asset-defaults] error:", error);
       res.status(500).json({ error: "Failed to backfill asset defaults", message: error?.message });
+    }
+  });
+
+  // ==========================================================================
+  // Asset Types CRUD
+  // --------------------------------------------------------------------------
+  // Single-tenant today: agencyId is sourced from a constant. When multi-tenant
+  // arrives, swap CURRENT_AGENCY_ID for `req.user!.agencyId` everywhere below.
+  // ==========================================================================
+  const CURRENT_AGENCY_ID = 1;
+
+  // GET /api/asset-types — list (active by default; ?includeInactive=true for settings)
+  app.get("/api/asset-types", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const includeInactive = req.query.includeInactive === 'true';
+      const conds = [eq(assetTypes.agencyId, CURRENT_AGENCY_ID)];
+      if (!includeInactive) conds.push(eq(assetTypes.active, true));
+      const rows = await db
+        .select()
+        .from(assetTypes)
+        .where(and(...conds))
+        .orderBy(asc(assetTypes.sortOrder));
+      res.json(rows);
+    } catch (error: any) {
+      console.error("[GET /api/asset-types] error:", error);
+      res.status(500).json({ error: "Failed to load asset types", message: error?.message });
+    }
+  });
+
+  // POST /api/asset-types — create (admin)
+  app.post("/api/asset-types", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      // Force agencyId; ignore any value the client sent.
+      const parsed = insertAssetTypeSchema
+        .omit({ agencyId: true, sortOrder: true })
+        .parse(req.body);
+
+      const [{ maxOrder }] = await db
+        .select({ maxOrder: sql<number>`COALESCE(MAX(${assetTypes.sortOrder}), 0)` })
+        .from(assetTypes)
+        .where(eq(assetTypes.agencyId, CURRENT_AGENCY_ID));
+
+      const [created] = await db
+        .insert(assetTypes)
+        .values({
+          ...parsed,
+          agencyId: CURRENT_AGENCY_ID,
+          sortOrder: Number(maxOrder) + 1,
+        })
+        .returning();
+      res.status(201).json(created);
+    } catch (error: any) {
+      console.error("[POST /api/asset-types] error:", error);
+      if (error?.name === 'ZodError') {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create asset type", message: error?.message });
+    }
+  });
+
+  // PUT /api/asset-types/:id — update (admin)
+  app.put("/api/asset-types/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [existing] = await db
+        .select()
+        .from(assetTypes)
+        .where(and(eq(assetTypes.id, id), eq(assetTypes.agencyId, CURRENT_AGENCY_ID)))
+        .limit(1);
+      if (!existing) return res.status(404).json({ error: "Asset type not found" });
+
+      const updateSchema = insertAssetTypeSchema
+        .pick({ name: true, sortOrder: true, active: true })
+        .partial();
+      const patch = updateSchema.parse(req.body);
+
+      const [updated] = await db
+        .update(assetTypes)
+        .set({ ...patch, updatedAt: new Date() })
+        .where(and(eq(assetTypes.id, id), eq(assetTypes.agencyId, CURRENT_AGENCY_ID)))
+        .returning();
+      res.json(updated);
+    } catch (error: any) {
+      console.error("[PUT /api/asset-types/:id] error:", error);
+      if (error?.name === 'ZodError') {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update asset type", message: error?.message });
+    }
+  });
+
+  // DELETE /api/asset-types/:id — soft delete (admin)
+  app.delete("/api/asset-types/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [existing] = await db
+        .select()
+        .from(assetTypes)
+        .where(and(eq(assetTypes.id, id), eq(assetTypes.agencyId, CURRENT_AGENCY_ID)))
+        .limit(1);
+      if (!existing) return res.status(404).json({ error: "Asset type not found" });
+
+      await db
+        .update(assetTypes)
+        .set({ active: false, updatedAt: new Date() })
+        .where(and(eq(assetTypes.id, id), eq(assetTypes.agencyId, CURRENT_AGENCY_ID)));
+      res.status(204).end();
+    } catch (error: any) {
+      console.error("[DELETE /api/asset-types/:id] error:", error);
+      res.status(500).json({ error: "Failed to delete asset type", message: error?.message });
+    }
+  });
+
+  // POST /api/asset-types/reorder — bulk reorder (admin)
+  // Body: { orderedIds: string[] } — IDs are UUID varchars (not numbers).
+  app.post("/api/asset-types/reorder", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const schema = z.object({ orderedIds: z.array(z.string()).min(1) });
+      const { orderedIds } = schema.parse(req.body);
+
+      // Reject duplicate IDs (would otherwise update the same row twice).
+      if (new Set(orderedIds).size !== orderedIds.length) {
+        return res.status(400).json({ error: "orderedIds contains duplicate IDs" });
+      }
+
+      // Verify every ID belongs to this agency.
+      const owned = await db
+        .select({ id: assetTypes.id })
+        .from(assetTypes)
+        .where(and(
+          eq(assetTypes.agencyId, CURRENT_AGENCY_ID),
+          inArray(assetTypes.id, orderedIds),
+        ));
+      if (owned.length !== orderedIds.length) {
+        return res.status(400).json({ error: "One or more IDs do not belong to this agency" });
+      }
+
+      // Update each row's sortOrder by its position (1-based).
+      await db.transaction(async (tx) => {
+        for (let i = 0; i < orderedIds.length; i++) {
+          await tx
+            .update(assetTypes)
+            .set({ sortOrder: i + 1, updatedAt: new Date() })
+            .where(and(
+              eq(assetTypes.id, orderedIds[i]),
+              eq(assetTypes.agencyId, CURRENT_AGENCY_ID),
+            ));
+        }
+      });
+
+      const rows = await db
+        .select()
+        .from(assetTypes)
+        .where(eq(assetTypes.agencyId, CURRENT_AGENCY_ID))
+        .orderBy(asc(assetTypes.sortOrder));
+      res.json(rows);
+    } catch (error: any) {
+      console.error("[POST /api/asset-types/reorder] error:", error);
+      if (error?.name === 'ZodError') {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to reorder asset types", message: error?.message });
     }
   });
 

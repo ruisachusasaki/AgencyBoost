@@ -1,0 +1,50 @@
+IMPORTANT: Before making ANY changes:
+1. Read server/routes.ts sections for existing client sub-resource routes (e.g., /api/clients/:clientId/products, /api/clients/:clientId/bundles)
+2. Confirm Prompts 1-4 are complete (tables exist, types/statuses APIs work)
+3. Identify the existing permission pattern for clients.canView and clients.canEdit
+
+DO NOT modify any existing routes. ONLY ADD new routes.
+
+Add client_assets CRUD routes, scoped under the client:
+
+1. GET /api/clients/:clientId/assets
+   - Auth: requireAuth + requirePermission('clients.canView')
+   - Verifies client belongs to req.user.agencyId (404 if not)
+   - Returns all assets for the client
+   - JOINS asset_types and asset_statuses so response includes full type/status objects (name, color for status)
+   - JOINS staff for owner (returns id, name, email, avatar)
+   - Orders by updatedAt DESC
+   - AVOIDS the Drizzle .select({ field: table.column }) with leftJoin pattern — use relations or separate queries instead
+
+2. POST /api/clients/:clientId/assets
+   - Auth: requireAuth + requirePermission('clients.canEdit')
+   - Verifies client + agency ownership
+   - Validates body with insertClientAssetSchema
+   - Validates assetTypeId and assetStatusId belong to req.user.agencyId
+   - Validates ownerStaffId (if provided) belongs to req.user.agencyId
+   - Emits event: 'client_asset.created' (see Prompt 8 for event system)
+   - Returns created asset with joined type/status/owner
+
+3. PUT /api/clients/:clientId/assets/:assetId
+   - Auth: requireAuth + requirePermission('clients.canEdit')
+   - Verifies client ownership + asset belongs to client
+   - Allows updating: name, linkUrl, assetTypeId, assetStatusId, ownerStaffId, portalVisible
+   - Detects specific field changes and emits appropriate events:
+     - Status changed → 'client_asset.status_changed' (payload: oldStatusId, newStatusId)
+     - Owner changed → 'client_asset.owner_changed' (payload: oldOwnerId, newOwnerId)
+     - Link changed → 'client_asset.link_updated'
+     - portalVisible changed → 'client_asset.portal_visibility_changed'
+   - Returns updated asset with joins
+
+4. DELETE /api/clients/:clientId/assets/:assetId
+   - Auth: requireAuth + requirePermission('clients.canEdit')
+   - HARD DELETE (this is a user-initiated action on their own data)
+   - Emits event: 'client_asset.deleted'
+   - Returns 204
+
+For now, the event emitters can be no-op placeholder functions (e.g., emitWorkflowEvent(eventName, payload)) — Prompt 8 will wire them up. Just ensure the call sites exist.
+
+Verify:
+- Existing client sub-resource routes (products, bundles, etc.) still work
+- Cross-agency access is blocked (try to GET another agency's client's assets → 404)
+- Validation rejects invalid type/status/owner IDs
