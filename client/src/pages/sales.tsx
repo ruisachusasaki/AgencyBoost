@@ -219,8 +219,16 @@ export default function Sales() {
   });
 
   // Fetch full details (incl. items) for the quote currently being viewed.
+  // NOTE: the default queryFn does NOT path-join queryKey segments — it only
+  // appends the second element if it's an object (as URL params). So we
+  // provide an explicit queryFn that hits /api/quotes/:id.
   const { data: viewingQuoteDetail, isLoading: isViewingQuoteLoading } = useQuery<any>({
     queryKey: ["/api/quotes", viewingQuoteId],
+    queryFn: async () => {
+      const res = await fetch(`/api/quotes/${viewingQuoteId}`, { credentials: "include" });
+      if (!res.ok) throw new Error(`Failed to load quote: ${res.status}`);
+      return res.json();
+    },
     enabled: !!viewingQuoteId,
     refetchOnWindowFocus: false,
   });
