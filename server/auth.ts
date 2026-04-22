@@ -1,7 +1,33 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from './db';
 import { staff, userRoles, roles, permissions, granularPermissions } from '@shared/schema';
-import { eq, and, or } from 'drizzle-orm';
+import { eq, and, or, inArray } from 'drizzle-orm';
+
+/**
+ * Maps legacy `module` permission checks to the granular permission keys
+ * that the UI actually toggles. When `requirePermission('products', 'canView')`
+ * is called and the user has no rows in `permissions` or `granular_permissions`
+ * with module='products', we fall back to checking these keys.
+ *
+ * This bridges the gap between the legacy module/action permission model
+ * (used by older API middleware) and the granular keyed permission model
+ * (used by the UI checkboxes in Settings > Roles & Permissions).
+ */
+const MODULE_TO_GRANULAR_FALLBACK: Record<string, { canView: string[]; canCreate: string[]; canEdit: string[]; canDelete: string[]; canManage: string[] }> = {
+  products: {
+    // View: anyone with either the settings catalog view OR the client-products
+    // view permission can read the product catalog (needed to assign products
+    // to clients). `*.manage` implies view.
+    canView: ['settings.products.view', 'settings.products.manage', 'clients.products.view', 'clients.products.manage'],
+    // Write actions on the settings catalog are restricted to `settings.products.manage`
+    // only. `clients.products.manage` controls client-product assignment, not
+    // catalog mutation, so it must NOT grant catalog write access.
+    canCreate: ['settings.products.manage'],
+    canEdit: ['settings.products.manage'],
+    canDelete: ['settings.products.manage'],
+    canManage: ['settings.products.manage'],
+  },
+};
 
 /**
  * AUTHENTICATION & AUTHORIZATION MIDDLEWARE
@@ -225,6 +251,31 @@ export async function hasPermission(
       
       for (const perm of rolePermissions) {
         if (perm[permission] === true) {
+          setCachedPermission(cacheKey, true);
+          return true;
+        }
+      }
+    }
+    
+    // Fallback: check granular UI keys mapped to this module/action.
+    // This bridges the legacy module/action permission gates (used by older
+    // API middleware) to the granular keys that the UI checkboxes actually toggle.
+    const fallbackKeys = MODULE_TO_GRANULAR_FALLBACK[normalizedModule]?.[permission];
+    if (fallbackKeys && fallbackKeys.length > 0) {
+      for (const userRole of userRolesList) {
+        const matches = await db
+          .select({ id: granularPermissions.id })
+          .from(granularPermissions)
+          .where(
+            and(
+              eq(granularPermissions.roleId, userRole.roleId),
+              inArray(granularPermissions.permissionKey, fallbackKeys),
+              eq(granularPermissions.enabled, true)
+            )
+          )
+          .limit(1);
+
+        if (matches.length > 0) {
           setCachedPermission(cacheKey, true);
           return true;
         }

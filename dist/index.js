@@ -10135,10 +10135,10 @@ var init_storage = __esm({
       async updateTasksStatusForClient(clientId, targetStatus, filters) {
         const { db: db2 } = await Promise.resolve().then(() => (init_db(), db_exports));
         const { tasks: tasks2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-        const { eq: eq31, and: and28, inArray: inArray9, notInArray } = await import("drizzle-orm");
+        const { eq: eq31, and: and28, inArray: inArray10, notInArray } = await import("drizzle-orm");
         const conditions = [eq31(tasks2.clientId, clientId)];
         if (filters?.includeStatuses && filters.includeStatuses.length > 0) {
-          conditions.push(inArray9(tasks2.status, filters.includeStatuses));
+          conditions.push(inArray10(tasks2.status, filters.includeStatuses));
         }
         if (filters?.excludeStatuses && filters.excludeStatuses.length > 0) {
           conditions.push(notInArray(tasks2.status, filters.excludeStatuses));
@@ -10147,7 +10147,7 @@ var init_storage = __esm({
           conditions.push(eq31(tasks2.assignedTo, filters.assignedTo));
         }
         if (filters?.priorities && filters.priorities.length > 0) {
-          conditions.push(inArray9(tasks2.priority, filters.priorities));
+          conditions.push(inArray10(tasks2.priority, filters.priorities));
         }
         const result = await db2.update(tasks2).set({
           status: targetStatus,
@@ -20391,7 +20391,7 @@ __export(googleCalendarSync_exports, {
   getGoogleCalendarBusyTimes: () => getGoogleCalendarBusyTimes,
   syncUserCalendar: () => syncUserCalendar
 });
-import { eq as eq22, and as and19, or as or7, not, inArray as inArray8 } from "drizzle-orm";
+import { eq as eq22, and as and19, or as or7, not, inArray as inArray9 } from "drizzle-orm";
 async function syncUserCalendar(userId2, calendarId = "primary") {
   console.log("[syncUserCalendar] Starting sync for user:", userId2, "calendar:", calendarId);
   const result = {
@@ -20539,7 +20539,7 @@ async function pullGoogleEvents(calendar, connection) {
     const eventsToDelete = Array.from(existingEventMap.values());
     if (eventsToDelete.length > 0) {
       const eventIdsToDelete = eventsToDelete.map((e) => e.id);
-      await db.delete(calendarEvents).where(inArray8(calendarEvents.id, eventIdsToDelete));
+      await db.delete(calendarEvents).where(inArray9(calendarEvents.id, eventIdsToDelete));
       result.eventsDeleted = eventsToDelete.length;
     }
     console.log(`[pullGoogleEvents] Sync complete: Created ${result.eventsCreated}, Updated ${result.eventsUpdated}, Deleted ${result.eventsDeleted} events`);
@@ -24005,7 +24005,7 @@ import { google as google4 } from "googleapis";
 import twilio from "twilio";
 import mailgun2 from "mailgun.js";
 import formData2 from "form-data";
-import { eq as eq20, like as like2, ilike as ilike3, or as or6, and as and18, asc as asc5, desc as desc5, sql as sql11, inArray as inArray7, isNotNull as isNotNull2, isNull as isNull3, gt as gt2, gte as gte2, lt as lt3, lte as lte3 } from "drizzle-orm";
+import { eq as eq20, like as like2, ilike as ilike3, or as or6, and as and18, asc as asc5, desc as desc5, sql as sql11, inArray as inArray8, isNotNull as isNotNull2, isNull as isNull3, gt as gt2, gte as gte2, lt as lt3, lte as lte3 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 // server/permissionAuditService.ts
@@ -24629,7 +24629,22 @@ function generateConditionSummary(conditions) {
 // server/auth.ts
 init_db();
 init_schema();
-import { eq as eq18, and as and16, or as or4 } from "drizzle-orm";
+import { eq as eq18, and as and16, or as or4, inArray as inArray7 } from "drizzle-orm";
+var MODULE_TO_GRANULAR_FALLBACK = {
+  products: {
+    // View: anyone with either the settings catalog view OR the client-products
+    // view permission can read the product catalog (needed to assign products
+    // to clients). `*.manage` implies view.
+    canView: ["settings.products.view", "settings.products.manage", "clients.products.view", "clients.products.manage"],
+    // Write actions on the settings catalog are restricted to `settings.products.manage`
+    // only. `clients.products.manage` controls client-product assignment, not
+    // catalog mutation, so it must NOT grant catalog write access.
+    canCreate: ["settings.products.manage"],
+    canEdit: ["settings.products.manage"],
+    canDelete: ["settings.products.manage"],
+    canManage: ["settings.products.manage"]
+  }
+};
 var IS_DEVELOPMENT = process.env.NODE_ENV === "development";
 var MOCK_ADMIN_USER_ID = "00000000-0000-4000-8000-000000000000";
 var PERMISSION_CACHE_TTL = 3e4;
@@ -24748,6 +24763,22 @@ async function hasPermission(userId2, module, permission) {
       );
       for (const perm of rolePermissions) {
         if (perm[permission] === true) {
+          setCachedPermission(cacheKey, true);
+          return true;
+        }
+      }
+    }
+    const fallbackKeys = MODULE_TO_GRANULAR_FALLBACK[normalizedModule]?.[permission];
+    if (fallbackKeys && fallbackKeys.length > 0) {
+      for (const userRole of userRolesList) {
+        const matches = await db.select({ id: granularPermissions.id }).from(granularPermissions).where(
+          and16(
+            eq18(granularPermissions.roleId, userRole.roleId),
+            inArray7(granularPermissions.permissionKey, fallbackKeys),
+            eq18(granularPermissions.enabled, true)
+          )
+        ).limit(1);
+        if (matches.length > 0) {
           setCachedPermission(cacheKey, true);
           return true;
         }
@@ -26336,7 +26367,7 @@ AgencyBoost CRM`
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and18(
-              inArray7(granularPermissions.roleId, roleIds),
+              inArray8(granularPermissions.roleId, roleIds),
               eq20(granularPermissions.permissionKey, "reports.cost_per_client.view"),
               eq20(granularPermissions.enabled, true)
             )
@@ -26403,7 +26434,7 @@ AgencyBoost CRM`
           lastName: staff.lastName,
           annualSalary: staff.annualSalary,
           department: staff.department
-        }).from(staff).where(inArray7(staff.id, allUserIds));
+        }).from(staff).where(inArray8(staff.id, allUserIds));
         const reportFromDate = /* @__PURE__ */ new Date(dateFrom + "T00:00:00");
         const reportToDate = /* @__PURE__ */ new Date(dateTo + "T00:00:00");
         const reportDays = Math.max(1, Math.round((reportToDate.getTime() - reportFromDate.getTime()) / (1e3 * 60 * 60 * 24)) + 1);
@@ -26447,7 +26478,7 @@ AgencyBoost CRM`
       if (allClientIds.size > 0) {
         const realClientIds = [...allClientIds].filter((id) => id !== "__no_client__");
         if (realClientIds.length > 0) {
-          const clientRows = await db.select({ id: clients.id, company: clients.company, name: clients.name }).from(clients).where(inArray7(clients.id, realClientIds));
+          const clientRows = await db.select({ id: clients.id, company: clients.company, name: clients.name }).from(clients).where(inArray8(clients.id, realClientIds));
           for (const c of clientRows) {
             clientNames[c.id] = c.company || c.name || c.id;
           }
@@ -26537,7 +26568,7 @@ AgencyBoost CRM`
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and18(
-              inArray7(granularPermissions.roleId, roleIds),
+              inArray8(granularPermissions.roleId, roleIds),
               eq20(granularPermissions.permissionKey, "reports.timesheet.view_all"),
               eq20(granularPermissions.enabled, true)
             )
@@ -26589,7 +26620,7 @@ AgencyBoost CRM`
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and18(
-              inArray7(granularPermissions.roleId, roleIds),
+              inArray8(granularPermissions.roleId, roleIds),
               eq20(granularPermissions.permissionKey, "reports.timesheet.edit_all"),
               eq20(granularPermissions.enabled, true)
             )
@@ -26656,7 +26687,7 @@ AgencyBoost CRM`
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and18(
-              inArray7(granularPermissions.roleId, roleIds),
+              inArray8(granularPermissions.roleId, roleIds),
               eq20(granularPermissions.permissionKey, "reports.timesheet.edit_all"),
               eq20(granularPermissions.enabled, true)
             )
@@ -30473,7 +30504,7 @@ AgencyBoost CRM`
       let deletedCount = 0;
       const errors = [];
       try {
-        const selectedTasks = await db.select().from(tasks).where(inArray7(tasks.id, taskIds));
+        const selectedTasks = await db.select().from(tasks).where(inArray8(tasks.id, taskIds));
         for (const task of selectedTasks) {
           const isTaskOwner = task.assignedTo === userId2;
           if (!canDelete && !isTaskOwner) {
@@ -30488,7 +30519,7 @@ AgencyBoost CRM`
         const allTasksToDelete = new Set(taskIds);
         const findAllDescendants = async (parentIds) => {
           if (parentIds.length === 0) return;
-          const children = await db.select({ id: tasks.id, parentTaskId: tasks.parentTaskId }).from(tasks).where(inArray7(tasks.parentTaskId, parentIds));
+          const children = await db.select({ id: tasks.id, parentTaskId: tasks.parentTaskId }).from(tasks).where(inArray8(tasks.parentTaskId, parentIds));
           const childIds = [];
           for (const child of children) {
             if (!allTasksToDelete.has(child.id)) {
@@ -30501,7 +30532,7 @@ AgencyBoost CRM`
           }
         };
         await findAllDescendants(taskIds);
-        const tasksToDelete = await db.select().from(tasks).where(inArray7(tasks.id, Array.from(allTasksToDelete))).orderBy(desc5(tasks.level));
+        const tasksToDelete = await db.select().from(tasks).where(inArray8(tasks.id, Array.from(allTasksToDelete))).orderBy(desc5(tasks.level));
         console.log(`Total tasks to delete (including descendants): ${tasksToDelete.length}`);
         for (const task of tasksToDelete) {
           try {
@@ -31369,7 +31400,7 @@ AgencyBoost CRM`
             dueDate: tasks.dueDate,
             completedAt: tasks.completedAt
           }
-        }).from(taskDependencies).innerJoin(tasks, eq20(taskDependencies.dependsOnTaskId, tasks.id)).where(inArray7(taskDependencies.taskId, limitedIds)).orderBy(asc5(taskDependencies.createdAt)),
+        }).from(taskDependencies).innerJoin(tasks, eq20(taskDependencies.dependsOnTaskId, tasks.id)).where(inArray8(taskDependencies.taskId, limitedIds)).orderBy(asc5(taskDependencies.createdAt)),
         db.select({
           id: taskDependencies.id,
           taskId: taskDependencies.taskId,
@@ -31385,7 +31416,7 @@ AgencyBoost CRM`
             dueDate: tasks.dueDate,
             completedAt: tasks.completedAt
           }
-        }).from(taskDependencies).innerJoin(tasks, eq20(taskDependencies.taskId, tasks.id)).where(inArray7(taskDependencies.dependsOnTaskId, limitedIds)).orderBy(asc5(taskDependencies.createdAt))
+        }).from(taskDependencies).innerJoin(tasks, eq20(taskDependencies.taskId, tasks.id)).where(inArray8(taskDependencies.dependsOnTaskId, limitedIds)).orderBy(asc5(taskDependencies.createdAt))
       ]);
       const result = {};
       for (const id of limitedIds) {
@@ -34193,13 +34224,13 @@ AgencyBoost CRM`
         (async () => {
           try {
             const { staff: staff3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-            const { inArray: inArray9 } = await import("drizzle-orm");
+            const { inArray: inArray10 } = await import("drizzle-orm");
             const mentionedStaff = await db2.select({
               id: staff3.id,
               firstName: staff3.firstName,
               lastName: staff3.lastName,
               email: staff3.email
-            }).from(staff3).where(inArray9(staff3.id, mentions));
+            }).from(staff3).where(inArray10(staff3.id, mentions));
             for (const staffMember of mentionedStaff) {
               try {
                 await db2.insert(notifications2).values({
@@ -34293,13 +34324,13 @@ AgencyBoost CRM`
         (async () => {
           try {
             const { staff: staff3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-            const { inArray: inArray9 } = await import("drizzle-orm");
+            const { inArray: inArray10 } = await import("drizzle-orm");
             const mentionedStaff = await db2.select({
               id: staff3.id,
               firstName: staff3.firstName,
               lastName: staff3.lastName,
               email: staff3.email
-            }).from(staff3).where(inArray9(staff3.id, mentions));
+            }).from(staff3).where(inArray10(staff3.id, mentions));
             for (const staffMember of mentionedStaff) {
               try {
                 await db2.insert(notifications2).values({
@@ -36990,7 +37021,7 @@ AgencyBoost CRM`
       const leadIds = clientDeals.map((d) => d.leadId).filter(Boolean);
       let leadQuotes = [];
       if (leadIds.length > 0) {
-        leadQuotes = await db.select().from(quotes).where(inArray7(quotes.leadId, leadIds));
+        leadQuotes = await db.select().from(quotes).where(inArray8(quotes.leadId, leadIds));
       }
       const allQuotes = [...directQuotes];
       for (const lq of leadQuotes) {
@@ -39798,7 +39829,7 @@ ${appointment.description || ""}
       if (roleIds.length > 0) {
         const grantedPerms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
           and18(
-            inArray7(granularPermissions.roleId, roleIds),
+            inArray8(granularPermissions.roleId, roleIds),
             eq20(granularPermissions.enabled, true)
           )
         );
@@ -39819,7 +39850,7 @@ ${appointment.description || ""}
       const { taskId } = req.params;
       const commentsData = await db.select().from(taskComments).where(eq20(taskComments.taskId, taskId)).orderBy(asc5(taskComments.createdAt));
       const commentIds = commentsData.map((c) => c.id);
-      const filesData = commentIds.length > 0 ? await db.select().from(commentFiles).where(inArray7(commentFiles.commentId, commentIds)) : [];
+      const filesData = commentIds.length > 0 ? await db.select().from(commentFiles).where(inArray8(commentFiles.commentId, commentIds)) : [];
       const filesByComment = filesData.reduce((acc, file) => {
         if (!acc[file.commentId]) acc[file.commentId] = [];
         acc[file.commentId].push(file);
@@ -45115,7 +45146,7 @@ ${appointment.description || ""}
       const questionIds = questions.map((q) => q.id);
       let options = [];
       if (questionIds.length > 0) {
-        options = await db.select().from(taskIntakeOptions).where(inArray7(taskIntakeOptions.questionId, questionIds)).orderBy(asc5(taskIntakeOptions.order));
+        options = await db.select().from(taskIntakeOptions).where(inArray8(taskIntakeOptions.questionId, questionIds)).orderBy(asc5(taskIntakeOptions.order));
       }
       const logicRules = await db.select().from(taskIntakeLogicRules).where(and18(eq20(taskIntakeLogicRules.formId, activeForm.id), eq20(taskIntakeLogicRules.enabled, true))).orderBy(asc5(taskIntakeLogicRules.order));
       const assignmentRules = await db.select().from(taskIntakeAssignmentRules).where(and18(eq20(taskIntakeAssignmentRules.formId, activeForm.id), eq20(taskIntakeAssignmentRules.enabled, true))).orderBy(desc5(taskIntakeAssignmentRules.priority));
@@ -45161,11 +45192,11 @@ ${appointment.description || ""}
       if (sectionIds.length > 0) {
         questions = await db.select().from(taskIntakeQuestions).where(and18(
           eq20(taskIntakeQuestions.formId, activeForm.id),
-          inArray7(taskIntakeQuestions.sectionId, sectionIds)
+          inArray8(taskIntakeQuestions.sectionId, sectionIds)
         )).orderBy(asc5(taskIntakeQuestions.order));
         const questionIds = questions.map((q) => q.id);
         if (questionIds.length > 0) {
-          options = await db.select().from(taskIntakeOptions).where(inArray7(taskIntakeOptions.questionId, questionIds)).orderBy(asc5(taskIntakeOptions.order));
+          options = await db.select().from(taskIntakeOptions).where(inArray8(taskIntakeOptions.questionId, questionIds)).orderBy(asc5(taskIntakeOptions.order));
         }
       }
       const sectionsWithQuestions = sections.map((section) => ({
@@ -45221,7 +45252,7 @@ ${appointment.description || ""}
       const questionIds = questions.map((q) => q.id);
       let options = [];
       if (questionIds.length > 0) {
-        options = await db.select().from(taskIntakeOptions).where(inArray7(taskIntakeOptions.questionId, questionIds)).orderBy(asc5(taskIntakeOptions.order));
+        options = await db.select().from(taskIntakeOptions).where(inArray8(taskIntakeOptions.questionId, questionIds)).orderBy(asc5(taskIntakeOptions.order));
       }
       const logicRules = await db.select().from(taskIntakeLogicRules).where(eq20(taskIntakeLogicRules.formId, formId)).orderBy(asc5(taskIntakeLogicRules.order));
       const assignmentRules = await db.select().from(taskIntakeAssignmentRules).where(eq20(taskIntakeAssignmentRules.formId, formId)).orderBy(desc5(taskIntakeAssignmentRules.priority));
@@ -45515,7 +45546,7 @@ ${appointment.description || ""}
         questionType: taskIntakeQuestions.questionType
       }).from(taskIntakeQuestions).where(sql11`${taskIntakeQuestions.internalLabel} LIKE 'TRIGGER%'`).orderBy(asc5(taskIntakeQuestions.order));
       const questionIds = triggerQuestions.map((q) => q.id);
-      const allOptions = questionIds.length > 0 ? await db.select().from(taskIntakeOptions).where(inArray7(taskIntakeOptions.questionId, questionIds)).orderBy(asc5(taskIntakeOptions.order)) : [];
+      const allOptions = questionIds.length > 0 ? await db.select().from(taskIntakeOptions).where(inArray8(taskIntakeOptions.questionId, questionIds)).orderBy(asc5(taskIntakeOptions.order)) : [];
       const allDepartments = await db.select({ id: departments.id, name: departments.name }).from(departments).orderBy(asc5(departments.name));
       const result = triggerQuestions.map((q) => {
         if (q.questionType === "department") {
@@ -45700,7 +45731,7 @@ ${appointment.description || ""}
       const { sectionId } = req.params;
       const questions = await db.select().from(taskIntakeQuestions).where(eq20(taskIntakeQuestions.sectionId, sectionId)).orderBy(asc5(taskIntakeQuestions.order));
       const questionIds = questions.map((q) => q.id);
-      const allOptions = questionIds.length > 0 ? await db.select().from(taskIntakeOptions).where(inArray7(taskIntakeOptions.questionId, questionIds)).orderBy(asc5(taskIntakeOptions.order)) : [];
+      const allOptions = questionIds.length > 0 ? await db.select().from(taskIntakeOptions).where(inArray8(taskIntakeOptions.questionId, questionIds)).orderBy(asc5(taskIntakeOptions.order)) : [];
       const questionsWithOptions = questions.map((q) => ({
         ...q,
         options: allOptions.filter((opt) => opt.questionId === q.id)
@@ -48762,10 +48793,10 @@ ${appointment.description || ""}
         console.log("\u{1F4CA} First meeting:", meetings[0]);
       }
       const meetingIds = meetings.map((m) => m.id);
-      const talkingPoints = meetingIds.length > 0 ? await db.select().from(oneOnOneTalkingPoints).where(inArray7(oneOnOneTalkingPoints.meetingId, meetingIds)) : [];
-      const actionItems = meetingIds.length > 0 ? await db.select().from(oneOnOneActionItems).where(inArray7(oneOnOneActionItems.meetingId, meetingIds)) : [];
-      const goals = meetingIds.length > 0 ? await db.select().from(oneOnOneGoals).where(inArray7(oneOnOneGoals.meetingId, meetingIds)) : [];
-      const kpiStatuses = meetingIds.length > 0 ? await db.select().from(oneOnOneMeetingKpiStatuses).where(inArray7(oneOnOneMeetingKpiStatuses.meetingId, meetingIds)) : [];
+      const talkingPoints = meetingIds.length > 0 ? await db.select().from(oneOnOneTalkingPoints).where(inArray8(oneOnOneTalkingPoints.meetingId, meetingIds)) : [];
+      const actionItems = meetingIds.length > 0 ? await db.select().from(oneOnOneActionItems).where(inArray8(oneOnOneActionItems.meetingId, meetingIds)) : [];
+      const goals = meetingIds.length > 0 ? await db.select().from(oneOnOneGoals).where(inArray8(oneOnOneGoals.meetingId, meetingIds)) : [];
+      const kpiStatuses = meetingIds.length > 0 ? await db.select().from(oneOnOneMeetingKpiStatuses).where(inArray8(oneOnOneMeetingKpiStatuses.meetingId, meetingIds)) : [];
       const performanceByUser = /* @__PURE__ */ new Map();
       for (const meeting of meetings) {
         const userId2 = meeting.directReportId;
@@ -51367,7 +51398,7 @@ ${appointment.description || ""}
       if (completedLessonIds.length > 0) {
         const lessonsData = await db.select({
           videoDuration: trainingLessons.videoDuration
-        }).from(trainingLessons).where(inArray7(trainingLessons.id, completedLessonIds));
+        }).from(trainingLessons).where(inArray8(trainingLessons.id, completedLessonIds));
         totalTimeSpentMinutes = Math.round(
           lessonsData.reduce((sum, l) => sum + (l.videoDuration || 0), 0) / 60
         );
@@ -52485,7 +52516,7 @@ ${appointment.description || ""}
         department: staff.department
       }).from(staff).innerJoin(userRoles, eq20(staff.id, userRoles.userId)).where(
         and18(
-          inArray7(userRoles.roleId, managerRoleIds),
+          inArray8(userRoles.roleId, managerRoleIds),
           eq20(staff.isActive, true)
         )
       ).groupBy(staff.id, staff.firstName, staff.lastName, staff.email, staff.department);
@@ -52508,7 +52539,7 @@ ${appointment.description || ""}
             department: staff.department
           }).from(staff).where(
             and18(
-              inArray7(staff.id, capacitySetting.notifyUserIds),
+              inArray8(staff.id, capacitySetting.notifyUserIds),
               eq20(staff.isActive, true)
             )
           );
@@ -53211,13 +53242,13 @@ ${appointment.description || ""}
       if (status && typeof status === "string") {
         const statusList = status.split(",").filter((s) => s.trim());
         if (statusList.length > 0) {
-          filterConditions.push(inArray7(tasks.status, statusList));
+          filterConditions.push(inArray8(tasks.status, statusList));
         }
       }
       if (priority && typeof priority === "string") {
         const priorityList = priority.split(",").filter((p) => p.trim());
         if (priorityList.length > 0) {
-          filterConditions.push(inArray7(tasks.priority, priorityList));
+          filterConditions.push(inArray8(tasks.priority, priorityList));
         }
       }
       if (projectId && typeof projectId === "string") {
@@ -54828,14 +54859,14 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
           lastName: staff.lastName,
           email: staff.email,
           department: staff.department
-        }).from(staff).innerJoin(userRoles, eq20(userRoles.userId, staff.id)).where(and18(eq20(staff.isActive, true), inArray7(userRoles.roleId, salesRoleIds))) : [];
+        }).from(staff).innerJoin(userRoles, eq20(userRoles.userId, staff.id)).where(and18(eq20(staff.isActive, true), inArray8(userRoles.roleId, salesRoleIds))) : [];
         const leadAssignedStaff = staffIdsWithLeads.length > 0 ? await db.select({
           id: staff.id,
           firstName: staff.firstName,
           lastName: staff.lastName,
           email: staff.email,
           department: staff.department
-        }).from(staff).where(and18(eq20(staff.isActive, true), inArray7(staff.id, staffIdsWithLeads))) : [];
+        }).from(staff).where(and18(eq20(staff.isActive, true), inArray8(staff.id, staffIdsWithLeads))) : [];
         const staffMap = /* @__PURE__ */ new Map();
         [...salesStaff, ...leadAssignedStaff].forEach((s) => staffMap.set(s.id, s));
         staffMembers = Array.from(staffMap.values());
@@ -55298,7 +55329,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
         if (roleIds.length > 0) {
           const grantedPerms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and18(
-              inArray7(granularPermissions.roleId, roleIds),
+              inArray8(granularPermissions.roleId, roleIds),
               eq20(granularPermissions.enabled, true)
             )
           );
@@ -56194,7 +56225,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
         if (statusValues.length === 1) {
           conditions.push(eq20(tickets.status, statusValues[0]));
         } else if (statusValues.length > 1) {
-          conditions.push(inArray7(tickets.status, statusValues));
+          conditions.push(inArray8(tickets.status, statusValues));
         }
       }
       if (type && type !== "all") conditions.push(eq20(tickets.type, type));
@@ -56376,7 +56407,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
         }
       }
       const userIds = Array.from(userStatsMap.keys());
-      const staffRows = userIds.length > 0 ? await db.select({ id: staff.id, firstName: staff.firstName, lastName: staff.lastName }).from(staff).where(inArray7(staff.id, userIds)) : [];
+      const staffRows = userIds.length > 0 ? await db.select({ id: staff.id, firstName: staff.firstName, lastName: staff.lastName }).from(staff).where(inArray8(staff.id, userIds)) : [];
       const staffNameMap = /* @__PURE__ */ new Map();
       for (const s of staffRows) {
         staffNameMap.set(s.id, `${s.firstName || ""} ${s.lastName || ""}`.trim() || "Unknown");
@@ -56468,7 +56499,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
         if (statusValues.length === 1) {
           conditions.push(eq20(tickets.status, statusValues[0]));
         } else if (statusValues.length > 1) {
-          conditions.push(inArray7(tickets.status, statusValues));
+          conditions.push(inArray8(tickets.status, statusValues));
         }
       }
       if (type) conditions.push(eq20(tickets.type, type));
@@ -57024,7 +57055,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       const entryClientIds = [...new Set(rawEntries.map((e) => e.clientId).filter(Boolean))];
       const clientNameMap = {};
       if (entryClientIds.length > 0) {
-        const cRows = await db.select({ id: clients.id, companyName: clients.company }).from(clients).where(inArray7(clients.id, entryClientIds));
+        const cRows = await db.select({ id: clients.id, companyName: clients.company }).from(clients).where(inArray8(clients.id, entryClientIds));
         for (const c of cRows) {
           clientNameMap[c.id] = c.companyName;
         }
@@ -57053,7 +57084,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and18(
-              inArray7(granularPermissions.roleId, roleIds),
+              inArray8(granularPermissions.roleId, roleIds),
               or6(
                 eq20(granularPermissions.permissionKey, "call_center.time_tracking.view_all"),
                 eq20(granularPermissions.permissionKey, "reports.call_center_cost.view")
@@ -57085,13 +57116,13 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       const clientLk = {};
       const userLk = {};
       if (allClientIds2.length > 0) {
-        const cRows = await db.select({ id: clients.id, companyName: clients.company }).from(clients).where(inArray7(clients.id, allClientIds2));
+        const cRows = await db.select({ id: clients.id, companyName: clients.company }).from(clients).where(inArray8(clients.id, allClientIds2));
         for (const c of cRows) {
           clientLk[c.id] = c.companyName;
         }
       }
       if (allUserIds2.length > 0) {
-        const uRows = await db.select({ id: staff.id, firstName: staff.firstName, lastName: staff.lastName, annualSalary: staff.annualSalary }).from(staff).where(inArray7(staff.id, allUserIds2));
+        const uRows = await db.select({ id: staff.id, firstName: staff.firstName, lastName: staff.lastName, annualSalary: staff.annualSalary }).from(staff).where(inArray8(staff.id, allUserIds2));
         for (const u of uRows) {
           userLk[u.id] = u;
         }
@@ -57123,7 +57154,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and18(
-              inArray7(granularPermissions.roleId, roleIds),
+              inArray8(granularPermissions.roleId, roleIds),
               eq20(granularPermissions.permissionKey, "call_center.time_tracking.add_time"),
               eq20(granularPermissions.enabled, true)
             )
@@ -57175,7 +57206,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and18(
-              inArray7(granularPermissions.roleId, roleIds),
+              inArray8(granularPermissions.roleId, roleIds),
               eq20(granularPermissions.permissionKey, "call_center.time_tracking.edit_time"),
               eq20(granularPermissions.enabled, true)
             )
@@ -57229,7 +57260,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and18(
-              inArray7(granularPermissions.roleId, roleIds),
+              inArray8(granularPermissions.roleId, roleIds),
               eq20(granularPermissions.permissionKey, "call_center.time_tracking.edit_time"),
               eq20(granularPermissions.enabled, true)
             )
@@ -57269,7 +57300,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and18(
-              inArray7(granularPermissions.roleId, roleIds),
+              inArray8(granularPermissions.roleId, roleIds),
               or6(
                 eq20(granularPermissions.permissionKey, "call_center.time_tracking.edit_time"),
                 eq20(granularPermissions.permissionKey, "call_center.time_tracking.add_time"),
@@ -57307,13 +57338,13 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       const cLk = {};
       const uLk = {};
       if (entryClientIds.length > 0) {
-        const cRows = await db.select({ id: clients.id, companyName: clients.company }).from(clients).where(inArray7(clients.id, entryClientIds));
+        const cRows = await db.select({ id: clients.id, companyName: clients.company }).from(clients).where(inArray8(clients.id, entryClientIds));
         for (const c of cRows) {
           cLk[c.id] = c.companyName;
         }
       }
       if (entryUserIds.length > 0) {
-        const uRows = await db.select({ id: staff.id, firstName: staff.firstName, lastName: staff.lastName }).from(staff).where(inArray7(staff.id, entryUserIds));
+        const uRows = await db.select({ id: staff.id, firstName: staff.firstName, lastName: staff.lastName }).from(staff).where(inArray8(staff.id, entryUserIds));
         for (const u of uRows) {
           uLk[u.id] = u;
         }
@@ -57353,7 +57384,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and18(
-              inArray7(granularPermissions.roleId, roleIds),
+              inArray8(granularPermissions.roleId, roleIds),
               eq20(granularPermissions.permissionKey, "reports.call_center_cost.view"),
               eq20(granularPermissions.enabled, true)
             )
@@ -57382,13 +57413,13 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       const costCLk = {};
       const costULk = {};
       if (costCIds.length > 0) {
-        const cRows = await db.select({ id: clients.id, companyName: clients.company }).from(clients).where(inArray7(clients.id, costCIds));
+        const cRows = await db.select({ id: clients.id, companyName: clients.company }).from(clients).where(inArray8(clients.id, costCIds));
         for (const c of cRows) {
           costCLk[c.id] = c.companyName;
         }
       }
       if (costUIds.length > 0) {
-        const uRows = await db.select({ id: staff.id, firstName: staff.firstName, lastName: staff.lastName, annualSalary: staff.annualSalary }).from(staff).where(inArray7(staff.id, costUIds));
+        const uRows = await db.select({ id: staff.id, firstName: staff.firstName, lastName: staff.lastName, annualSalary: staff.annualSalary }).from(staff).where(inArray8(staff.id, costUIds));
         for (const u of uRows) {
           costULk[u.id] = u;
         }
@@ -57856,7 +57887,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       if (!isAdmin) {
         const reportIds = directReports.map((r) => r.id);
         if (reportIds.length > 0) {
-          conditions.push(inArray7(onboardingInstances.staffId, reportIds));
+          conditions.push(inArray8(onboardingInstances.staffId, reportIds));
         } else {
           return res.json([]);
         }
@@ -57865,7 +57896,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
         const deptStaff = await db.select({ id: staff.id }).from(staff).where(eq20(staff.department, teamIdFilter));
         const deptIds = deptStaff.map((s) => s.id);
         if (deptIds.length > 0) {
-          conditions.push(inArray7(onboardingInstances.staffId, deptIds));
+          conditions.push(inArray8(onboardingInstances.staffId, deptIds));
         } else {
           return res.json([]);
         }
