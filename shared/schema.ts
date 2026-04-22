@@ -6005,3 +6005,72 @@ export const insertStickyNoteSchema = createInsertSchema(stickyNotes).omit({
 });
 export type StickyNote = typeof stickyNotes.$inferSelect;
 export type InsertStickyNote = z.infer<typeof insertStickyNoteSchema>;
+
+// ============================================================================
+// Asset Library
+// ----------------------------------------------------------------------------
+// Single-tenant today, future-proofed for multi-tenancy. Every row carries
+// `agencyId` (default 1 = Media Optimizers, LLC). When multi-tenancy lands,
+// add an `agencies` table with id=1 as the first row, then add the FK
+// constraint — no data migration required.
+// ============================================================================
+
+export const assetTypes = pgTable("asset_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agencyId: integer("agency_id").notNull().default(1),
+  name: text("name").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqAgencyName: unique().on(table.agencyId, table.name),
+}));
+
+export const assetStatuses = pgTable("asset_statuses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agencyId: integer("agency_id").notNull().default(1),
+  name: text("name").notNull(),
+  color: varchar("color", { length: 16 }).notNull().default("#6B7280"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqAgencyName: unique().on(table.agencyId, table.name),
+}));
+
+export const assets = pgTable("assets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agencyId: integer("agency_id").notNull().default(1),
+  name: text("name").notNull(),
+  typeId: varchar("type_id").references(() => assetTypes.id, { onDelete: "set null" }),
+  statusId: varchar("status_id").references(() => assetStatuses.id, { onDelete: "set null" }),
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: "set null" }),
+  description: text("description"),
+  fileUrl: text("file_url"),
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAssetTypeSchema = createInsertSchema(assetTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const insertAssetStatusSchema = createInsertSchema(assetStatuses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const insertAssetSchema = createInsertSchema(assets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AssetType = typeof assetTypes.$inferSelect;
+export type InsertAssetType = z.infer<typeof insertAssetTypeSchema>;
+export type AssetStatus = typeof assetStatuses.$inferSelect;
+export type InsertAssetStatus = z.infer<typeof insertAssetStatusSchema>;
+export type Asset = typeof assets.$inferSelect;
+export type InsertAsset = z.infer<typeof insertAssetSchema>;

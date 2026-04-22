@@ -596,6 +596,22 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  // POST /api/admin/backfill-asset-defaults - Seed default Asset Types & Statuses
+  // for every agency. Idempotent: skips agencies that already have defaults.
+  // Single-tenant today; ready for multi-tenancy when the agencies table exists.
+  // NOTE: When new-agency creation is added, call seedAssetDefaultsForAgency(newAgencyId)
+  // from that creation flow so new agencies get defaults automatically.
+  app.post("/api/admin/backfill-asset-defaults", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { backfillAssetDefaultsForAllAgencies } = await import("./services/assetDefaultsSeeder");
+      const result = await backfillAssetDefaultsForAllAgencies();
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error("[backfill-asset-defaults] error:", error);
+      res.status(500).json({ error: "Failed to backfill asset defaults", message: error?.message });
+    }
+  });
+
   // POST /api/admin/cleanup-orphaned-auth - Clean up orphaned auth records so emails can be reused
   app.post("/api/admin/cleanup-orphaned-auth", requireAuth(), requireAdmin(), async (req, res) => {
     try {

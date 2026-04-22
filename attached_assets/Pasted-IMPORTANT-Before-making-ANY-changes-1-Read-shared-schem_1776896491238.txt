@@ -1,0 +1,41 @@
+IMPORTANT: Before making ANY changes:
+1. Read shared/schema.ts to confirm the three new tables from Prompt 1 exist
+2. Audit the existing agency/tenant creation flow — find where new agencies are created (likely in server/routes.ts or a dedicated service)
+3. Identify how other per-agency defaults are seeded (if any exist)
+
+DO NOT modify any existing seed logic or creation flows. ONLY ADD new hooks.
+
+Create a new file: server/services/assetDefaultsSeeder.ts
+
+This service exports two functions:
+
+1. seedAssetDefaultsForAgency(agencyId: number)
+   - Creates the default Asset Types for the given agency:
+     - Strategy (sortOrder: 1)
+     - Copy (sortOrder: 2)
+     - Creative (sortOrder: 3)
+     - Reports (sortOrder: 4)
+     - Client-Provided (sortOrder: 5)
+     - Other (sortOrder: 6)
+   - Creates the default Asset Statuses for the given agency:
+     - Approved (color: #10B981 green, sortOrder: 1)
+     - Client Approval (color: #F59E0B amber, sortOrder: 2)
+     - In Progress (color: #00C9C6 teal, sortOrder: 3)
+     - Needs Updates (color: #EF4444 red, sortOrder: 4)
+     - Archived (color: #6B7280 gray, sortOrder: 5)
+   - IDEMPOTENT: Check if defaults already exist for this agency before inserting (skip if any rows exist for that agencyId in either table)
+
+2. backfillAssetDefaultsForAllAgencies()
+   - Queries all existing agencies
+   - Calls seedAssetDefaultsForAgency() for each
+   - Idempotency from function 1 ensures this is safe to run multiple times
+
+Wire up:
+- Add a one-time call to backfillAssetDefaultsForAllAgencies() that can be triggered manually via a temporary admin-only route: POST /api/admin/backfill-asset-defaults (protected by requireAuth + admin check)
+- Hook seedAssetDefaultsForAgency() into the existing agency creation flow so new agencies get defaults automatically
+- DO NOT auto-run backfill on server startup — it should be a manual trigger
+
+Verify:
+- Existing agency creation still works
+- Backfill route creates defaults for Media O's agency
+- Running backfill twice does not create duplicates
