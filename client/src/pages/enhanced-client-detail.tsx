@@ -5177,10 +5177,21 @@ export default function EnhancedClientDetail() {
       let successCount = 0;
       let errorCount = 0;
       
+      const ccList = (emailData.cc || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const bccList = (emailData.bcc || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
       for (const recipient of recipients) {
         try {
           const response = await apiRequest('POST', '/api/communications/send-email', {
             to: recipient.email,
+            cc: ccList,
+            bcc: bccList,
             subject: emailData.subject,
             previewText: emailData.previewText,
             message: emailData.message,
@@ -7773,12 +7784,15 @@ export default function EnhancedClientDetail() {
                               <Label htmlFor="email-cc">CC</Label>
                               <Input
                                 id="email-cc"
-                                type="email"
+                                type="text"
                                 value={emailData.cc}
                                 onChange={(e) => handleEmailFieldChange('cc', e.target.value)}
-                                placeholder="cc@email.com"
+                                placeholder="cc1@email.com, cc2@email.com"
                                 data-testid="input-email-cc"
                               />
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Separate multiple addresses with commas.
+                              </p>
                             </div>
                           )}
                           
@@ -7787,12 +7801,15 @@ export default function EnhancedClientDetail() {
                               <Label htmlFor="email-bcc">BCC</Label>
                               <Input
                                 id="email-bcc"
-                                type="email"
+                                type="text"
                                 value={emailData.bcc}
                                 onChange={(e) => handleEmailFieldChange('bcc', e.target.value)}
-                                placeholder="bcc@email.com"
+                                placeholder="bcc1@email.com, bcc2@email.com"
                                 data-testid="input-email-bcc"
                               />
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Separate multiple addresses with commas.
+                              </p>
                             </div>
                           )}
                           

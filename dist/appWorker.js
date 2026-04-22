@@ -42846,7 +42846,16 @@ ${appointment.description || ""}
   app2.post("/api/communications/send-email", requireAuth(), requirePermission("clients", "canView"), async (req, res) => {
     try {
       console.log("CRM Email Send - Processing communication request");
-      const { to, subject, message, fromEmail, fromName, clientId } = req.body;
+      const { to, cc, bcc, subject, message, fromEmail, fromName, clientId } = req.body;
+      const normalizeAddressList = (val) => {
+        if (!val) return [];
+        if (Array.isArray(val)) {
+          return val.map((v) => String(v).trim()).filter(Boolean);
+        }
+        return String(val).split(",").map((s) => s.trim()).filter(Boolean);
+      };
+      const ccList = normalizeAddressList(cc);
+      const bccList = normalizeAddressList(bcc);
       if (!to || !subject || !message) {
         return res.status(400).json({
           message: "All fields are required: recipient email, subject, and message"
@@ -42893,6 +42902,8 @@ ${appointment.description || ""}
         text: processedMessage.replace(/<[^>]*>/g, "")
         // Strip HTML for plain text version
       };
+      if (ccList.length > 0) emailData.cc = ccList;
+      if (bccList.length > 0) emailData.bcc = bccList;
       const result = await mg.messages.create(integration.domain, emailData);
       console.log("MailGun send successful:", { id: result.id, status: result.status, message: result.message });
       let emailStatus = "sent";
