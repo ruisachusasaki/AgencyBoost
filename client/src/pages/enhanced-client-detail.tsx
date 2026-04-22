@@ -43,6 +43,8 @@ import RoadmapComments from "@/components/roadmap-comments";
 import { convertTextToHtml } from "@/components/rich-text-editor";
 import { Map } from "lucide-react";
 import ClientBillingTab from "@/components/client-billing-tab";
+import ClientAssetsTab from "@/components/client-assets-tab";
+import { Folder } from "lucide-react";
 
 // MergeTagSelector Component for Email and SMS
 function MergeTagSelector({ searchValue, onSearchChange, onSelectTag, customFields }: {
@@ -5993,7 +5995,7 @@ export default function EnhancedClientDetail() {
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="border-b border-gray-200">
-            <TabsList className="grid w-full grid-cols-8 bg-transparent border-0 rounded-none h-auto p-0">
+            <TabsList className="grid w-full grid-cols-9 bg-transparent border-0 rounded-none h-auto p-0">
               <TabsTrigger 
                 value="contact" 
                 className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 -mb-0.5"
@@ -6050,6 +6052,14 @@ export default function EnhancedClientDetail() {
               >
                 <Clock className="h-4 w-4" />
                 Recent Activity
+              </TabsTrigger>
+              <TabsTrigger
+                value="assets"
+                className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 -mb-0.5"
+                data-testid="tab-client-assets"
+              >
+                <Folder className="h-4 w-4" />
+                Client Assets
               </TabsTrigger>
             </TabsList>
           </div>
@@ -7180,6 +7190,10 @@ export default function EnhancedClientDetail() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="assets" className="space-y-6 mt-6">
+          {clientId && <ClientAssetsTab clientId={clientId} />}
         </TabsContent>
 
           <TabsContent value="communication" className="space-y-6 mt-6">
