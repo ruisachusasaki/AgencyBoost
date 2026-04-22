@@ -23,7 +23,7 @@ import {
   Monitor, FileX, User, Clock, Mail, Phone, Globe, MapPin, Calendar,
   PenTool, Palette, Hash, Heart, Star, Zap, Coffee, Lightbulb, Rocket,
   Shield, ShieldCheck, ExternalLink, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
-  Loader2, Image as ImageIcon, Paintbrush, X, Save
+  Loader2, Image as ImageIcon, Paintbrush, X, Save, Folder
 } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -2146,6 +2146,18 @@ export default function ClientsSettings() {
               <FileText className="h-4 w-4" />
               Client Onboarding Form
             </button>
+            <button
+              onClick={() => setActiveTab("clientAssets")}
+              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                activeTab === "clientAssets"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+              data-testid="tab-client-assets"
+            >
+              <Folder className="h-4 w-4" />
+              Client Assets
+            </button>
           </nav>
         </div>
 
@@ -2315,6 +2327,10 @@ export default function ClientsSettings() {
 
         {activeTab === "onboardingForm" && (
           <ClientOnboardingFormEditor />
+        )}
+
+        {activeTab === "clientAssets" && (
+          <ClientAssetsSection />
         )}
 
         {/* Create Section Dialog */}
