@@ -28,6 +28,7 @@ import {
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { RichTextEditor } from "@/components/rich-text-editor";
+import ClientAssetsSection from "@/components/settings/client-assets-section";
 import { ClientOnboardingFormEditor } from "@/components/client-onboarding-form-editor";
 
 // Icon mapping for client brief sections
@@ -2674,6 +2675,8 @@ export default function ClientsSettings() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <ClientAssetsSection />
     </div>
   );
 }
