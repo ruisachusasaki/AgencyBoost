@@ -6010,6 +6010,14 @@ export default function EnhancedClientDetail() {
                 <Zap className="h-4 w-4" />
                 Client Hub
               </TabsTrigger>
+              <TabsTrigger
+                value="assets"
+                className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 -mb-0.5"
+                data-testid="tab-client-assets"
+              >
+                <Folder className="h-4 w-4" />
+                Client Assets
+              </TabsTrigger>
               <TabsTrigger 
                 value="roadmap" 
                 className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 -mb-0.5"
@@ -6052,14 +6060,6 @@ export default function EnhancedClientDetail() {
               >
                 <Clock className="h-4 w-4" />
                 Recent Activity
-              </TabsTrigger>
-              <TabsTrigger
-                value="assets"
-                className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 -mb-0.5"
-                data-testid="tab-client-assets"
-              >
-                <Folder className="h-4 w-4" />
-                Client Assets
               </TabsTrigger>
             </TabsList>
           </div>

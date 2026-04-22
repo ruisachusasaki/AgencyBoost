@@ -6,7 +6,7 @@ import { z } from "zod";
 import { formatDistanceToNow, format as formatDate } from "date-fns";
 import {
   Plus, Search, ExternalLink, Pencil, Trash2, Eye, EyeOff,
-  MoreVertical, FileText, Loader2,
+  MoreVertical, FileText, Loader2, ArrowUp, ArrowDown, ArrowUpDown,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -211,6 +211,60 @@ export default function ClientAssetsTab({ clientId }: ClientAssetsTabProps) {
     });
   }, [assets, debouncedSearch, typeFilter, statusFilter, ownerFilter]);
 
+  // Sorting
+  type SortKey = "name" | "type" | "status" | "owner" | "portalVisible" | "updatedAt";
+  const [sortKey, setSortKey] = useState<SortKey>("updatedAt");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "updatedAt" ? "desc" : "asc");
+    }
+  };
+  const sortedAssets = useMemo(() => {
+    const arr = [...filteredAssets];
+    const dir = sortDir === "asc" ? 1 : -1;
+    const cmp = (a: any, b: any) => {
+      let av: any, bv: any;
+      switch (sortKey) {
+        case "name": av = a.name?.toLowerCase() ?? ""; bv = b.name?.toLowerCase() ?? ""; break;
+        case "type": av = a.type?.name?.toLowerCase() ?? ""; bv = b.type?.name?.toLowerCase() ?? ""; break;
+        case "status": av = a.status?.name?.toLowerCase() ?? ""; bv = b.status?.name?.toLowerCase() ?? ""; break;
+        case "owner": av = a.owner?.name?.toLowerCase() ?? ""; bv = b.owner?.name?.toLowerCase() ?? ""; break;
+        case "portalVisible": av = a.portalVisible ? 1 : 0; bv = b.portalVisible ? 1 : 0; break;
+        case "updatedAt": av = new Date(a.updatedAt).getTime(); bv = new Date(b.updatedAt).getTime(); break;
+      }
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    };
+    arr.sort(cmp);
+    return arr;
+  }, [filteredAssets, sortKey, sortDir]);
+
+  function SortableHead({ k, children, className }: { k: SortKey; children: React.ReactNode; className?: string }) {
+    const active = sortKey === k;
+    return (
+      <TableHead className={className}>
+        <button
+          type="button"
+          onClick={() => toggleSort(k)}
+          className="inline-flex items-center gap-1 font-medium hover:text-primary"
+          data-testid={`sort-${k}`}
+        >
+          {children}
+          {active ? (
+            sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+          ) : (
+            <ArrowUpDown className="h-3 w-3 text-gray-300" />
+          )}
+        </button>
+      </TableHead>
+    );
+  }
+
   // Modals
   const [editing, setEditing] = useState<ClientAssetRow | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -361,18 +415,18 @@ export default function ClientAssetsTab({ clientId }: ClientAssetsTabProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="w-16">Link</TableHead>
-                  <TableHead className="w-32">Type</TableHead>
-                  <TableHead className="w-32">Status</TableHead>
-                  <TableHead className="w-48">Owner</TableHead>
-                  <TableHead className="w-28">Portal Visible</TableHead>
-                  <TableHead className="w-36">Last Updated</TableHead>
-                  <TableHead className="w-16"></TableHead>
+                  <SortableHead k="name" className="w-[28%] min-w-[180px]">Name</SortableHead>
+                  <TableHead className="w-12">Link</TableHead>
+                  <SortableHead k="type" className="w-28">Type</SortableHead>
+                  <SortableHead k="status" className="w-32">Status</SortableHead>
+                  <SortableHead k="owner" className="w-44">Owner</SortableHead>
+                  <SortableHead k="portalVisible" className="w-32 whitespace-nowrap">Portal Visible</SortableHead>
+                  <SortableHead k="updatedAt" className="w-32 whitespace-nowrap">Last Updated</SortableHead>
+                  <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAssets.map((a) => (
+                {sortedAssets.map((a) => (
                   <TableRow key={a.id}>
                     <TableCell>
                       <button
