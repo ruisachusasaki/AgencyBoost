@@ -3248,24 +3248,35 @@ export default function Sales() {
             <DialogTitle>Quote Details</DialogTitle>
           </DialogHeader>
           {viewingQuoteId && (() => {
-            const listQuote = (quotesData as any[]).find((q: any) => q.id === viewingQuoteId);
-            // Prefer the detailed quote (which includes items) once it loads;
-            // fall back to the list row so the header info renders immediately.
-            const quote = viewingQuoteDetail || listQuote;
-            if (!quote) return null;
-            
+            const listQuote = (quotesData as any[] | undefined)?.find((q: any) => q.id === viewingQuoteId);
+            // Merge the list row (header fields like createdByName) with the
+            // detailed quote (items, customQuantities, etc) once it loads.
+            const quote: any = { ...(listQuote || {}), ...(viewingQuoteDetail || {}) };
+            if (!quote || !quote.id) return null;
+
+            const safeStatus = typeof quote.status === 'string' ? quote.status : '';
+            const statusLabel = safeStatus ? safeStatus.replace('_', ' ').toUpperCase() : 'UNKNOWN';
+            const safeFloat = (v: any) => {
+              const n = parseFloat(v);
+              return isNaN(n) ? 0 : n;
+            };
+            const createdAtDate = quote.createdAt ? new Date(quote.createdAt) : null;
+            const createdAtLabel = createdAtDate && !isNaN(createdAtDate.getTime())
+              ? createdAtDate.toLocaleDateString()
+              : '—';
+
             return (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm text-muted-foreground">Quote Name</Label>
-                    <p className="font-medium" data-testid="text-view-quote-name">{quote.name}</p>
+                    <p className="font-medium" data-testid="text-view-quote-name">{quote.name || '—'}</p>
                   </div>
                   <div>
                     <Label className="text-sm text-muted-foreground">Status</Label>
                     <div>
-                      <Badge className={getQuoteStatusBadge(quote.status)} data-testid="text-view-quote-status">
-                        {quote.status.replace('_', ' ').toUpperCase()}
+                      <Badge className={getQuoteStatusBadge(safeStatus)} data-testid="text-view-quote-status">
+                        {statusLabel}
                       </Badge>
                     </div>
                   </div>
@@ -3275,29 +3286,33 @@ export default function Sales() {
                   </div>
                   <div>
                     <Label className="text-sm text-muted-foreground">Budget</Label>
-                    <p className="font-medium" data-testid="text-view-quote-budget">${parseFloat(quote.clientBudget || 0).toLocaleString()}</p>
+                    <p className="font-medium" data-testid="text-view-quote-budget">${safeFloat(quote.clientBudget).toLocaleString()}</p>
                   </div>
                   <div>
                     <Label className="text-sm text-muted-foreground">Desired Margin</Label>
-                    <p className={`font-medium ${parseFloat(quote.desiredMargin) < minimumMarginThreshold ? 'text-red-600' : 'text-green-600'}`} data-testid="text-view-quote-margin">
-                      {parseFloat(quote.desiredMargin || 0)}%
+                    <p className={`font-medium ${safeFloat(quote.desiredMargin) < minimumMarginThreshold ? 'text-red-600' : 'text-green-600'}`} data-testid="text-view-quote-margin">
+                      {safeFloat(quote.desiredMargin)}%
                     </p>
                   </div>
                   <div>
                     <Label className="text-sm text-muted-foreground">One-Time Cost</Label>
-                    <p className="font-medium" data-testid="text-view-quote-onetime-cost">${parseFloat(quote.oneTimeCost || 0).toLocaleString()}</p>
+                    <p className="font-medium" data-testid="text-view-quote-onetime-cost">${safeFloat(quote.oneTimeCost).toLocaleString()}</p>
                   </div>
                   <div>
                     <Label className="text-sm text-muted-foreground">Monthly Cost</Label>
-                    <p className="font-medium" data-testid="text-view-quote-monthly-cost">${parseFloat(quote.monthlyCost || quote.totalCost || 0).toLocaleString()}</p>
+                    <p className="font-medium" data-testid="text-view-quote-monthly-cost">${safeFloat(quote.monthlyCost || quote.totalCost).toLocaleString()}</p>
                   </div>
                   <div>
                     <Label className="text-sm text-muted-foreground">Created By</Label>
-                    <p className="font-medium" data-testid="text-view-quote-creator">{quote.createdByName} {quote.createdByLastName}</p>
+                    <p className="font-medium" data-testid="text-view-quote-creator">
+                      {(quote.createdByName || quote.createdByLastName)
+                        ? `${quote.createdByName || ''} ${quote.createdByLastName || ''}`.trim()
+                        : '—'}
+                    </p>
                   </div>
                   <div>
                     <Label className="text-sm text-muted-foreground">Created At</Label>
-                    <p className="font-medium" data-testid="text-view-quote-created-at">{new Date(quote.createdAt).toLocaleDateString()}</p>
+                    <p className="font-medium" data-testid="text-view-quote-created-at">{createdAtLabel}</p>
                   </div>
                 </div>
                 
