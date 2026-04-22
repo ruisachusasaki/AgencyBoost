@@ -25,6 +25,31 @@ export const NOTIFICATION_TYPES = {
   QUOTE_SENT: "quote_sent",
 } as const;
 
+// Job Application Stages — single source of truth for HR application status workflow.
+// Used by: applicant detail status dropdown, HR applications board, and the
+// "Job Application Status Updated" workflow trigger config (To Status / From Status).
+// Add a new stage here and it will appear everywhere automatically.
+export const JOB_APPLICATION_STAGES: ReadonlyArray<{ value: string; label: string }> = [
+  { value: "new", label: "New" },
+  { value: "review", label: "Review" },
+  { value: "interview", label: "Interview" },
+  { value: "not_selected", label: "Not Selected" },
+  { value: "test_sent", label: "Test Sent" },
+  { value: "send_offer", label: "Send Offer" },
+  { value: "offer_sent", label: "Offer Sent" },
+  { value: "offer_accepted", label: "Offer Accepted" },
+  { value: "offer_declined", label: "Offer Declined" },
+  { value: "hired", label: "Hired" },
+] as const;
+
+export const JOB_APPLICATION_STAGE_VALUES: string[] = JOB_APPLICATION_STAGES.map(s => s.value);
+
+export const JOB_APPLICATION_STAGE_LABELS: Record<string, string> =
+  JOB_APPLICATION_STAGES.reduce((acc, s) => {
+    acc[s.value] = s.label;
+    return acc;
+  }, {} as Record<string, string>);
+
 // Role Names
 export const ROLE_NAMES = {
   ADMIN: "Admin",

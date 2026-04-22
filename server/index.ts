@@ -6,6 +6,7 @@ import { setupGoogleCalendar } from "./googleCalendarSetup";
 import { db } from "./db";
 import { sql, eq, and } from "drizzle-orm";
 import { clientBriefSections, automationTriggers, automationActions, calendars, staff, staffLinkedEmails, calendarAppointments, teamPositions, expenseReportFormConfig, users, dashboardWidgets, oneOnOneProgressionStatuses, timeOffPolicies, timeOffTypes, userRoles, tags, tasks } from "@shared/schema";
+import { JOB_APPLICATION_STAGE_VALUES } from "@shared/constants";
 
 /**
  * Startup migration to ensure client brief columns exist
@@ -70,6 +71,71 @@ async function ensureDefaultTemplateColumn() {
  * Initialize default automation triggers
  * Creates sample automation triggers in the database for system functionality
  */
+/**
+ * Refreshes the To Status / From Status options for the
+ * "Job Application Status Updated" workflow trigger so the dropdowns
+ * always reflect the current canonical stage list defined in
+ * shared/constants.ts (JOB_APPLICATION_STAGES).
+ */
+async function refreshJobApplicationStatusTriggerOptions() {
+  try {
+    const [existing] = await db
+      .select()
+      .from(automationTriggers)
+      .where(eq(automationTriggers.type, "job_application_status_updated"))
+      .limit(1);
+
+    if (!existing) {
+      // Not seeded yet — nothing to refresh.
+      return;
+    }
+
+    const currentSchema = (existing.configSchema as Record<string, any>) || {};
+    const desiredOptions = [...JOB_APPLICATION_STAGE_VALUES];
+
+    const toMatches =
+      Array.isArray(currentSchema?.to_status?.options) &&
+      currentSchema.to_status.options.length === desiredOptions.length &&
+      currentSchema.to_status.options.every((o: string, i: number) => o === desiredOptions[i]);
+
+    const fromMatches =
+      Array.isArray(currentSchema?.from_status?.options) &&
+      currentSchema.from_status.options.length === desiredOptions.length &&
+      currentSchema.from_status.options.every((o: string, i: number) => o === desiredOptions[i]);
+
+    if (toMatches && fromMatches) {
+      log("Job Application Status Updated trigger options already current");
+      return;
+    }
+
+    const newSchema = {
+      ...currentSchema,
+      to_status: {
+        ...(currentSchema.to_status || {}),
+        type: currentSchema?.to_status?.type || "string",
+        label: currentSchema?.to_status?.label || "To Status",
+        required: currentSchema?.to_status?.required ?? true,
+        options: desiredOptions,
+      },
+      from_status: {
+        ...(currentSchema.from_status || {}),
+        type: currentSchema?.from_status?.type || "string",
+        label: currentSchema?.from_status?.label || "From Status",
+        options: desiredOptions,
+      },
+    };
+
+    await db
+      .update(automationTriggers)
+      .set({ configSchema: newSchema })
+      .where(eq(automationTriggers.type, "job_application_status_updated"));
+
+    log(`Refreshed Job Application Status Updated trigger options (${desiredOptions.length} stages)`);
+  } catch (err: any) {
+    log(`Warning: Could not refresh Job Application Status Updated trigger options: ${err?.message || err}`);
+  }
+}
+
 async function initializeDefaultAutomationTriggers() {
   try {
     log("Running startup migration: initializeDefaultAutomationTriggers");
@@ -246,6 +312,10 @@ async function initializeDefaultAutomationTriggers() {
       } else {
         log("Automation triggers already exist - all critical triggers present");
       }
+
+      // Always refresh the Job Application Status Updated trigger's stage options
+      // so the workflow dropdowns stay in sync with the canonical stage list.
+      await refreshJobApplicationStatusTriggerOptions();
       return;
     }
     

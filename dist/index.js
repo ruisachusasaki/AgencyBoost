@@ -23713,6 +23713,23 @@ var SALES_CONFIG = {
   MAX_QUOTE_VALIDITY_DAYS: 30
   // Days before quote expires
 };
+var JOB_APPLICATION_STAGES = [
+  { value: "new", label: "New" },
+  { value: "review", label: "Review" },
+  { value: "interview", label: "Interview" },
+  { value: "not_selected", label: "Not Selected" },
+  { value: "test_sent", label: "Test Sent" },
+  { value: "send_offer", label: "Send Offer" },
+  { value: "offer_sent", label: "Offer Sent" },
+  { value: "offer_accepted", label: "Offer Accepted" },
+  { value: "offer_declined", label: "Offer Declined" },
+  { value: "hired", label: "Hired" }
+];
+var JOB_APPLICATION_STAGE_VALUES = JOB_APPLICATION_STAGES.map((s) => s.value);
+var JOB_APPLICATION_STAGE_LABELS = JOB_APPLICATION_STAGES.reduce((acc, s) => {
+  acc[s.value] = s.label;
+  return acc;
+}, {});
 var ROLE_NAMES = {
   ADMIN: "Admin",
   SALES_MANAGER: "Sales Manager",
@@ -60179,6 +60196,42 @@ async function ensureDefaultTemplateColumn() {
     log(`Default template column migration error: ${error.message}`);
   }
 }
+async function refreshJobApplicationStatusTriggerOptions() {
+  try {
+    const [existing] = await db.select().from(automationTriggers).where(eq30(automationTriggers.type, "job_application_status_updated")).limit(1);
+    if (!existing) {
+      return;
+    }
+    const currentSchema = existing.configSchema || {};
+    const desiredOptions = [...JOB_APPLICATION_STAGE_VALUES];
+    const toMatches = Array.isArray(currentSchema?.to_status?.options) && currentSchema.to_status.options.length === desiredOptions.length && currentSchema.to_status.options.every((o, i) => o === desiredOptions[i]);
+    const fromMatches = Array.isArray(currentSchema?.from_status?.options) && currentSchema.from_status.options.length === desiredOptions.length && currentSchema.from_status.options.every((o, i) => o === desiredOptions[i]);
+    if (toMatches && fromMatches) {
+      log("Job Application Status Updated trigger options already current");
+      return;
+    }
+    const newSchema = {
+      ...currentSchema,
+      to_status: {
+        ...currentSchema.to_status || {},
+        type: currentSchema?.to_status?.type || "string",
+        label: currentSchema?.to_status?.label || "To Status",
+        required: currentSchema?.to_status?.required ?? true,
+        options: desiredOptions
+      },
+      from_status: {
+        ...currentSchema.from_status || {},
+        type: currentSchema?.from_status?.type || "string",
+        label: currentSchema?.from_status?.label || "From Status",
+        options: desiredOptions
+      }
+    };
+    await db.update(automationTriggers).set({ configSchema: newSchema }).where(eq30(automationTriggers.type, "job_application_status_updated"));
+    log(`Refreshed Job Application Status Updated trigger options (${desiredOptions.length} stages)`);
+  } catch (err) {
+    log(`Warning: Could not refresh Job Application Status Updated trigger options: ${err?.message || err}`);
+  }
+}
 async function initializeDefaultAutomationTriggers() {
   try {
     log("Running startup migration: initializeDefaultAutomationTriggers");
@@ -60347,6 +60400,7 @@ async function initializeDefaultAutomationTriggers() {
       } else {
         log("Automation triggers already exist - all critical triggers present");
       }
+      await refreshJobApplicationStatusTriggerOptions();
       return;
     }
     const sampleTriggers = [
