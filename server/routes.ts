@@ -22580,9 +22580,17 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   });
 
   // Helper function to process merge tags in messages
-  function processMergeTags(message: string, clientData: any, userData?: any): string {
+  function processMergeTags(message: string, clientData: any, userData?: any, customFieldMap?: Record<string, string>): string {
     let result = message;
-    
+
+    // Replace custom field merge tags ({{custom.<slug>}}) using prebuilt map
+    if (customFieldMap) {
+      result = result.replace(/\{\{\s*custom\.([a-zA-Z0-9_]+)\s*\}\}/g, (_match, slug) => {
+        const key = String(slug).toLowerCase();
+        return customFieldMap[key] !== undefined ? String(customFieldMap[key]) : '';
+      });
+    }
+
     // Replace client merge tags
     if (clientData) {
       const fullName = clientData.name || '';
@@ -23588,10 +23596,34 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           console.error('Error fetching client data for merge tags:', error);
         }
       }
-      
+
+      // Build custom field merge-tag map ({{custom.<slug>}})
+      let customFieldMap: Record<string, string> = {};
+      try {
+        const allCustomFields = await db.select().from(customFields);
+        const cfv = (clientData?.customFieldValues as Record<string, any>) || {};
+        const slugify = (n: string) => n.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '').toLowerCase();
+        for (const f of allCustomFields) {
+          const slug = slugify(f.name || '');
+          if (!slug) continue;
+          const raw = cfv[f.id];
+          if (raw === undefined || raw === null) {
+            customFieldMap[slug] = '';
+          } else if (Array.isArray(raw)) {
+            customFieldMap[slug] = raw.join(', ');
+          } else if (typeof raw === 'object') {
+            customFieldMap[slug] = JSON.stringify(raw);
+          } else {
+            customFieldMap[slug] = String(raw);
+          }
+        }
+      } catch (error) {
+        console.error('Error building custom field merge tag map:', error);
+      }
+
       // Process merge tags in subject and message
-      const processedSubject = processMergeTags(subject, clientData, userData);
-      const processedMessage = processMergeTags(message, clientData, userData);
+      const processedSubject = processMergeTags(subject, clientData, userData, customFieldMap);
+      const processedMessage = processMergeTags(message, clientData, userData, customFieldMap);
       
       console.log(`Sending email to ${to} via MailGun...`);
 
@@ -23606,8 +23638,9 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         html: processedMessage,
         text: processedMessage.replace(/<[^>]*>/g, '') // Strip HTML for plain text version
       };
-      if (ccList.length > 0) emailData.cc = ccList;
-      if (bccList.length > 0) emailData.bcc = bccList;
+      if (ccList.length > 0) emailData.cc = ccList.join(', ');
+      if (bccList.length > 0) emailData.bcc = bccList.join(', ');
+      console.log('Email CC:', emailData.cc || '(none)', '| BCC:', emailData.bcc || '(none)');
 
       const result = await mg.messages.create(integration.domain, emailData);
       console.log('MailGun send successful:', { id: result.id, status: result.status, message: result.message });

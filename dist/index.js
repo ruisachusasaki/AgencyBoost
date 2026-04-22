@@ -42161,8 +42161,14 @@ ${appointment.description || ""}
       res.status(500).json({ message: "Failed to update phone number" });
     }
   });
-  function processMergeTags(message, clientData, userData) {
+  function processMergeTags(message, clientData, userData, customFieldMap) {
     let result = message;
+    if (customFieldMap) {
+      result = result.replace(/\{\{\s*custom\.([a-zA-Z0-9_]+)\s*\}\}/g, (_match, slug) => {
+        const key = String(slug).toLowerCase();
+        return customFieldMap[key] !== void 0 ? String(customFieldMap[key]) : "";
+      });
+    }
     if (clientData) {
       const fullName = clientData.name || "";
       const nameParts = fullName.trim().split(/\s+/);
@@ -42889,8 +42895,30 @@ ${appointment.description || ""}
           console.error("Error fetching client data for merge tags:", error);
         }
       }
-      const processedSubject = processMergeTags(subject, clientData, userData);
-      const processedMessage = processMergeTags(message, clientData, userData);
+      let customFieldMap = {};
+      try {
+        const allCustomFields = await db.select().from(customFields);
+        const cfv = clientData?.customFieldValues || {};
+        const slugify = (n) => n.replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_|_$/g, "").toLowerCase();
+        for (const f of allCustomFields) {
+          const slug = slugify(f.name || "");
+          if (!slug) continue;
+          const raw = cfv[f.id];
+          if (raw === void 0 || raw === null) {
+            customFieldMap[slug] = "";
+          } else if (Array.isArray(raw)) {
+            customFieldMap[slug] = raw.join(", ");
+          } else if (typeof raw === "object") {
+            customFieldMap[slug] = JSON.stringify(raw);
+          } else {
+            customFieldMap[slug] = String(raw);
+          }
+        }
+      } catch (error) {
+        console.error("Error building custom field merge tag map:", error);
+      }
+      const processedSubject = processMergeTags(subject, clientData, userData, customFieldMap);
+      const processedMessage = processMergeTags(message, clientData, userData, customFieldMap);
       console.log(`Sending email to ${to} via MailGun...`);
       const decryptedApiKey = EncryptionService.decrypt(integration.apiKey);
       const mg = createMailgunClient(decryptedApiKey, integration.domain);
@@ -42902,8 +42930,9 @@ ${appointment.description || ""}
         text: processedMessage.replace(/<[^>]*>/g, "")
         // Strip HTML for plain text version
       };
-      if (ccList.length > 0) emailData.cc = ccList;
-      if (bccList.length > 0) emailData.bcc = bccList;
+      if (ccList.length > 0) emailData.cc = ccList.join(", ");
+      if (bccList.length > 0) emailData.bcc = bccList.join(", ");
+      console.log("Email CC:", emailData.cc || "(none)", "| BCC:", emailData.bcc || "(none)");
       const result = await mg.messages.create(integration.domain, emailData);
       console.log("MailGun send successful:", { id: result.id, status: result.status, message: result.message });
       let emailStatus = "sent";
