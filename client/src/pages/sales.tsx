@@ -155,6 +155,7 @@ export default function Sales() {
   const [packageItemsData, setPackageItemsData] = useState<Record<string, any>>({});
   const [viewingQuoteId, setViewingQuoteId] = useState<string | null>(null);
   const [deleteConfirmQuoteId, setDeleteConfirmQuoteId] = useState<string | null>(null);
+  const [openViewItems, setOpenViewItems] = useState<Record<string, boolean>>({});
 
   // Targets state
   const [isTargetDialogOpen, setIsTargetDialogOpen] = useState(false);
@@ -216,6 +217,28 @@ export default function Sales() {
     queryKey: ["/api/quotes"],
     refetchOnWindowFocus: false,
   });
+
+  // Fetch full details (incl. items) for the quote currently being viewed.
+  const { data: viewingQuoteDetail, isLoading: isViewingQuoteLoading } = useQuery<any>({
+    queryKey: ["/api/quotes", viewingQuoteId],
+    enabled: !!viewingQuoteId,
+    refetchOnWindowFocus: false,
+  });
+
+  // When the view dialog loads a quote, prefetch any bundle/package contents
+  // so we can render their nested items in the read-only accordion.
+  useEffect(() => {
+    if (!viewingQuoteDetail || !Array.isArray(viewingQuoteDetail.items)) return;
+    viewingQuoteDetail.items.forEach((item: any) => {
+      const refId = item.bundleId || item.packageId || item.productId;
+      if (!refId) return;
+      if (item.itemType === 'bundle') {
+        fetchBundleProducts(refId);
+      } else if (item.itemType === 'package') {
+        fetchPackageDetails(refId);
+      }
+    });
+  }, [viewingQuoteDetail]);
 
   // Fetch staff for sales rep filter
   const { data: staffData = [] } = useQuery({
@@ -3225,7 +3248,10 @@ export default function Sales() {
             <DialogTitle>Quote Details</DialogTitle>
           </DialogHeader>
           {viewingQuoteId && (() => {
-            const quote = quotesData.find((q: any) => q.id === viewingQuoteId);
+            const listQuote = (quotesData as any[]).find((q: any) => q.id === viewingQuoteId);
+            // Prefer the detailed quote (which includes items) once it loads;
+            // fall back to the list row so the header info renders immediately.
+            const quote = viewingQuoteDetail || listQuote;
             if (!quote) return null;
             
             return (
@@ -3285,21 +3311,128 @@ export default function Sales() {
                 <div>
                   <Label className="text-sm text-muted-foreground mb-2 block">Quote Items</Label>
                   <div className="border rounded-md divide-y">
-                    {quote.items && quote.items.length > 0 ? (
-                      quote.items.map((item: any, index: number) => (
-                        <div key={index} className="p-3 flex justify-between items-center" data-testid={`div-quote-item-${index}`}>
-                          <div>
-                            <p className="font-medium">{item.productName || item.bundleName || item.packageName || 'Unknown'}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {item.itemType === 'product' ? 'Product' : item.itemType === 'bundle' ? 'Bundle' : 'Package'}
-                            </p>
+                    {isViewingQuoteLoading && !viewingQuoteDetail ? (
+                      <p className="p-3 text-sm text-muted-foreground">Loading items…</p>
+                    ) : quote.items && quote.items.length > 0 ? (
+                      quote.items.map((item: any, index: number) => {
+                        const refId = item.bundleId || item.packageId || item.productId;
+                        const itemKey = `${item.id || refId || 'item'}-${index}`;
+                        const itemTypeLabel = item.itemType === 'product' ? 'Product' : item.itemType === 'bundle' ? 'Bundle' : 'Package';
+                        const itemName = item.productName || item.bundleName || item.packageName || 'Unknown';
+                        const totalCost = parseFloat(item.totalCost || 0);
+                        const isOpen = !!openViewItems[itemKey];
+                        const bundleProds = item.itemType === 'bundle' && refId ? bundleProductsData[refId] : null;
+                        const packageInfo = item.itemType === 'package' && refId ? packageItemsData[refId] : null;
+                        const hasNested = (item.itemType === 'bundle' && bundleProds && bundleProds.length > 0)
+                          || (item.itemType === 'package' && packageInfo && Array.isArray(packageInfo.items));
+
+                        const customQuantities = (item.customQuantities && typeof item.customQuantities === 'object')
+                          ? item.customQuantities as Record<string, any>
+                          : {};
+
+                        const header = (
+                          <div className="flex items-center justify-between w-full p-3" data-testid={`div-quote-item-${index}`}>
+                            <div className="flex items-center gap-2 text-left">
+                              {hasNested && (
+                                <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                              )}
+                              <div>
+                                <p className="font-medium">{itemName}</p>
+                                <p className="text-sm text-muted-foreground">{itemTypeLabel}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium">${totalCost.toLocaleString()}</p>
+                              <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="font-medium">${parseFloat(item.totalCost || 0).toLocaleString()}</p>
-                            <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
-                          </div>
-                        </div>
-                      ))
+                        );
+
+                        if (!hasNested) {
+                          return <div key={itemKey}>{header}</div>;
+                        }
+
+                        return (
+                          <Collapsible
+                            key={itemKey}
+                            open={isOpen}
+                            onOpenChange={(open) => setOpenViewItems(prev => ({ ...prev, [itemKey]: open }))}
+                          >
+                            <CollapsibleTrigger asChild>
+                              <button
+                                type="button"
+                                className="w-full text-left hover:bg-muted/50 transition-colors"
+                                data-testid={`button-toggle-view-item-${index}`}
+                              >
+                                {header}
+                              </button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="px-3 pb-3 bg-muted/20 space-y-2">
+                              {item.itemType === 'bundle' && bundleProds && bundleProds.map((bp: any) => {
+                                const qty = customQuantities[bp.productId] || bp.quantity || 1;
+                                return (
+                                  <div key={bp.productId} className="flex items-center justify-between p-2 bg-background rounded border">
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium">{bp.productName}</p>
+                                      <p className="text-xs text-muted-foreground">${bp.productCost || '0.00'} each</p>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground w-20 text-right">Qty: {qty}</p>
+                                  </div>
+                                );
+                              })}
+
+                              {item.itemType === 'package' && packageInfo && (
+                                <>
+                                  {(packageInfo.buildFee !== undefined || customQuantities.__buildFee !== undefined) && (
+                                    <div className="flex items-center justify-between p-2 bg-background rounded border">
+                                      <div className="flex-1">
+                                        <p className="text-sm font-medium">Build Fee</p>
+                                        <p className="text-xs text-muted-foreground">One-time setup cost</p>
+                                      </div>
+                                      <p className="text-sm font-medium w-28 text-right">
+                                        ${parseFloat(String(customQuantities.__buildFee ?? packageInfo.buildFee ?? 0)).toLocaleString()}
+                                      </p>
+                                    </div>
+                                  )}
+                                  {Array.isArray(packageInfo.items) && packageInfo.items.map((pkgItem: any, pkgIdx: number) => {
+                                    const pkgItemName = pkgItem.itemType === 'product'
+                                      ? (pkgItem.product?.name || 'Unknown Product')
+                                      : (pkgItem.bundle?.name || 'Unknown Bundle');
+                                    const pkgItemKey = pkgItem.id || `${pkgItem.itemType}-${pkgItem.productId || pkgItem.bundleId}`;
+                                    const pkgQty = customQuantities[pkgItemKey] ?? (pkgItem.quantity || 1);
+                                    const pkgItemTypeLabel = pkgItem.itemType === 'product' ? 'Product' : 'Bundle';
+                                    return (
+                                      <div key={pkgIdx} className="p-2 bg-background rounded border">
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex-1">
+                                            <p className="text-sm font-medium">{pkgItemName}</p>
+                                            <p className="text-xs text-muted-foreground">{pkgItemTypeLabel}</p>
+                                          </div>
+                                          <p className="text-sm text-muted-foreground w-20 text-right">Qty: {pkgQty}</p>
+                                        </div>
+                                        {pkgItem.itemType === 'bundle' && pkgItem.bundle?.products?.length > 0 && (
+                                          <div className="mt-2 ml-3 pl-3 border-l space-y-1">
+                                            {pkgItem.bundle.products.map((bp: any) => {
+                                              const bpKey = `${pkgItemKey}_bp_${bp.productId}`;
+                                              const bpQty = customQuantities[bpKey] ?? (bp.quantity || 1);
+                                              return (
+                                                <div key={bp.productId} className="flex items-center justify-between text-xs">
+                                                  <span>{bp.productName}</span>
+                                                  <span className="text-muted-foreground">Qty: {bpQty}</span>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </>
+                              )}
+                            </CollapsibleContent>
+                          </Collapsible>
+                        );
+                      })
                     ) : (
                       <p className="p-3 text-sm text-muted-foreground">No items</p>
                     )}
