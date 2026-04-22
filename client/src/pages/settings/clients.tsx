@@ -2691,8 +2691,6 @@ export default function ClientsSettings() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-        <ClientAssetsSection />
     </div>
   );
 }
