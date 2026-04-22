@@ -356,45 +356,62 @@ export default function OrgChartStructureBuilder() {
                     />
                   </div>
 
-                  {/* Position List - shows positions NOT already in org chart */}
-                  <div className="space-y-2">
+                  {/* Position List - shows ALL active positions from Settings > Staff > Teams */}
+                  <div className="space-y-2 max-h-[60vh] overflow-y-auto">
                     {(() => {
-                      const filteredPositions = allPositions.filter(p => 
-                        p.isActive && 
-                        !p.inOrgChart && // Only show positions not already in org chart
-                        p.label.toLowerCase().includes(positionSearchQuery.toLowerCase())
-                      );
+                      const query = positionSearchQuery.toLowerCase();
+                      const filteredPositions = allPositions
+                        .filter(p => p.isActive && p.label.toLowerCase().includes(query))
+                        .sort((a, b) => {
+                          if (!!a.inOrgChart === !!b.inOrgChart) {
+                            return a.label.localeCompare(b.label);
+                          }
+                          return a.inOrgChart ? 1 : -1;
+                        });
 
                       if (filteredPositions.length === 0) {
                         return (
                           <div className="text-center py-8 text-muted-foreground">
                             {positionSearchQuery 
                               ? "No positions match your search."
-                              : allPositions.filter(p => p.isActive).length === 0
-                                ? "No positions found. Create positions in Settings > Staff Management > Teams first."
-                                : "All positions are already in the org chart."}
+                              : "No positions found. Create positions in Settings > Staff Management > Teams first."}
                           </div>
                         );
                       }
 
-                      return filteredPositions.map(position => (
-                        <Card 
-                          key={position.id} 
-                          className="hover:bg-accent cursor-pointer transition-colors"
-                          onClick={() => addPositionMutation.mutate(position)}
-                          data-testid={`position-template-${position.id}`}
-                        >
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                              <Briefcase className="h-5 w-5 text-orange-500" />
-                              <div className="flex-1">
-                                <div className="font-medium">{position.label}</div>
+                      return filteredPositions.map(position => {
+                        const alreadyInChart = !!position.inOrgChart;
+                        return (
+                          <Card 
+                            key={position.id} 
+                            className={
+                              alreadyInChart
+                                ? "opacity-60 cursor-not-allowed"
+                                : "hover:bg-accent cursor-pointer transition-colors"
+                            }
+                            onClick={() => {
+                              if (!alreadyInChart) addPositionMutation.mutate(position);
+                            }}
+                            data-testid={`position-template-${position.id}`}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-center gap-3">
+                                <Briefcase className="h-5 w-5 text-orange-500" />
+                                <div className="flex-1">
+                                  <div className="font-medium">{position.label}</div>
+                                </div>
+                                {alreadyInChart ? (
+                                  <span className="text-xs font-medium px-2 py-1 rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                                    In Chart
+                                  </span>
+                                ) : (
+                                  <Plus className="h-4 w-4 text-muted-foreground" />
+                                )}
                               </div>
-                              <Plus className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ));
+                            </CardContent>
+                          </Card>
+                        );
+                      });
                     })()}
                   </div>
                 </div>
