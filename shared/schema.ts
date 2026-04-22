@@ -6040,16 +6040,17 @@ export const assetStatuses = pgTable("asset_statuses", {
   uniqAgencyName: unique().on(table.agencyId, table.name),
 }));
 
-export const assets = pgTable("assets", {
+export const clientAssets = pgTable("client_assets", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   agencyId: integer("agency_id").notNull().default(1),
+  clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
-  typeId: varchar("type_id").references(() => assetTypes.id, { onDelete: "set null" }),
-  statusId: varchar("status_id").references(() => assetStatuses.id, { onDelete: "set null" }),
-  clientId: varchar("client_id").references(() => clients.id, { onDelete: "set null" }),
+  linkUrl: text("link_url"),
   description: text("description"),
-  fileUrl: text("file_url"),
-  createdBy: varchar("created_by").references(() => users.id, { onDelete: "set null" }),
+  assetTypeId: varchar("asset_type_id").references(() => assetTypes.id, { onDelete: "set null" }),
+  assetStatusId: varchar("asset_status_id").references(() => assetStatuses.id, { onDelete: "set null" }),
+  ownerStaffId: uuid("owner_staff_id").references(() => staff.id, { onDelete: "set null" }),
+  portalVisible: boolean("portal_visible").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -6064,7 +6065,7 @@ export const insertAssetStatusSchema = createInsertSchema(assetStatuses).omit({
   createdAt: true,
   updatedAt: true,
 });
-export const insertAssetSchema = createInsertSchema(assets).omit({
+export const insertClientAssetSchema = createInsertSchema(clientAssets).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -6074,5 +6075,5 @@ export type AssetType = typeof assetTypes.$inferSelect;
 export type InsertAssetType = z.infer<typeof insertAssetTypeSchema>;
 export type AssetStatus = typeof assetStatuses.$inferSelect;
 export type InsertAssetStatus = z.infer<typeof insertAssetStatusSchema>;
-export type Asset = typeof assets.$inferSelect;
-export type InsertAsset = z.infer<typeof insertAssetSchema>;
+export type ClientAsset = typeof clientAssets.$inferSelect;
+export type InsertClientAsset = z.infer<typeof insertClientAssetSchema>;

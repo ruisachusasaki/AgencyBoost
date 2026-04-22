@@ -95,7 +95,8 @@ import {
   icAgreementTemplates, jobOffers, offerSignatures, offerStatusLog,
   scheduledHiredEmails,
   assetTypes, insertAssetTypeSchema,
-  assetStatuses, insertAssetStatusSchema
+  assetStatuses, insertAssetStatusSchema,
+  clientAssets, insertClientAssetSchema
 } from "@shared/schema";
 import { spawnOnboardingChecklist } from "./services/onboardingSpawnService";
 import { sendHiredNotifications, getWelcomeEmailPreview, startScheduledEmailProcessor } from "./services/hiredNotificationService";
@@ -931,6 +932,272 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         return res.status(400).json({ error: "Validation failed", details: error.errors });
       }
       res.status(500).json({ error: "Failed to reorder asset statuses", message: error?.message });
+    }
+  });
+
+  // ----- Client Assets (CRUD scoped under a client) -----
+  // No-op event emitter placeholder (Prompt 8 will wire up the real workflow event bus).
+  function emitWorkflowEvent(eventName: string, payload: Record<string, any>) {
+    try {
+      console.log(`[event] ${eventName}`, JSON.stringify(payload));
+    } catch {}
+  }
+
+  // Helper: load a client + verify it belongs to this agency.
+  // Single-tenant today: clients table has no agencyId column, so we only
+  // verify existence. When multi-tenancy lands, add an agencyId equality
+  // check against req.user!.agencyId here (one place to update).
+  async function loadClientForAgency(clientId: string, _agencyId: number) {
+    const [c] = await db.select({ id: clients.id }).from(clients).where(eq(clients.id, clientId)).limit(1);
+    return c ?? null;
+  }
+
+  // Helper: hydrate one or many client_assets rows with type/status/owner objects.
+  async function hydrateClientAssets(rows: any[]) {
+    if (rows.length === 0) return [];
+    const typeIds = Array.from(new Set(rows.map(r => r.assetTypeId).filter(Boolean))) as string[];
+    const statusIds = Array.from(new Set(rows.map(r => r.assetStatusId).filter(Boolean))) as string[];
+    const ownerIds = Array.from(new Set(rows.map(r => r.ownerStaffId).filter(Boolean))) as string[];
+
+    const [typesRows, statusesRows, ownersRows] = await Promise.all([
+      typeIds.length
+        ? db.select().from(assetTypes).where(inArray(assetTypes.id, typeIds))
+        : Promise.resolve([] as any[]),
+      statusIds.length
+        ? db.select().from(assetStatuses).where(inArray(assetStatuses.id, statusIds))
+        : Promise.resolve([] as any[]),
+      ownerIds.length
+        ? db
+            .select({
+              id: staff.id,
+              firstName: staff.firstName,
+              lastName: staff.lastName,
+              email: staff.email,
+              profileImagePath: staff.profileImagePath,
+            })
+            .from(staff)
+            .where(inArray(staff.id, ownerIds))
+        : Promise.resolve([] as any[]),
+    ]);
+
+    const typeMap = new Map(typesRows.map((t: any) => [t.id, t]));
+    const statusMap = new Map(statusesRows.map((s: any) => [s.id, s]));
+    const ownerMap = new Map(
+      ownersRows.map((o: any) => [
+        o.id,
+        {
+          id: o.id,
+          name: `${o.firstName ?? ''} ${o.lastName ?? ''}`.trim(),
+          email: o.email,
+          avatar: o.profileImagePath ?? null,
+        },
+      ])
+    );
+
+    return rows.map((r) => ({
+      ...r,
+      type: r.assetTypeId ? typeMap.get(r.assetTypeId) ?? null : null,
+      status: r.assetStatusId ? statusMap.get(r.assetStatusId) ?? null : null,
+      owner: r.ownerStaffId ? ownerMap.get(r.ownerStaffId) ?? null : null,
+    }));
+  }
+
+  // GET /api/clients/:clientId/assets
+  app.get("/api/clients/:clientId/assets", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const client = await loadClientForAgency(clientId, CURRENT_AGENCY_ID);
+      if (!client) return res.status(404).json({ error: "Client not found" });
+
+      const rows = await db
+        .select()
+        .from(clientAssets)
+        .where(and(eq(clientAssets.clientId, clientId), eq(clientAssets.agencyId, CURRENT_AGENCY_ID)))
+        .orderBy(desc(clientAssets.updatedAt));
+
+      const hydrated = await hydrateClientAssets(rows);
+      res.json(hydrated);
+    } catch (error: any) {
+      console.error("[GET /api/clients/:clientId/assets] error:", error);
+      res.status(500).json({ error: "Failed to fetch client assets", message: error?.message });
+    }
+  });
+
+  // POST /api/clients/:clientId/assets
+  app.post("/api/clients/:clientId/assets", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const client = await loadClientForAgency(clientId, CURRENT_AGENCY_ID);
+      if (!client) return res.status(404).json({ error: "Client not found" });
+
+      const parsed = insertClientAssetSchema
+        .omit({ agencyId: true, clientId: true })
+        .parse(req.body);
+
+      // Validate FK ownership (asset type, asset status, owner staff)
+      if (parsed.assetTypeId) {
+        const [t] = await db.select({ id: assetTypes.id }).from(assetTypes)
+          .where(and(eq(assetTypes.id, parsed.assetTypeId), eq(assetTypes.agencyId, CURRENT_AGENCY_ID))).limit(1);
+        if (!t) return res.status(400).json({ error: "Invalid assetTypeId for this agency" });
+      }
+      if (parsed.assetStatusId) {
+        const [s] = await db.select({ id: assetStatuses.id }).from(assetStatuses)
+          .where(and(eq(assetStatuses.id, parsed.assetStatusId), eq(assetStatuses.agencyId, CURRENT_AGENCY_ID))).limit(1);
+        if (!s) return res.status(400).json({ error: "Invalid assetStatusId for this agency" });
+      }
+      if (parsed.ownerStaffId) {
+        // Single-tenant: no agencyId on staff yet; verify existence only.
+        const [o] = await db.select({ id: staff.id }).from(staff).where(eq(staff.id, parsed.ownerStaffId)).limit(1);
+        if (!o) return res.status(400).json({ error: "Invalid ownerStaffId" });
+      }
+
+      const [created] = await db.insert(clientAssets).values({
+        ...parsed,
+        agencyId: CURRENT_AGENCY_ID,
+        clientId,
+      }).returning();
+
+      emitWorkflowEvent('client_asset.created', {
+        agencyId: CURRENT_AGENCY_ID,
+        clientId,
+        assetId: created.id,
+        actorUserId: (req.user as any)?.id ?? null,
+      });
+
+      const [hydrated] = await hydrateClientAssets([created]);
+      res.status(201).json(hydrated);
+    } catch (error: any) {
+      console.error("[POST /api/clients/:clientId/assets] error:", error);
+      if (error?.name === 'ZodError') {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create client asset", message: error?.message });
+    }
+  });
+
+  // PUT /api/clients/:clientId/assets/:assetId
+  app.put("/api/clients/:clientId/assets/:assetId", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { clientId, assetId } = req.params;
+      const client = await loadClientForAgency(clientId, CURRENT_AGENCY_ID);
+      if (!client) return res.status(404).json({ error: "Client not found" });
+
+      const [existing] = await db.select().from(clientAssets)
+        .where(and(
+          eq(clientAssets.id, assetId),
+          eq(clientAssets.clientId, clientId),
+          eq(clientAssets.agencyId, CURRENT_AGENCY_ID),
+        )).limit(1);
+      if (!existing) return res.status(404).json({ error: "Asset not found" });
+
+      const updateSchema = insertClientAssetSchema
+        .omit({ agencyId: true, clientId: true })
+        .partial()
+        .pick({
+          name: true,
+          linkUrl: true,
+          assetTypeId: true,
+          assetStatusId: true,
+          ownerStaffId: true,
+          portalVisible: true,
+        });
+      const patch = updateSchema.parse(req.body);
+
+      // FK ownership validation for any provided IDs
+      if (patch.assetTypeId !== undefined && patch.assetTypeId !== null) {
+        const [t] = await db.select({ id: assetTypes.id }).from(assetTypes)
+          .where(and(eq(assetTypes.id, patch.assetTypeId), eq(assetTypes.agencyId, CURRENT_AGENCY_ID))).limit(1);
+        if (!t) return res.status(400).json({ error: "Invalid assetTypeId for this agency" });
+      }
+      if (patch.assetStatusId !== undefined && patch.assetStatusId !== null) {
+        const [s] = await db.select({ id: assetStatuses.id }).from(assetStatuses)
+          .where(and(eq(assetStatuses.id, patch.assetStatusId), eq(assetStatuses.agencyId, CURRENT_AGENCY_ID))).limit(1);
+        if (!s) return res.status(400).json({ error: "Invalid assetStatusId for this agency" });
+      }
+      if (patch.ownerStaffId !== undefined && patch.ownerStaffId !== null) {
+        const [o] = await db.select({ id: staff.id }).from(staff).where(eq(staff.id, patch.ownerStaffId)).limit(1);
+        if (!o) return res.status(400).json({ error: "Invalid ownerStaffId" });
+      }
+
+      const [updated] = await db.update(clientAssets)
+        .set({ ...patch, updatedAt: new Date() })
+        .where(eq(clientAssets.id, assetId))
+        .returning();
+
+      const baseEventPayload = {
+        agencyId: CURRENT_AGENCY_ID,
+        clientId,
+        assetId,
+        actorUserId: (req.user as any)?.id ?? null,
+      };
+      if (patch.assetStatusId !== undefined && patch.assetStatusId !== existing.assetStatusId) {
+        emitWorkflowEvent('client_asset.status_changed', {
+          ...baseEventPayload,
+          oldStatusId: existing.assetStatusId,
+          newStatusId: updated.assetStatusId,
+        });
+      }
+      if (patch.ownerStaffId !== undefined && patch.ownerStaffId !== existing.ownerStaffId) {
+        emitWorkflowEvent('client_asset.owner_changed', {
+          ...baseEventPayload,
+          oldOwnerId: existing.ownerStaffId,
+          newOwnerId: updated.ownerStaffId,
+        });
+      }
+      if (patch.linkUrl !== undefined && patch.linkUrl !== existing.linkUrl) {
+        emitWorkflowEvent('client_asset.link_updated', {
+          ...baseEventPayload,
+          oldLinkUrl: existing.linkUrl,
+          newLinkUrl: updated.linkUrl,
+        });
+      }
+      if (patch.portalVisible !== undefined && patch.portalVisible !== existing.portalVisible) {
+        emitWorkflowEvent('client_asset.portal_visibility_changed', {
+          ...baseEventPayload,
+          oldPortalVisible: existing.portalVisible,
+          newPortalVisible: updated.portalVisible,
+        });
+      }
+
+      const [hydrated] = await hydrateClientAssets([updated]);
+      res.json(hydrated);
+    } catch (error: any) {
+      console.error("[PUT /api/clients/:clientId/assets/:assetId] error:", error);
+      if (error?.name === 'ZodError') {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update client asset", message: error?.message });
+    }
+  });
+
+  // DELETE /api/clients/:clientId/assets/:assetId  (HARD DELETE)
+  app.delete("/api/clients/:clientId/assets/:assetId", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { clientId, assetId } = req.params;
+      const client = await loadClientForAgency(clientId, CURRENT_AGENCY_ID);
+      if (!client) return res.status(404).json({ error: "Client not found" });
+
+      const [existing] = await db.select({ id: clientAssets.id }).from(clientAssets)
+        .where(and(
+          eq(clientAssets.id, assetId),
+          eq(clientAssets.clientId, clientId),
+          eq(clientAssets.agencyId, CURRENT_AGENCY_ID),
+        )).limit(1);
+      if (!existing) return res.status(404).json({ error: "Asset not found" });
+
+      await db.delete(clientAssets).where(eq(clientAssets.id, assetId));
+
+      emitWorkflowEvent('client_asset.deleted', {
+        agencyId: CURRENT_AGENCY_ID,
+        clientId,
+        assetId,
+        actorUserId: (req.user as any)?.id ?? null,
+      });
+
+      res.status(204).end();
+    } catch (error: any) {
+      console.error("[DELETE /api/clients/:clientId/assets/:assetId] error:", error);
+      res.status(500).json({ error: "Failed to delete client asset", message: error?.message });
     }
   });
 

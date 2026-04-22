@@ -26,7 +26,6 @@ __export(schema_exports, {
   appointments: () => appointments,
   assetStatuses: () => assetStatuses,
   assetTypes: () => assetTypes,
-  assets: () => assets,
   auditLogs: () => auditLogs,
   authUsers: () => authUsers,
   automationActions: () => automationActions,
@@ -47,6 +46,7 @@ __export(schema_exports, {
   campaigns: () => campaigns,
   capacitySettings: () => capacitySettings,
   clientAppointments: () => clientAppointments,
+  clientAssets: () => clientAssets,
   clientBriefSections: () => clientBriefSections,
   clientBriefValues: () => clientBriefValues,
   clientBundles: () => clientBundles,
@@ -100,7 +100,6 @@ __export(schema_exports, {
   insertAiIntegrationSchema: () => insertAiIntegrationSchema,
   insertApplicationStageHistorySchema: () => insertApplicationStageHistorySchema,
   insertAppointmentReminderSchema: () => insertAppointmentReminderSchema,
-  insertAssetSchema: () => insertAssetSchema,
   insertAssetStatusSchema: () => insertAssetStatusSchema,
   insertAssetTypeSchema: () => insertAssetTypeSchema,
   insertAuditLogSchema: () => insertAuditLogSchema,
@@ -121,6 +120,7 @@ __export(schema_exports, {
   insertCampaignSchema: () => insertCampaignSchema,
   insertCapacitySettingsSchema: () => insertCapacitySettingsSchema,
   insertClientAppointmentSchema: () => insertClientAppointmentSchema,
+  insertClientAssetSchema: () => insertClientAssetSchema,
   insertClientBriefSectionSchema: () => insertClientBriefSectionSchema,
   insertClientBriefValueSchema: () => insertClientBriefValueSchema,
   insertClientBundleSchema: () => insertClientBundleSchema,
@@ -482,7 +482,7 @@ import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb, uuid, date, serial, unique, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-var sessions, uuidDefault, users, businessProfile, customFieldFolders, customFields, clientNotes, clientTasks, clientAppointments, clientDocuments, clientContacts, clientTransactions, tags, clientGroups, productCategories, products, productBundles, bundleProducts, productPackages, packageItems, clientProducts, clientBundles, clientPackages, quotes, quoteItems, salesSettings, salesTargets, capacitySettings, notes, appointments, documents, activities, clients, clientRoadmapEntries, insertClientRoadmapEntrySchema, clientRoadmapComments, insertClientRoadmapCommentSchema, clientPortalUsers, clientHealthScores, clientBriefSections, clientBriefValues, projects, campaigns, templateFolders, emailTemplates, smsTemplates, scheduledEmails, scheduledHiredEmails, leadPipelineStages, leadSources, leadNoteTemplates, leads, leadStageTransitions, salesActivities, deals, smartLists, tasks, taskTimeEntries, insertTaskTimeEntrySchema, taskDependencies, taskComments, taskCommentReactions, commentFiles, imageAnnotations, timeOffPolicies, timeOffTypes, timeOffRequests, timeOffRequestDays, jobApplications, applicationStageHistory, jobApplicationComments, jobApplicationWatchers, timeOffBalances, taskActivities, invoices, socialMediaAccounts, socialMediaPosts, socialMediaTemplates, socialMediaAnalytics, insertUserSchema, insertCustomFieldFolderSchema, insertCustomFieldSchema, insertClientGroupSchema, insertClientProductSchema, insertClientBundleSchema, insertClientAppointmentSchema, insertNoteSchema, insertDocumentSchema, insertActivitySchema, insertClientSchema, inputClientHealthScoreSchema, insertClientHealthScoreSchema, insertClientBriefSectionSchema, insertClientBriefValueSchema, insertCampaignSchema, insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema, insertScheduledEmailSchema, insertSmartListSchema, insertLeadPipelineStagSchema, insertLeadSourceSchema, insertLeadNoteTemplateSchema, insertLeadSchema, insertLeadStageTransitionSchema, insertSalesActivitySchema, insertDealSchema, insertTaskSchema, insertTaskSchemaValidated, insertTaskActivitySchema, insertInvoiceSchema, insertSocialMediaAccountSchema, insertSocialMediaPostSchema, insertSocialMediaTemplateSchema, insertSocialMediaAnalyticsSchema, insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema, insertImageAnnotationSchema, insertTimeOffRequestSchema, insertJobApplicationSchema, insertApplicationStageHistorySchema, insertJobApplicationWatcherSchema, insertTimeOffBalanceSchema, insertTimeOffRequestDaySchema, workflows, workflowExecutions, workflowActionAnalytics, workflowTemplates, taskCategories, taskTemplates, enhancedTasks, taskHistory, automationTriggers, automationActions, notifications, roles, permissions, userRoles, granularPermissions, permissionAuditLogs, permissionChangeHistory, insertWorkflowSchema, insertWorkflowExecutionSchema, insertWorkflowActionAnalyticsSchema, insertWorkflowTemplateSchema, insertTaskCategorySchema, insertTaskTemplateSchema, insertEnhancedTaskSchema, insertTaskHistorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema, insertNotificationSchema, insertClientNoteSchema, insertClientTaskSchema, insertClientDocumentSchema, insertClientContactSchema, insertClientTransactionSchema, healthScoreFilterSchema, departments, positions, positionKpis2, insertPositionKpiSchema, staff, salaryHistory, insertStaffSchema, authUsers, insertAuthUserSchema, staffLinkedEmails, insertStaffLinkedEmailSchema, jobOpenings, insertJobOpeningSchema, insertDepartmentSchema, insertPositionSchema, insertTagSchema, insertProductCategorySchema, insertProductSchema, insertProductBundleSchema, insertBundleProductSchema, insertProductPackageSchema, insertPackageItemSchema, insertClientPackageSchema, auditLogs, insertAuditLogSchema, insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertGranularPermissionSchema, insertPermissionAuditLogSchema, insertPermissionChangeHistorySchema, notificationSettings, insertNotificationSettingsSchema, calendars, calendarStaff, calendarAvailability, calendarDateOverrides, calendarIntegrations, smsIntegrations, emailIntegrations, aiIntegrations, insertAiIntegrationSchema, stripeIntegrations, insertStripeIntegrationSchema, aiAssistantSettings, insertAiAssistantSettingsSchema, goHighLevelIntegration, insertGoHighLevelIntegrationSchema, slackWorkspaces, insertSlackWorkspaceSchema, leadNotes, leadAppointments, insertLeadNoteSchema, insertLeadAppointmentSchema, calendarAppointments, appointmentReminders, roundRobinTracking, insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema, insertCalendarDateOverrideSchema, insertCalendarIntegrationSchema, insertSmsIntegrationSchema, insertEmailIntegrationSchema, insertCalendarAppointmentSchema, insertAppointmentReminderSchema, insertRoundRobinTrackingSchema, customFieldFileUploads, insertCustomFieldFileUploadSchema, taskAttachments, insertTaskAttachmentSchema, taskStatuses, teamWorkflows, teamWorkflowStatuses, taskPriorities, taskSettings, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema, insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema, formFolders, forms, formFields, formSubmissions, insertFormSchema, jobApplicationFormConfig, insertJobApplicationFormConfigSchema, newHireOnboardingFormConfig, insertNewHireOnboardingFormConfigSchema, clientOnboardingFormConfig, insertClientOnboardingFormConfigSchema, newHireOnboardingSubmissions, insertNewHireOnboardingSubmissionSchema, expenseReportFormConfig, insertExpenseReportFormConfigSchema, expenseReportSubmissions, insertExpenseReportSubmissionSchema, offboardingFormConfig, insertOffboardingFormConfigSchema, offboardingSubmissions, insertOffboardingSubmissionSchema, insertFormFieldSchema, insertFormSubmissionSchema, insertFormFolderSchema, insertTaskDependencySchema, teamPositions, clientTeamAssignments, positionDescriptionVersions, insertTeamPositionSchema, reorderTeamPositionsSchema, insertClientTeamAssignmentSchema, knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBasePermissions, knowledgeBaseBookmarks, knowledgeBaseLikes, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseSettings, knowledgeBaseArticleVersions, insertKnowledgeBaseCategorySchema, insertKnowledgeBaseArticleSchema, insertKnowledgeBasePermissionSchema, insertKnowledgeBaseBookmarkSchema, insertKnowledgeBaseLikeSchema, insertKnowledgeBaseCommentSchema, insertKnowledgeBaseViewSchema, insertKnowledgeBaseSettingSchema, insertKnowledgeBaseArticleVersionSchema, trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress, trainingCoursePermissions, trainingQuizzes, trainingQuizQuestions, trainingLessonResources, trainingQuizAttempts, trainingAssignments, trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, userViewPreferences, dashboards, dashboardWidgets, userDashboardWidgets, insertTrainingCategorySchema, insertTrainingCourseSchema, insertTrainingModuleSchema, insertTrainingLessonSchema, insertTrainingEnrollmentSchema, insertTrainingProgressSchema, insertTrainingCoursePermissionSchema, insertTrainingQuizSchema, insertTrainingQuizQuestionSchema, insertTrainingQuizAttemptSchema, insertTrainingAssignmentSchema, insertTrainingAssignmentSubmissionSchema, insertTrainingDiscussionSchema, insertTrainingDiscussionLikeSchema, insertTrainingLessonResourceSchema, insertUserViewPreferenceSchema, insertDashboardSchema, insertDashboardWidgetSchema, insertUserDashboardWidgetSchema, insertQuoteSchema, insertQuoteItemSchema, insertSalesSettingsSchema, updateSalesSettingsSchema, insertSalesTargetSchema, updateSalesTargetSchema, insertCapacitySettingsSchema, updateCapacitySettingsSchema, timeTrackingReportFiltersSchema, oneOnOneMeetings, insertOneOnOneMeetingSchema, oneOnOneTalkingPoints, insertOneOnOneTalkingPointSchema, oneOnOneWins, insertOneOnOneWinSchema, oneOnOneObjectives, insertOneOnOneObjectiveSchema, oneOnOneActionItems, insertOneOnOneActionItemSchema, oneOnOneGoals, insertOneOnOneGoalSchema, oneOnOneMeetingKpiStatuses, insertOneOnOneMeetingKpiStatusSchema, oneOnOneComments, insertOneOnOneCommentSchema, oneOnOneProgressionStatuses, insertOneOnOneProgressionStatusSchema, orgChartStructures, insertOrgChartStructureSchema, orgChartNodes, insertOrgChartNodeSchema, orgChartNodeAssignments, insertOrgChartNodeAssignmentSchema, insertTimeOffTypeSchema, calendarConnections, calendarSyncState, calendarEvents, calendarEventCache, insertCalendarConnectionSchema, insertCalendarSyncStateSchema, insertCalendarEventSchema, eventTimeEntries, insertEventTimeEntrySchema, surveyFolders, surveys, surveySlides, surveyFields, surveyLogicRules, surveySubmissions, surveySubmissionAnswers, insertSurveyFolderSchema, PX_MEETING_SEGMENTS, pxMeetings, pxMeetingAttendees, insertPxMeetingSchema, insertPxMeetingAttendeeSchema, staffIncidents, insertStaffIncidentSchema, insertSurveySchema, insertSurveySlideSchema, insertSurveyFieldSchema, insertSurveyLogicRuleSchema, insertSurveySubmissionSchema, insertSurveySubmissionAnswerSchema, taskIntakeForms, taskIntakeSections, taskIntakeQuestions, taskIntakeOptions, taskIntakeLogicRules, taskIntakeAssignmentRules, insertTaskIntakeFormSchema, insertTaskIntakeSectionSchema, insertTaskIntakeQuestionSchema, insertTaskIntakeOptionSchema, insertTaskIntakeLogicRuleSchema, insertTaskIntakeAssignmentRuleSchema, taskIntakeSubmissions, taskIntakeAnswers, insertTaskIntakeSubmissionSchema, insertTaskIntakeAnswerSchema, toolDirectoryCategories, toolDirectoryTools, insertToolDirectoryCategorySchema, insertToolDirectoryToolSchema, tickets, ticketRoutingRules, ticketComments, ticketAttachments, insertTicketSchema, insertTicketCommentSchema, insertTicketAttachmentSchema, insertTicketRoutingRuleSchema, callCenterTimeEntries, insertCallCenterTimeEntrySchema, productTaskTemplates, insertProductTaskTemplateSchema, clientTaskGenerations, insertClientTaskGenerationSchema, clientRecurringConfig, insertClientRecurringConfigSchema, proposals, insertProposalSchema, proposalTerms, insertProposalTermsSchema, customForms, customFormFields, customFormSubmissions, insertCustomFormSchema, insertCustomFormFieldSchema, insertCustomFormSubmissionSchema, onboardingTemplates, onboardingTemplateItems, onboardingInstances, onboardingInstanceItems, insertOnboardingTemplateSchema, insertOnboardingTemplateItemSchema, insertOnboardingInstanceSchema, insertOnboardingInstanceItemSchema, icAgreementTemplates, jobOffers, offerSignatures, offerStatusLog, insertIcAgreementTemplateSchema, insertJobOfferSchema, insertOfferSignatureSchema, insertOfferStatusLogSchema, stickyNotes, insertStickyNoteSchema, assetTypes, assetStatuses, assets, insertAssetTypeSchema, insertAssetStatusSchema, insertAssetSchema;
+var sessions, uuidDefault, users, businessProfile, customFieldFolders, customFields, clientNotes, clientTasks, clientAppointments, clientDocuments, clientContacts, clientTransactions, tags, clientGroups, productCategories, products, productBundles, bundleProducts, productPackages, packageItems, clientProducts, clientBundles, clientPackages, quotes, quoteItems, salesSettings, salesTargets, capacitySettings, notes, appointments, documents, activities, clients, clientRoadmapEntries, insertClientRoadmapEntrySchema, clientRoadmapComments, insertClientRoadmapCommentSchema, clientPortalUsers, clientHealthScores, clientBriefSections, clientBriefValues, projects, campaigns, templateFolders, emailTemplates, smsTemplates, scheduledEmails, scheduledHiredEmails, leadPipelineStages, leadSources, leadNoteTemplates, leads, leadStageTransitions, salesActivities, deals, smartLists, tasks, taskTimeEntries, insertTaskTimeEntrySchema, taskDependencies, taskComments, taskCommentReactions, commentFiles, imageAnnotations, timeOffPolicies, timeOffTypes, timeOffRequests, timeOffRequestDays, jobApplications, applicationStageHistory, jobApplicationComments, jobApplicationWatchers, timeOffBalances, taskActivities, invoices, socialMediaAccounts, socialMediaPosts, socialMediaTemplates, socialMediaAnalytics, insertUserSchema, insertCustomFieldFolderSchema, insertCustomFieldSchema, insertClientGroupSchema, insertClientProductSchema, insertClientBundleSchema, insertClientAppointmentSchema, insertNoteSchema, insertDocumentSchema, insertActivitySchema, insertClientSchema, inputClientHealthScoreSchema, insertClientHealthScoreSchema, insertClientBriefSectionSchema, insertClientBriefValueSchema, insertCampaignSchema, insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema, insertScheduledEmailSchema, insertSmartListSchema, insertLeadPipelineStagSchema, insertLeadSourceSchema, insertLeadNoteTemplateSchema, insertLeadSchema, insertLeadStageTransitionSchema, insertSalesActivitySchema, insertDealSchema, insertTaskSchema, insertTaskSchemaValidated, insertTaskActivitySchema, insertInvoiceSchema, insertSocialMediaAccountSchema, insertSocialMediaPostSchema, insertSocialMediaTemplateSchema, insertSocialMediaAnalyticsSchema, insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema, insertImageAnnotationSchema, insertTimeOffRequestSchema, insertJobApplicationSchema, insertApplicationStageHistorySchema, insertJobApplicationWatcherSchema, insertTimeOffBalanceSchema, insertTimeOffRequestDaySchema, workflows, workflowExecutions, workflowActionAnalytics, workflowTemplates, taskCategories, taskTemplates, enhancedTasks, taskHistory, automationTriggers, automationActions, notifications, roles, permissions, userRoles, granularPermissions, permissionAuditLogs, permissionChangeHistory, insertWorkflowSchema, insertWorkflowExecutionSchema, insertWorkflowActionAnalyticsSchema, insertWorkflowTemplateSchema, insertTaskCategorySchema, insertTaskTemplateSchema, insertEnhancedTaskSchema, insertTaskHistorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema, insertNotificationSchema, insertClientNoteSchema, insertClientTaskSchema, insertClientDocumentSchema, insertClientContactSchema, insertClientTransactionSchema, healthScoreFilterSchema, departments, positions, positionKpis2, insertPositionKpiSchema, staff, salaryHistory, insertStaffSchema, authUsers, insertAuthUserSchema, staffLinkedEmails, insertStaffLinkedEmailSchema, jobOpenings, insertJobOpeningSchema, insertDepartmentSchema, insertPositionSchema, insertTagSchema, insertProductCategorySchema, insertProductSchema, insertProductBundleSchema, insertBundleProductSchema, insertProductPackageSchema, insertPackageItemSchema, insertClientPackageSchema, auditLogs, insertAuditLogSchema, insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertGranularPermissionSchema, insertPermissionAuditLogSchema, insertPermissionChangeHistorySchema, notificationSettings, insertNotificationSettingsSchema, calendars, calendarStaff, calendarAvailability, calendarDateOverrides, calendarIntegrations, smsIntegrations, emailIntegrations, aiIntegrations, insertAiIntegrationSchema, stripeIntegrations, insertStripeIntegrationSchema, aiAssistantSettings, insertAiAssistantSettingsSchema, goHighLevelIntegration, insertGoHighLevelIntegrationSchema, slackWorkspaces, insertSlackWorkspaceSchema, leadNotes, leadAppointments, insertLeadNoteSchema, insertLeadAppointmentSchema, calendarAppointments, appointmentReminders, roundRobinTracking, insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema, insertCalendarDateOverrideSchema, insertCalendarIntegrationSchema, insertSmsIntegrationSchema, insertEmailIntegrationSchema, insertCalendarAppointmentSchema, insertAppointmentReminderSchema, insertRoundRobinTrackingSchema, customFieldFileUploads, insertCustomFieldFileUploadSchema, taskAttachments, insertTaskAttachmentSchema, taskStatuses, teamWorkflows, teamWorkflowStatuses, taskPriorities, taskSettings, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema, insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema, formFolders, forms, formFields, formSubmissions, insertFormSchema, jobApplicationFormConfig, insertJobApplicationFormConfigSchema, newHireOnboardingFormConfig, insertNewHireOnboardingFormConfigSchema, clientOnboardingFormConfig, insertClientOnboardingFormConfigSchema, newHireOnboardingSubmissions, insertNewHireOnboardingSubmissionSchema, expenseReportFormConfig, insertExpenseReportFormConfigSchema, expenseReportSubmissions, insertExpenseReportSubmissionSchema, offboardingFormConfig, insertOffboardingFormConfigSchema, offboardingSubmissions, insertOffboardingSubmissionSchema, insertFormFieldSchema, insertFormSubmissionSchema, insertFormFolderSchema, insertTaskDependencySchema, teamPositions, clientTeamAssignments, positionDescriptionVersions, insertTeamPositionSchema, reorderTeamPositionsSchema, insertClientTeamAssignmentSchema, knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBasePermissions, knowledgeBaseBookmarks, knowledgeBaseLikes, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseSettings, knowledgeBaseArticleVersions, insertKnowledgeBaseCategorySchema, insertKnowledgeBaseArticleSchema, insertKnowledgeBasePermissionSchema, insertKnowledgeBaseBookmarkSchema, insertKnowledgeBaseLikeSchema, insertKnowledgeBaseCommentSchema, insertKnowledgeBaseViewSchema, insertKnowledgeBaseSettingSchema, insertKnowledgeBaseArticleVersionSchema, trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress, trainingCoursePermissions, trainingQuizzes, trainingQuizQuestions, trainingLessonResources, trainingQuizAttempts, trainingAssignments, trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, userViewPreferences, dashboards, dashboardWidgets, userDashboardWidgets, insertTrainingCategorySchema, insertTrainingCourseSchema, insertTrainingModuleSchema, insertTrainingLessonSchema, insertTrainingEnrollmentSchema, insertTrainingProgressSchema, insertTrainingCoursePermissionSchema, insertTrainingQuizSchema, insertTrainingQuizQuestionSchema, insertTrainingQuizAttemptSchema, insertTrainingAssignmentSchema, insertTrainingAssignmentSubmissionSchema, insertTrainingDiscussionSchema, insertTrainingDiscussionLikeSchema, insertTrainingLessonResourceSchema, insertUserViewPreferenceSchema, insertDashboardSchema, insertDashboardWidgetSchema, insertUserDashboardWidgetSchema, insertQuoteSchema, insertQuoteItemSchema, insertSalesSettingsSchema, updateSalesSettingsSchema, insertSalesTargetSchema, updateSalesTargetSchema, insertCapacitySettingsSchema, updateCapacitySettingsSchema, timeTrackingReportFiltersSchema, oneOnOneMeetings, insertOneOnOneMeetingSchema, oneOnOneTalkingPoints, insertOneOnOneTalkingPointSchema, oneOnOneWins, insertOneOnOneWinSchema, oneOnOneObjectives, insertOneOnOneObjectiveSchema, oneOnOneActionItems, insertOneOnOneActionItemSchema, oneOnOneGoals, insertOneOnOneGoalSchema, oneOnOneMeetingKpiStatuses, insertOneOnOneMeetingKpiStatusSchema, oneOnOneComments, insertOneOnOneCommentSchema, oneOnOneProgressionStatuses, insertOneOnOneProgressionStatusSchema, orgChartStructures, insertOrgChartStructureSchema, orgChartNodes, insertOrgChartNodeSchema, orgChartNodeAssignments, insertOrgChartNodeAssignmentSchema, insertTimeOffTypeSchema, calendarConnections, calendarSyncState, calendarEvents, calendarEventCache, insertCalendarConnectionSchema, insertCalendarSyncStateSchema, insertCalendarEventSchema, eventTimeEntries, insertEventTimeEntrySchema, surveyFolders, surveys, surveySlides, surveyFields, surveyLogicRules, surveySubmissions, surveySubmissionAnswers, insertSurveyFolderSchema, PX_MEETING_SEGMENTS, pxMeetings, pxMeetingAttendees, insertPxMeetingSchema, insertPxMeetingAttendeeSchema, staffIncidents, insertStaffIncidentSchema, insertSurveySchema, insertSurveySlideSchema, insertSurveyFieldSchema, insertSurveyLogicRuleSchema, insertSurveySubmissionSchema, insertSurveySubmissionAnswerSchema, taskIntakeForms, taskIntakeSections, taskIntakeQuestions, taskIntakeOptions, taskIntakeLogicRules, taskIntakeAssignmentRules, insertTaskIntakeFormSchema, insertTaskIntakeSectionSchema, insertTaskIntakeQuestionSchema, insertTaskIntakeOptionSchema, insertTaskIntakeLogicRuleSchema, insertTaskIntakeAssignmentRuleSchema, taskIntakeSubmissions, taskIntakeAnswers, insertTaskIntakeSubmissionSchema, insertTaskIntakeAnswerSchema, toolDirectoryCategories, toolDirectoryTools, insertToolDirectoryCategorySchema, insertToolDirectoryToolSchema, tickets, ticketRoutingRules, ticketComments, ticketAttachments, insertTicketSchema, insertTicketCommentSchema, insertTicketAttachmentSchema, insertTicketRoutingRuleSchema, callCenterTimeEntries, insertCallCenterTimeEntrySchema, productTaskTemplates, insertProductTaskTemplateSchema, clientTaskGenerations, insertClientTaskGenerationSchema, clientRecurringConfig, insertClientRecurringConfigSchema, proposals, insertProposalSchema, proposalTerms, insertProposalTermsSchema, customForms, customFormFields, customFormSubmissions, insertCustomFormSchema, insertCustomFormFieldSchema, insertCustomFormSubmissionSchema, onboardingTemplates, onboardingTemplateItems, onboardingInstances, onboardingInstanceItems, insertOnboardingTemplateSchema, insertOnboardingTemplateItemSchema, insertOnboardingInstanceSchema, insertOnboardingInstanceItemSchema, icAgreementTemplates, jobOffers, offerSignatures, offerStatusLog, insertIcAgreementTemplateSchema, insertJobOfferSchema, insertOfferSignatureSchema, insertOfferStatusLogSchema, stickyNotes, insertStickyNoteSchema, assetTypes, assetStatuses, clientAssets, insertAssetTypeSchema, insertAssetStatusSchema, insertClientAssetSchema;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -5535,16 +5535,17 @@ var init_schema = __esm({
     }, (table) => ({
       uniqAgencyName: unique().on(table.agencyId, table.name)
     }));
-    assets = pgTable("assets", {
+    clientAssets = pgTable("client_assets", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
       agencyId: integer("agency_id").notNull().default(1),
+      clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
       name: text("name").notNull(),
-      typeId: varchar("type_id").references(() => assetTypes.id, { onDelete: "set null" }),
-      statusId: varchar("status_id").references(() => assetStatuses.id, { onDelete: "set null" }),
-      clientId: varchar("client_id").references(() => clients.id, { onDelete: "set null" }),
+      linkUrl: text("link_url"),
       description: text("description"),
-      fileUrl: text("file_url"),
-      createdBy: varchar("created_by").references(() => users.id, { onDelete: "set null" }),
+      assetTypeId: varchar("asset_type_id").references(() => assetTypes.id, { onDelete: "set null" }),
+      assetStatusId: varchar("asset_status_id").references(() => assetStatuses.id, { onDelete: "set null" }),
+      ownerStaffId: uuid("owner_staff_id").references(() => staff.id, { onDelete: "set null" }),
+      portalVisible: boolean("portal_visible").notNull().default(false),
       createdAt: timestamp("created_at").defaultNow(),
       updatedAt: timestamp("updated_at").defaultNow()
     });
@@ -5558,7 +5559,7 @@ var init_schema = __esm({
       createdAt: true,
       updatedAt: true
     });
-    insertAssetSchema = createInsertSchema(assets).omit({
+    insertClientAssetSchema = createInsertSchema(clientAssets).omit({
       id: true,
       createdAt: true,
       updatedAt: true
@@ -25673,6 +25674,205 @@ AgencyBoost CRM`
         return res.status(400).json({ error: "Validation failed", details: error.errors });
       }
       res.status(500).json({ error: "Failed to reorder asset statuses", message: error?.message });
+    }
+  });
+  function emitWorkflowEvent(eventName, payload) {
+    try {
+      console.log(`[event] ${eventName}`, JSON.stringify(payload));
+    } catch {
+    }
+  }
+  async function loadClientForAgency(clientId, _agencyId) {
+    const [c] = await db.select({ id: clients.id }).from(clients).where(eq21(clients.id, clientId)).limit(1);
+    return c ?? null;
+  }
+  async function hydrateClientAssets(rows) {
+    if (rows.length === 0) return [];
+    const typeIds = Array.from(new Set(rows.map((r) => r.assetTypeId).filter(Boolean)));
+    const statusIds = Array.from(new Set(rows.map((r) => r.assetStatusId).filter(Boolean)));
+    const ownerIds = Array.from(new Set(rows.map((r) => r.ownerStaffId).filter(Boolean)));
+    const [typesRows, statusesRows, ownersRows] = await Promise.all([
+      typeIds.length ? db.select().from(assetTypes).where(inArray8(assetTypes.id, typeIds)) : Promise.resolve([]),
+      statusIds.length ? db.select().from(assetStatuses).where(inArray8(assetStatuses.id, statusIds)) : Promise.resolve([]),
+      ownerIds.length ? db.select({
+        id: staff.id,
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+        email: staff.email,
+        profileImagePath: staff.profileImagePath
+      }).from(staff).where(inArray8(staff.id, ownerIds)) : Promise.resolve([])
+    ]);
+    const typeMap = new Map(typesRows.map((t) => [t.id, t]));
+    const statusMap = new Map(statusesRows.map((s) => [s.id, s]));
+    const ownerMap = new Map(
+      ownersRows.map((o) => [
+        o.id,
+        {
+          id: o.id,
+          name: `${o.firstName ?? ""} ${o.lastName ?? ""}`.trim(),
+          email: o.email,
+          avatar: o.profileImagePath ?? null
+        }
+      ])
+    );
+    return rows.map((r) => ({
+      ...r,
+      type: r.assetTypeId ? typeMap.get(r.assetTypeId) ?? null : null,
+      status: r.assetStatusId ? statusMap.get(r.assetStatusId) ?? null : null,
+      owner: r.ownerStaffId ? ownerMap.get(r.ownerStaffId) ?? null : null
+    }));
+  }
+  app2.get("/api/clients/:clientId/assets", requireAuth(), requirePermission("clients", "canView"), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const client = await loadClientForAgency(clientId, CURRENT_AGENCY_ID);
+      if (!client) return res.status(404).json({ error: "Client not found" });
+      const rows = await db.select().from(clientAssets).where(and18(eq21(clientAssets.clientId, clientId), eq21(clientAssets.agencyId, CURRENT_AGENCY_ID))).orderBy(desc5(clientAssets.updatedAt));
+      const hydrated = await hydrateClientAssets(rows);
+      res.json(hydrated);
+    } catch (error) {
+      console.error("[GET /api/clients/:clientId/assets] error:", error);
+      res.status(500).json({ error: "Failed to fetch client assets", message: error?.message });
+    }
+  });
+  app2.post("/api/clients/:clientId/assets", requireAuth(), requirePermission("clients", "canEdit"), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const client = await loadClientForAgency(clientId, CURRENT_AGENCY_ID);
+      if (!client) return res.status(404).json({ error: "Client not found" });
+      const parsed = insertClientAssetSchema.omit({ agencyId: true, clientId: true }).parse(req.body);
+      if (parsed.assetTypeId) {
+        const [t] = await db.select({ id: assetTypes.id }).from(assetTypes).where(and18(eq21(assetTypes.id, parsed.assetTypeId), eq21(assetTypes.agencyId, CURRENT_AGENCY_ID))).limit(1);
+        if (!t) return res.status(400).json({ error: "Invalid assetTypeId for this agency" });
+      }
+      if (parsed.assetStatusId) {
+        const [s] = await db.select({ id: assetStatuses.id }).from(assetStatuses).where(and18(eq21(assetStatuses.id, parsed.assetStatusId), eq21(assetStatuses.agencyId, CURRENT_AGENCY_ID))).limit(1);
+        if (!s) return res.status(400).json({ error: "Invalid assetStatusId for this agency" });
+      }
+      if (parsed.ownerStaffId) {
+        const [o] = await db.select({ id: staff.id }).from(staff).where(eq21(staff.id, parsed.ownerStaffId)).limit(1);
+        if (!o) return res.status(400).json({ error: "Invalid ownerStaffId" });
+      }
+      const [created] = await db.insert(clientAssets).values({
+        ...parsed,
+        agencyId: CURRENT_AGENCY_ID,
+        clientId
+      }).returning();
+      emitWorkflowEvent("client_asset.created", {
+        agencyId: CURRENT_AGENCY_ID,
+        clientId,
+        assetId: created.id,
+        actorUserId: req.user?.id ?? null
+      });
+      const [hydrated] = await hydrateClientAssets([created]);
+      res.status(201).json(hydrated);
+    } catch (error) {
+      console.error("[POST /api/clients/:clientId/assets] error:", error);
+      if (error?.name === "ZodError") {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create client asset", message: error?.message });
+    }
+  });
+  app2.put("/api/clients/:clientId/assets/:assetId", requireAuth(), requirePermission("clients", "canEdit"), async (req, res) => {
+    try {
+      const { clientId, assetId } = req.params;
+      const client = await loadClientForAgency(clientId, CURRENT_AGENCY_ID);
+      if (!client) return res.status(404).json({ error: "Client not found" });
+      const [existing] = await db.select().from(clientAssets).where(and18(
+        eq21(clientAssets.id, assetId),
+        eq21(clientAssets.clientId, clientId),
+        eq21(clientAssets.agencyId, CURRENT_AGENCY_ID)
+      )).limit(1);
+      if (!existing) return res.status(404).json({ error: "Asset not found" });
+      const updateSchema = insertClientAssetSchema.omit({ agencyId: true, clientId: true }).partial().pick({
+        name: true,
+        linkUrl: true,
+        assetTypeId: true,
+        assetStatusId: true,
+        ownerStaffId: true,
+        portalVisible: true
+      });
+      const patch = updateSchema.parse(req.body);
+      if (patch.assetTypeId !== void 0 && patch.assetTypeId !== null) {
+        const [t] = await db.select({ id: assetTypes.id }).from(assetTypes).where(and18(eq21(assetTypes.id, patch.assetTypeId), eq21(assetTypes.agencyId, CURRENT_AGENCY_ID))).limit(1);
+        if (!t) return res.status(400).json({ error: "Invalid assetTypeId for this agency" });
+      }
+      if (patch.assetStatusId !== void 0 && patch.assetStatusId !== null) {
+        const [s] = await db.select({ id: assetStatuses.id }).from(assetStatuses).where(and18(eq21(assetStatuses.id, patch.assetStatusId), eq21(assetStatuses.agencyId, CURRENT_AGENCY_ID))).limit(1);
+        if (!s) return res.status(400).json({ error: "Invalid assetStatusId for this agency" });
+      }
+      if (patch.ownerStaffId !== void 0 && patch.ownerStaffId !== null) {
+        const [o] = await db.select({ id: staff.id }).from(staff).where(eq21(staff.id, patch.ownerStaffId)).limit(1);
+        if (!o) return res.status(400).json({ error: "Invalid ownerStaffId" });
+      }
+      const [updated] = await db.update(clientAssets).set({ ...patch, updatedAt: /* @__PURE__ */ new Date() }).where(eq21(clientAssets.id, assetId)).returning();
+      const baseEventPayload = {
+        agencyId: CURRENT_AGENCY_ID,
+        clientId,
+        assetId,
+        actorUserId: req.user?.id ?? null
+      };
+      if (patch.assetStatusId !== void 0 && patch.assetStatusId !== existing.assetStatusId) {
+        emitWorkflowEvent("client_asset.status_changed", {
+          ...baseEventPayload,
+          oldStatusId: existing.assetStatusId,
+          newStatusId: updated.assetStatusId
+        });
+      }
+      if (patch.ownerStaffId !== void 0 && patch.ownerStaffId !== existing.ownerStaffId) {
+        emitWorkflowEvent("client_asset.owner_changed", {
+          ...baseEventPayload,
+          oldOwnerId: existing.ownerStaffId,
+          newOwnerId: updated.ownerStaffId
+        });
+      }
+      if (patch.linkUrl !== void 0 && patch.linkUrl !== existing.linkUrl) {
+        emitWorkflowEvent("client_asset.link_updated", {
+          ...baseEventPayload,
+          oldLinkUrl: existing.linkUrl,
+          newLinkUrl: updated.linkUrl
+        });
+      }
+      if (patch.portalVisible !== void 0 && patch.portalVisible !== existing.portalVisible) {
+        emitWorkflowEvent("client_asset.portal_visibility_changed", {
+          ...baseEventPayload,
+          oldPortalVisible: existing.portalVisible,
+          newPortalVisible: updated.portalVisible
+        });
+      }
+      const [hydrated] = await hydrateClientAssets([updated]);
+      res.json(hydrated);
+    } catch (error) {
+      console.error("[PUT /api/clients/:clientId/assets/:assetId] error:", error);
+      if (error?.name === "ZodError") {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update client asset", message: error?.message });
+    }
+  });
+  app2.delete("/api/clients/:clientId/assets/:assetId", requireAuth(), requirePermission("clients", "canEdit"), async (req, res) => {
+    try {
+      const { clientId, assetId } = req.params;
+      const client = await loadClientForAgency(clientId, CURRENT_AGENCY_ID);
+      if (!client) return res.status(404).json({ error: "Client not found" });
+      const [existing] = await db.select({ id: clientAssets.id }).from(clientAssets).where(and18(
+        eq21(clientAssets.id, assetId),
+        eq21(clientAssets.clientId, clientId),
+        eq21(clientAssets.agencyId, CURRENT_AGENCY_ID)
+      )).limit(1);
+      if (!existing) return res.status(404).json({ error: "Asset not found" });
+      await db.delete(clientAssets).where(eq21(clientAssets.id, assetId));
+      emitWorkflowEvent("client_asset.deleted", {
+        agencyId: CURRENT_AGENCY_ID,
+        clientId,
+        assetId,
+        actorUserId: req.user?.id ?? null
+      });
+      res.status(204).end();
+    } catch (error) {
+      console.error("[DELETE /api/clients/:clientId/assets/:assetId] error:", error);
+      res.status(500).json({ error: "Failed to delete client asset", message: error?.message });
     }
   });
   app2.post("/api/admin/cleanup-orphaned-auth", requireAuth(), requireAdmin(), async (req, res) => {
