@@ -22457,7 +22457,10 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   });
 
   // Get all Twilio phone numbers
-  app.get("/api/integrations/twilio/numbers", requireAuth(), requirePermission('integrations', 'canView'), async (req, res) => {
+  // Any authenticated staff member can list available send-from numbers — they are
+  // needed by the SMS / Call composers throughout the app. Management of numbers
+  // (add/edit/delete) still requires the integrations permission below.
+  app.get("/api/integrations/twilio/numbers", requireAuth(), async (req, res) => {
     try {
       const numbers = await db
         .select()
@@ -22637,7 +22640,10 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   }
 
   // Send SMS using connected Twilio integration
-  app.post("/api/integrations/twilio/send", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
+  // Sending SMS is a normal staff action (composer in client/lead pages); managing
+  // the integration setup itself (connect/test/disconnect) still requires the
+  // integrations permission elsewhere.
+  app.post("/api/integrations/twilio/send", requireAuth(), async (req, res) => {
     try {
       const { to, message, fromNumber, clientId, templateId } = req.body;
       console.log('SMS Request received:', { to, fromNumber, clientId, message: message?.substring(0, 50) + '...' });

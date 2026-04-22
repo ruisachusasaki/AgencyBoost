@@ -42069,7 +42069,7 @@ ${appointment.description || ""}
       });
     }
   });
-  app2.get("/api/integrations/twilio/numbers", requireAuth(), requirePermission("integrations", "canView"), async (req, res) => {
+  app2.get("/api/integrations/twilio/numbers", requireAuth(), async (req, res) => {
     try {
       const numbers = await db.select().from(smsIntegrations).where(and18(
         eq20(smsIntegrations.provider, "twilio"),
@@ -42175,7 +42175,7 @@ ${appointment.description || ""}
     result = result.replace(/{{today_date}}/g, now.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })).replace(/{{current_time}}/g, now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }));
     return result;
   }
-  app2.post("/api/integrations/twilio/send", requireAuth(), requirePermission("integrations", "canManage"), async (req, res) => {
+  app2.post("/api/integrations/twilio/send", requireAuth(), async (req, res) => {
     try {
       const { to, message, fromNumber, clientId, templateId } = req.body;
       console.log("SMS Request received:", { to, fromNumber, clientId, message: message?.substring(0, 50) + "..." });
