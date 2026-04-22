@@ -16360,92 +16360,35 @@ async function getWelcomeEmailPreview(applicationId) {
 }
 async function sendHiredNotifications(applicationId, changedBy, emailOptions) {
   try {
-    const preview = await getWelcomeEmailPreview(applicationId);
-    const { recipientEmail, candidateName, position, startDate, usedPersonalFallback } = preview;
-    const emailSubject = emailOptions?.customSubject || preview.subject;
-    const emailHtml = emailOptions?.customHtml || preview.htmlContent;
-    if (emailOptions?.sendOption === "scheduled" && emailOptions.scheduledFor) {
-      if (!recipientEmail) {
-        console.error("[HiredNotif] Cannot schedule email: no recipient email found");
-        return;
-      }
-      const scheduledDate = new Date(emailOptions.scheduledFor);
-      if (isNaN(scheduledDate.getTime()) || scheduledDate <= /* @__PURE__ */ new Date()) {
-        console.error("[HiredNotif] Cannot schedule email: invalid or past date");
-        return;
-      }
-      await db.insert(scheduledHiredEmails).values({
-        applicationId,
-        toEmail: recipientEmail,
-        subject: emailSubject,
-        htmlContent: emailHtml,
-        scheduledFor: new Date(emailOptions.scheduledFor),
-        timezone: emailOptions.timezone || "America/New_York",
-        status: "pending",
-        createdBy: changedBy,
-        candidateName,
-        positionTitle: position
-      });
-      console.log(`[HiredNotif] Welcome email scheduled for ${emailOptions.scheduledFor} to ${recipientEmail}`);
-      const notificationService = getNotificationService();
-      if (notificationService && changedBy) {
-        const scheduledDate2 = new Date(emailOptions.scheduledFor).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit"
-        });
-        void notificationService.notify({
-          userId: changedBy,
-          type: "applicant_hired",
-          title: `${candidateName} has been marked as Hired`,
-          message: `You have successfully hired ${candidateName} for the ${position} role. A welcome email has been scheduled to send on ${scheduledDate2} to ${recipientEmail}.`,
-          entityType: "job_application",
-          entityId: applicationId,
-          actionUrl: `/applicants/${applicationId}`,
-          actionText: "View Application",
-          priority: "normal",
-          metadata: { position, startDate }
-        }).catch(
-          (err) => console.error("[HiredNotif] Failed to send manager notification:", err)
-        );
-      }
-    } else {
-      const notificationService = getNotificationService();
-      if (notificationService && recipientEmail) {
-        try {
-          await notificationService.sendDirectEmail({
-            to: recipientEmail,
-            subject: emailSubject,
-            text: emailSubject,
-            html: emailHtml
-          });
-          console.log(`[HiredNotif] Welcome email sent to ${recipientEmail}`);
-        } catch (err) {
-          console.error("[HiredNotif] Failed to send welcome email:", err);
-        }
-      }
-      if (notificationService && changedBy) {
-        let managerMessage = `You have successfully hired ${candidateName} for the ${position} role. A welcome email has been sent to ${recipientEmail}. Their AgencyBoost onboarding checklist will be ready on their start date of ${startDate}.`;
-        if (usedPersonalFallback && preview.recipientEmail) {
-          managerMessage += ` Note: The welcome email was sent to their personal email (${preview.recipientEmail}) because no matching AgencyBoost staff account was found. Please ensure their staff account is created with their work email.`;
-        }
-        void notificationService.notify({
-          userId: changedBy,
-          type: "applicant_hired",
-          title: `${candidateName} has been marked as Hired`,
-          message: managerMessage,
-          entityType: "job_application",
-          entityId: applicationId,
-          actionUrl: `/applicants/${applicationId}`,
-          actionText: "View Application",
-          priority: "normal",
-          metadata: { position, startDate }
-        }).catch(
-          (err) => console.error("[HiredNotif] Failed to send manager notification:", err)
-        );
-      }
+    const [application] = await db.select().from(jobApplications).where(eq11(jobApplications.id, applicationId)).limit(1);
+    if (!application) {
+      console.error("[HiredNotif] Application not found:", applicationId);
+      return;
+    }
+    const candidateName = application.applicantName || "New Hire";
+    const position = application.positionTitle || "Team Member";
+    const [offer] = await db.select().from(jobOffers).where(eq11(jobOffers.applicationId, applicationId)).limit(1);
+    const startDate = offer?.startDate ? new Date(offer.startDate).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    }) : "TBD";
+    const notificationService = getNotificationService();
+    if (notificationService && changedBy) {
+      void notificationService.notify({
+        userId: changedBy,
+        type: "applicant_hired",
+        title: `${candidateName} has been marked as Hired`,
+        message: `${candidateName} has been marked as hired for the ${position} role (start date: ${startDate}). Any welcome emails or onboarding actions are now handled by the "Applicant Hired" workflow trigger under Workflows.`,
+        entityType: "job_application",
+        entityId: applicationId,
+        actionUrl: `/applicants/${applicationId}`,
+        actionText: "View Application",
+        priority: "normal",
+        metadata: { position, startDate }
+      }).catch(
+        (err) => console.error("[HiredNotif] Failed to send manager notification:", err)
+      );
     }
     void emitTrigger({
       type: "applicant_hired",
@@ -16454,7 +16397,8 @@ async function sendHiredNotifications(applicationId, changedBy, emailOptions) {
         candidateName,
         position,
         startDate,
-        managerId: changedBy
+        managerId: changedBy,
+        candidateEmail: application.applicantEmail || null
       },
       context: { userId: changedBy, timestamp: /* @__PURE__ */ new Date() }
     }).catch((err) => console.error("[Trigger] applicant_hired failed:", err));
@@ -49741,7 +49685,7 @@ ${appointment.description || ""}
   app2.patch("/api/hr/job-applications/:id", requireAuth(), async (req, res) => {
     try {
       const { id } = req.params;
-      const { stage, rating, emailOptions } = req.body;
+      const { stage, rating } = req.body;
       const [existingApp] = await db.select({ stage: jobApplications.stage }).from(jobApplications).where(eq20(jobApplications.id, id)).limit(1);
       if (!existingApp) {
         return res.status(404).json({ message: "Application not found" });
@@ -49770,14 +49714,7 @@ ${appointment.description || ""}
         } catch (logErr) {
           console.error("[HiredStatus] Error logging offer status:", logErr);
         }
-        const parsedEmailOptions = emailOptions ? {
-          sendOption: emailOptions.sendOption || "now",
-          scheduledFor: emailOptions.scheduledFor,
-          timezone: emailOptions.timezone,
-          customSubject: emailOptions.customSubject,
-          customHtml: emailOptions.customHtml
-        } : void 0;
-        sendHiredNotifications(id, changedBy, parsedEmailOptions).catch(
+        sendHiredNotifications(id, changedBy).catch(
           (err) => console.error("Hired notification error:", err)
         );
       }
@@ -60362,6 +60299,18 @@ async function initializeDefaultAutomationTriggers() {
           category: "Client Management",
           configSchema: {
             clientId: { type: "client_select", label: "Client", required: false }
+          },
+          isActive: true,
+          createdAt: /* @__PURE__ */ new Date()
+        },
+        {
+          id: "trigger-applicant-hired",
+          name: "Applicant Hired",
+          type: "applicant_hired",
+          description: "Triggers when an applicant's status is changed to Hired. Use this to send the welcome email and run any onboarding actions.",
+          category: "hr_management",
+          configSchema: {
+            position_title: { type: "string", label: "Position Title (optional filter)", placeholder: "Leave blank to fire for any position" }
           },
           isActive: true,
           createdAt: /* @__PURE__ */ new Date()

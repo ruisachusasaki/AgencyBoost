@@ -97,7 +97,6 @@ import {
 } from "@shared/schema";
 import { spawnOnboardingChecklist } from "./services/onboardingSpawnService";
 import { sendHiredNotifications, getWelcomeEmailPreview, startScheduledEmailProcessor } from "./services/hiredNotificationService";
-import type { HiredEmailOptions } from "./services/hiredNotificationService";
 import { syncLmsCompletion } from "./services/onboardingLmsSyncService";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { canAccessWidget, isKnownWidgetType } from "@shared/widget-permissions";
@@ -33047,7 +33046,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   app.patch('/api/hr/job-applications/:id', requireAuth(), async (req, res) => {
     try {
       const { id } = req.params;
-      const { stage, rating, emailOptions } = req.body;
+      const { stage, rating } = req.body;
 
       const [existingApp] = await db
         .select({ stage: jobApplications.stage })
@@ -33097,17 +33096,9 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           console.error("[HiredStatus] Error logging offer status:", logErr);
         }
 
-        const parsedEmailOptions: HiredEmailOptions | undefined = emailOptions
-          ? {
-              sendOption: emailOptions.sendOption || "now",
-              scheduledFor: emailOptions.scheduledFor,
-              timezone: emailOptions.timezone,
-              customSubject: emailOptions.customSubject,
-              customHtml: emailOptions.customHtml,
-            }
-          : undefined;
-
-        sendHiredNotifications(id, changedBy, parsedEmailOptions).catch((err) =>
+        // Welcome emails are now handled exclusively by the "Applicant Hired" workflow trigger.
+        // sendHiredNotifications fires the trigger and notifies the manager in-app.
+        sendHiredNotifications(id, changedBy).catch((err) =>
           console.error("Hired notification error:", err)
         );
       }

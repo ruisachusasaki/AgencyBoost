@@ -129,6 +129,78 @@ export async function sendHiredNotifications(
   emailOptions?: HiredEmailOptions
 ): Promise<void> {
   try {
+    const [application] = await db
+      .select()
+      .from(jobApplications)
+      .where(eq(jobApplications.id, applicationId))
+      .limit(1);
+
+    if (!application) {
+      console.error("[HiredNotif] Application not found:", applicationId);
+      return;
+    }
+
+    const candidateName = application.applicantName || "New Hire";
+    const position = application.positionTitle || "Team Member";
+
+    const [offer] = await db
+      .select()
+      .from(jobOffers)
+      .where(eq(jobOffers.applicationId, applicationId))
+      .limit(1);
+
+    const startDate = offer?.startDate
+      ? new Date(offer.startDate).toLocaleDateString("en-US", {
+          year: "numeric", month: "long", day: "numeric",
+        })
+      : "TBD";
+
+    // Notify the manager (in-app notification only — email is now handled by Workflows)
+    const notificationService = getNotificationService();
+    if (notificationService && changedBy) {
+      void notificationService
+        .notify({
+          userId: changedBy,
+          type: "applicant_hired",
+          title: `${candidateName} has been marked as Hired`,
+          message: `${candidateName} has been marked as hired for the ${position} role (start date: ${startDate}). Any welcome emails or onboarding actions are now handled by the "Applicant Hired" workflow trigger under Workflows.`,
+          entityType: "job_application",
+          entityId: applicationId,
+          actionUrl: `/applicants/${applicationId}`,
+          actionText: "View Application",
+          priority: "normal",
+          metadata: { position, startDate },
+        })
+        .catch((err) =>
+          console.error("[HiredNotif] Failed to send manager notification:", err)
+        );
+    }
+
+    // Fire the workflow trigger - workflows are now solely responsible for any emails
+    void emitTrigger({
+      type: "applicant_hired",
+      data: {
+        applicationId,
+        candidateName,
+        position,
+        startDate,
+        managerId: changedBy,
+        candidateEmail: application.applicantEmail || null,
+      },
+      context: { userId: changedBy, timestamp: new Date() },
+    }).catch((err) => console.error("[Trigger] applicant_hired failed:", err));
+  } catch (error) {
+    console.error("[HiredNotif] Unhandled error in sendHiredNotifications:", error);
+  }
+}
+
+// Legacy code path kept for reference (no longer invoked - emails handled by Workflows)
+async function _legacySendHiredEmail(
+  applicationId: string,
+  changedBy: string,
+  emailOptions?: HiredEmailOptions
+): Promise<void> {
+  try {
     const preview = await getWelcomeEmailPreview(applicationId);
     const { recipientEmail, candidateName, position, startDate, usedPersonalFallback } = preview;
 

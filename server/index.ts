@@ -200,6 +200,18 @@ async function initializeDefaultAutomationTriggers() {
           createdAt: new Date()
         },
         {
+          id: "trigger-applicant-hired",
+          name: "Applicant Hired",
+          type: "applicant_hired",
+          description: "Triggers when an applicant's status is changed to Hired. Use this to send the welcome email and run any onboarding actions.",
+          category: "hr_management",
+          configSchema: {
+            position_title: { type: "string", label: "Position Title (optional filter)", placeholder: "Leave blank to fire for any position" }
+          },
+          isActive: true,
+          createdAt: new Date()
+        },
+        {
           id: "trigger-weekly-hours-below-threshold",
           name: "Weekly Hours Below Threshold",
           type: "weekly_hours_below_threshold",

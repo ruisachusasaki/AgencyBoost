@@ -56,14 +56,6 @@ export default function ApplicantDetailPage() {
   const [isWatcherPopoverOpen, setIsWatcherPopoverOpen] = useState(false);
   const [showSendOfferModal, setShowSendOfferModal] = useState(false);
   const [showHiredConfirm, setShowHiredConfirm] = useState(false);
-  const [hiredEmailLoading, setHiredEmailLoading] = useState(false);
-  const [hiredEmailSubject, setHiredEmailSubject] = useState("");
-  const [hiredEmailHtml, setHiredEmailHtml] = useState("");
-  const [hiredEmailRecipient, setHiredEmailRecipient] = useState("");
-  const [hiredSendOption, setHiredSendOption] = useState<"now" | "scheduled">("now");
-  const [hiredScheduleDate, setHiredScheduleDate] = useState("");
-  const [hiredScheduleTime, setHiredScheduleTime] = useState("09:00");
-  const [hiredEmailEditing, setHiredEmailEditing] = useState(false);
   const { toast } = useToast();
 
   // Fetch applicant details
@@ -183,54 +175,18 @@ export default function ApplicantDetailPage() {
       return;
     }
     if (stage === "hired") {
-      setHiredEmailLoading(true);
-      setHiredEmailEditing(false);
-      setHiredSendOption("now");
-      setHiredScheduleDate("");
-      setHiredScheduleTime("09:00");
-      setHiredEmailSubject("");
-      setHiredEmailHtml("");
-      setHiredEmailRecipient("");
       setShowHiredConfirm(true);
-      try {
-        const res = await fetch(`/api/hr/job-applications/${id}/welcome-email-preview`);
-        if (res.ok) {
-          const preview = await res.json();
-          setHiredEmailSubject(preview.subject);
-          setHiredEmailHtml(preview.htmlContent);
-          setHiredEmailRecipient(preview.recipientEmail);
-        }
-      } catch {
-        // will show with default values
-      } finally {
-        setHiredEmailLoading(false);
-      }
       return;
     }
     await updateApplicationMutation.mutateAsync({ stage });
   };
 
   const confirmHired = async () => {
-    if (hiredSendOption === "scheduled" && !hiredScheduleDate) {
-      toast({ title: "Please select a date to schedule the email", variant: "destructive" });
-      return;
-    }
     try {
-      const emailOptions: any = {
-        sendOption: hiredSendOption,
-        customSubject: hiredEmailSubject || undefined,
-        customHtml: hiredEmailHtml || undefined,
-      };
-      if (hiredSendOption === "scheduled") {
-        const scheduledDateTime = new Date(`${hiredScheduleDate}T${hiredScheduleTime}:00`);
-        emailOptions.scheduledFor = scheduledDateTime.toISOString();
-        emailOptions.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      }
-      await updateApplicationMutation.mutateAsync({ stage: "hired", emailOptions });
+      await updateApplicationMutation.mutateAsync({ stage: "hired" });
       toast({
-        title: hiredSendOption === "scheduled"
-          ? `${application?.applicantName || "Applicant"} has been marked as hired. Welcome email scheduled!`
-          : `${application?.applicantName || "Applicant"} has been marked as hired. Welcome email sent!`,
+        title: `${application?.applicantName || "Applicant"} has been marked as hired.`,
+        description: "Any welcome emails or onboarding actions will be handled by the \"Applicant Hired\" workflow trigger.",
       });
     } catch {
       toast({ title: "Failed to update status", variant: "destructive" });
@@ -916,176 +872,35 @@ export default function ApplicantDetailPage() {
       )}
 
       <Dialog open={showHiredConfirm} onOpenChange={setShowHiredConfirm}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <PartyPopper className="h-5 w-5 text-[hsl(179,100%,39%)]" />
               Mark {application?.applicantName || "this applicant"} as Hired
             </DialogTitle>
-            <DialogDescription>
-              Review and customize the welcome email before sending. Make sure their AgencyBoost staff account has already been created with their work email address.
+            <DialogDescription className="pt-2 space-y-2">
+              <span className="block">
+                This will move the applicant to the Hired stage.
+              </span>
+              <span className="block">
+                Welcome emails and onboarding actions are handled by the{" "}
+                <strong>"Applicant Hired"</strong> workflow trigger under Workflows.
+                If no active workflow is configured for this trigger, no email will be sent automatically.
+              </span>
             </DialogDescription>
           </DialogHeader>
 
-          {hiredEmailLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(179,100%,39%)]" />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
-                <Mail className="h-4 w-4" />
-                <span>To: <strong>{hiredEmailRecipient || "No email found"}</strong></span>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">Subject Line</Label>
-                  {!hiredEmailEditing && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setHiredEmailEditing(true)}
-                      className="text-xs h-7 gap-1"
-                    >
-                      <Edit3 className="h-3 w-3" />
-                      Edit Email
-                    </Button>
-                  )}
-                </div>
-                {hiredEmailEditing ? (
-                  <Input
-                    value={hiredEmailSubject}
-                    onChange={(e) => setHiredEmailSubject(e.target.value)}
-                    placeholder="Email subject..."
-                  />
-                ) : (
-                  <p className="text-sm border rounded-md px-3 py-2 bg-muted/30">{hiredEmailSubject}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Email Body</Label>
-                {hiredEmailEditing ? (
-                  <div className="border rounded-md overflow-hidden max-h-[350px] overflow-y-auto">
-                    <RichTextEditor
-                      content={hiredEmailHtml}
-                      onChange={(html) => setHiredEmailHtml(html)}
-                      placeholder="Write your welcome email..."
-                    />
-                  </div>
-                ) : (
-                  <div
-                    className="border rounded-md p-4 bg-white dark:bg-gray-950 max-h-[300px] overflow-y-auto text-sm"
-                    dangerouslySetInnerHTML={{ __html: hiredEmailHtml }}
-                  />
-                )}
-              </div>
-
-              <Separator />
-
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">When should this email be sent?</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setHiredSendOption("now")}
-                    className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-colors text-left ${
-                      hiredSendOption === "now"
-                        ? "border-[hsl(179,100%,39%)] bg-[hsl(179,100%,39%)]/5"
-                        : "border-border hover:border-muted-foreground/30"
-                    }`}
-                  >
-                    <Send className={`h-5 w-5 ${hiredSendOption === "now" ? "text-[hsl(179,100%,39%)]" : "text-muted-foreground"}`} />
-                    <div>
-                      <p className="font-medium text-sm">Send Now</p>
-                      <p className="text-xs text-muted-foreground">Email goes out immediately</p>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setHiredSendOption("scheduled")}
-                    className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-colors text-left ${
-                      hiredSendOption === "scheduled"
-                        ? "border-[hsl(179,100%,39%)] bg-[hsl(179,100%,39%)]/5"
-                        : "border-border hover:border-muted-foreground/30"
-                    }`}
-                  >
-                    <CalendarClock className={`h-5 w-5 ${hiredSendOption === "scheduled" ? "text-[hsl(179,100%,39%)]" : "text-muted-foreground"}`} />
-                    <div>
-                      <p className="font-medium text-sm">Schedule</p>
-                      <p className="text-xs text-muted-foreground">Pick a date and time</p>
-                    </div>
-                  </button>
-                </div>
-
-                {hiredSendOption === "scheduled" && (
-                  <div className="grid grid-cols-2 gap-3 pt-1">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Date</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={cn(
-                              "w-full h-9 px-3 text-left font-normal justify-start",
-                              !hiredScheduleDate && "text-muted-foreground"
-                            )}
-                          >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            {hiredScheduleDate
-                              ? format(new Date(hiredScheduleDate + "T00:00:00"), "MMM d, yyyy")
-                              : "Pick a date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 z-[9999]" onOpenAutoFocus={(e) => e.preventDefault()} style={{ pointerEvents: "auto" }}>
-                          <CalendarPicker
-                            mode="single"
-                            selected={hiredScheduleDate ? new Date(hiredScheduleDate + "T00:00:00") : undefined}
-                            onSelect={(date) => {
-                              setHiredScheduleDate(date ? format(date, "yyyy-MM-dd") : "");
-                            }}
-                            disabled={(date) => date < new Date(new Date().toDateString())}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Time</Label>
-                      <Input
-                        type="time"
-                        value={hiredScheduleTime}
-                        onChange={(e) => setHiredScheduleTime(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           <DialogFooter className="gap-2 pt-2">
-            <Button variant="ghost" onClick={() => setShowHiredConfirm(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setShowHiredConfirm(false)}>
+              Cancel
+            </Button>
             <Button
               onClick={confirmHired}
-              disabled={updateApplicationMutation.isPending || hiredEmailLoading}
+              disabled={updateApplicationMutation.isPending}
               className="bg-[hsl(179,100%,39%)] hover:bg-[hsl(179,100%,32%)] text-white gap-2"
+              data-testid="button-confirm-hired"
             >
-              {updateApplicationMutation.isPending ? (
-                "Processing..."
-              ) : hiredSendOption === "scheduled" ? (
-                <>
-                  <CalendarClock className="h-4 w-4" />
-                  Mark as Hired & Schedule Email
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  Mark as Hired & Send Email
-                </>
-              )}
+              {updateApplicationMutation.isPending ? "Processing..." : "Mark as Hired"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1093,3 +908,5 @@ export default function ApplicantDetailPage() {
     </div>
   );
 }
+
+// Removed legacy welcome-email popup - kept block below disabled
