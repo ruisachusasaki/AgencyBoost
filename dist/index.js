@@ -25901,6 +25901,33 @@ AgencyBoost CRM`
       res.status(500).json({ error: "Failed to delete client asset", message: error?.message });
     }
   });
+  app2.get("/api/client-portal/assets", requireClientPortalAuth(), async (req, res) => {
+    try {
+      const clientPortalUserId = getAuthenticatedClientPortalUserIdOrFail(req, res);
+      if (!clientPortalUserId) return;
+      const [cpUser] = await db.select({ clientId: clientPortalUsers.clientId }).from(clientPortalUsers).where(eq21(clientPortalUsers.id, clientPortalUserId)).limit(1);
+      if (!cpUser) return res.status(404).json({ error: "Portal user not found" });
+      const rows = await db.select().from(clientAssets).where(and18(
+        eq21(clientAssets.clientId, cpUser.clientId),
+        eq21(clientAssets.agencyId, CURRENT_AGENCY_ID),
+        eq21(clientAssets.portalVisible, true)
+      )).orderBy(desc5(clientAssets.updatedAt));
+      const hydrated = await hydrateClientAssets(rows);
+      const visible = hydrated.filter((a) => a.type?.active === true && a.status?.active === true).map((a) => ({
+        id: a.id,
+        name: a.name,
+        linkUrl: a.linkUrl,
+        updatedAt: a.updatedAt,
+        createdAt: a.createdAt,
+        type: a.type ? { id: a.type.id, name: a.type.name } : null,
+        status: a.status ? { id: a.status.id, name: a.status.name, color: a.status.color } : null
+      }));
+      res.json(visible);
+    } catch (error) {
+      console.error("[GET /api/client-portal/assets] error:", error);
+      res.status(500).json({ error: "Failed to load assets", message: error?.message });
+    }
+  });
   app2.post("/api/admin/cleanup-orphaned-auth", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       const { email } = req.body;

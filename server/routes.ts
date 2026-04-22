@@ -1236,6 +1236,51 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  // GET /api/client-portal/assets - Read-only list of portal-visible assets for the authenticated client
+  app.get("/api/client-portal/assets", requireClientPortalAuth(), async (req, res) => {
+    try {
+      const clientPortalUserId = getAuthenticatedClientPortalUserIdOrFail(req, res);
+      if (!clientPortalUserId) return;
+
+      const [cpUser] = await db
+        .select({ clientId: clientPortalUsers.clientId })
+        .from(clientPortalUsers)
+        .where(eq(clientPortalUsers.id, clientPortalUserId))
+        .limit(1);
+      if (!cpUser) return res.status(404).json({ error: "Portal user not found" });
+
+      const rows = await db
+        .select()
+        .from(clientAssets)
+        .where(and(
+          eq(clientAssets.clientId, cpUser.clientId),
+          eq(clientAssets.agencyId, CURRENT_AGENCY_ID),
+          eq(clientAssets.portalVisible, true),
+        ))
+        .orderBy(desc(clientAssets.updatedAt));
+
+      const hydrated = await hydrateClientAssets(rows);
+
+      // Filter: require BOTH a non-null active type AND a non-null active status; strip owner email/avatar for privacy.
+      const visible = hydrated
+        .filter((a: any) => a.type?.active === true && a.status?.active === true)
+        .map((a: any) => ({
+          id: a.id,
+          name: a.name,
+          linkUrl: a.linkUrl,
+          updatedAt: a.updatedAt,
+          createdAt: a.createdAt,
+          type: a.type ? { id: a.type.id, name: a.type.name } : null,
+          status: a.status ? { id: a.status.id, name: a.status.name, color: a.status.color } : null,
+        }));
+
+      res.json(visible);
+    } catch (error: any) {
+      console.error("[GET /api/client-portal/assets] error:", error);
+      res.status(500).json({ error: "Failed to load assets", message: error?.message });
+    }
+  });
+
   // POST /api/admin/cleanup-orphaned-auth - Clean up orphaned auth records so emails can be reused
   app.post("/api/admin/cleanup-orphaned-auth", requireAuth(), requireAdmin(), async (req, res) => {
     try {

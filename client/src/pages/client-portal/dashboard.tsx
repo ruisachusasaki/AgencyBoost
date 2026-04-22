@@ -13,7 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Calendar as CalendarIcon, CheckCircle2, Circle, Clock, Users, LogOut, BarChart3, Filter, X, ChevronLeft, ChevronRight, ThumbsUp, MessageCircle, Send, ArrowLeft, Paperclip, User, Trophy, Sparkles, ChevronDown, ChevronUp, Rocket } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle2, Circle, Clock, Users, LogOut, BarChart3, Filter, X, ChevronLeft, ChevronRight, ThumbsUp, MessageCircle, Send, ArrowLeft, Paperclip, User, Trophy, Sparkles, ChevronDown, ChevronUp, Rocket, FolderOpen, ExternalLink, Search } from "lucide-react";
+import { ClientPortalAssetsSection } from "@/components/client-portal/assets-section";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format, subDays, subMonths, startOfDay, endOfDay, addDays } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
@@ -1648,6 +1649,11 @@ export default function ClientPortalDashboard() {
             </div>
           </div>
         )}
+
+        {/* Client Assets Section (read-only) */}
+        <div className="mt-8">
+          <ClientPortalAssetsSection primaryColor={branding.primaryColor || "hsl(179, 100%, 39%)"} />
+        </div>
       </main>
 
       {/* Task Detail Dialog */}
