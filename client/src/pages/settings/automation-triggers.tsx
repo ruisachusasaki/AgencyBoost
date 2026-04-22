@@ -36,7 +36,109 @@ interface AutomationAction {
   createdAt: string;
 }
 
-const ITEMS_PER_PAGE = 10;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
+interface PaginationControlsProps {
+  total: number;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  itemLabel: string;
+}
+
+function PaginationControls({
+  total,
+  page,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  itemLabel,
+}: PaginationControlsProps) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const startItem = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endItem = Math.min(page * pageSize, total);
+
+  return (
+    <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Items per page:</span>
+          <Select
+            value={pageSize.toString()}
+            onValueChange={(value) => onPageSizeChange(Number(value))}
+          >
+            <SelectTrigger className="w-20" data-testid={`select-pagesize-${itemLabel}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((opt) => (
+                <SelectItem key={opt} value={opt.toString()}>
+                  {opt}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="text-sm text-gray-600">
+          Showing {startItem} to {endItem} of {total} {itemLabel}
+        </div>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(Math.max(1, page - 1))}
+          disabled={page <= 1}
+          data-testid={`button-prev-${itemLabel}`}
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Previous
+        </Button>
+
+        <div className="flex items-center space-x-1">
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            let pageNum;
+            if (totalPages <= 5) {
+              pageNum = i + 1;
+            } else if (page <= 3) {
+              pageNum = i + 1;
+            } else if (page >= totalPages - 2) {
+              pageNum = totalPages - 4 + i;
+            } else {
+              pageNum = page - 2 + i;
+            }
+
+            return (
+              <Button
+                key={pageNum}
+                variant={pageNum === page ? "default" : "outline"}
+                size="sm"
+                onClick={() => onPageChange(pageNum)}
+                className="w-8 h-8 p-0"
+                data-testid={`button-page-${itemLabel}-${pageNum}`}
+              >
+                {pageNum}
+              </Button>
+            );
+          })}
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+          disabled={page >= totalPages}
+          data-testid={`button-next-${itemLabel}`}
+        >
+          Next
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export default function AutomationTriggers() {
   const [activeTab, setActiveTab] = useState("triggers");
@@ -47,6 +149,8 @@ export default function AutomationTriggers() {
   const [deletingAction, setDeletingAction] = useState<AutomationAction | null>(null);
   const [triggersPage, setTriggersPage] = useState(1);
   const [actionsPage, setActionsPage] = useState(1);
+  const [triggersPageSize, setTriggersPageSize] = useState(20);
+  const [actionsPageSize, setActionsPageSize] = useState(20);
   const [formData, setFormData] = useState({
     name: "",
     type: "",
@@ -69,20 +173,20 @@ export default function AutomationTriggers() {
     queryKey: ["/api/automation-actions"],
   });
 
-  // Clamp pagination when data changes
+  // Clamp pagination when data or page size changes
   useEffect(() => {
-    const maxPage = Math.max(1, Math.ceil(triggers.length / ITEMS_PER_PAGE));
+    const maxPage = Math.max(1, Math.ceil(triggers.length / triggersPageSize));
     if (triggersPage > maxPage) {
       setTriggersPage(maxPage);
     }
-  }, [triggers.length, triggersPage]);
+  }, [triggers.length, triggersPage, triggersPageSize]);
 
   useEffect(() => {
-    const maxPage = Math.max(1, Math.ceil(actions.length / ITEMS_PER_PAGE));
+    const maxPage = Math.max(1, Math.ceil(actions.length / actionsPageSize));
     if (actionsPage > maxPage) {
       setActionsPage(maxPage);
     }
-  }, [actions.length, actionsPage]);
+  }, [actions.length, actionsPage, actionsPageSize]);
 
   // Create trigger mutation
   const createTriggerMutation = useMutation({
@@ -431,7 +535,7 @@ export default function AutomationTriggers() {
 
           <div className="grid gap-4">
             {triggers
-              .slice((triggersPage - 1) * ITEMS_PER_PAGE, triggersPage * ITEMS_PER_PAGE)
+              .slice((triggersPage - 1) * triggersPageSize, triggersPage * triggersPageSize)
               .map((trigger) => (
               <Card key={trigger.id} className="relative" data-testid={`card-trigger-${trigger.id}`}>
                 <CardHeader className="pb-3">
@@ -499,35 +603,15 @@ export default function AutomationTriggers() {
           </div>
 
           {/* Triggers Pagination */}
-          {triggers.length > ITEMS_PER_PAGE && (
-            <div className="flex items-center justify-between border-t pt-4">
-              <p className="text-sm text-muted-foreground">
-                Showing {((triggersPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(triggersPage * ITEMS_PER_PAGE, triggers.length)} of {triggers.length} triggers
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setTriggersPage(p => Math.max(1, p - 1))}
-                  disabled={triggersPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Previous
-                </Button>
-                <span className="text-sm px-2">
-                  Page {triggersPage} of {Math.ceil(triggers.length / ITEMS_PER_PAGE)}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setTriggersPage(p => Math.min(Math.ceil(triggers.length / ITEMS_PER_PAGE), p + 1))}
-                  disabled={triggersPage >= Math.ceil(triggers.length / ITEMS_PER_PAGE)}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
-            </div>
+          {triggers.length > 0 && (
+            <PaginationControls
+              total={triggers.length}
+              page={triggersPage}
+              pageSize={triggersPageSize}
+              onPageChange={setTriggersPage}
+              onPageSizeChange={(s) => { setTriggersPageSize(s); setTriggersPage(1); }}
+              itemLabel="triggers"
+            />
           )}
         </div>
         )}
@@ -565,7 +649,7 @@ export default function AutomationTriggers() {
 
           <div className="grid gap-4">
             {actions
-              .slice((actionsPage - 1) * ITEMS_PER_PAGE, actionsPage * ITEMS_PER_PAGE)
+              .slice((actionsPage - 1) * actionsPageSize, actionsPage * actionsPageSize)
               .map((action) => (
               <Card key={action.id} className="relative" data-testid={`card-action-${action.id}`}>
                 <CardHeader className="pb-3">
@@ -640,35 +724,15 @@ export default function AutomationTriggers() {
           </div>
 
           {/* Actions Pagination */}
-          {actions.length > ITEMS_PER_PAGE && (
-            <div className="flex items-center justify-between border-t pt-4">
-              <p className="text-sm text-muted-foreground">
-                Showing {((actionsPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(actionsPage * ITEMS_PER_PAGE, actions.length)} of {actions.length} actions
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setActionsPage(p => Math.max(1, p - 1))}
-                  disabled={actionsPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Previous
-                </Button>
-                <span className="text-sm px-2">
-                  Page {actionsPage} of {Math.ceil(actions.length / ITEMS_PER_PAGE)}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setActionsPage(p => Math.min(Math.ceil(actions.length / ITEMS_PER_PAGE), p + 1))}
-                  disabled={actionsPage >= Math.ceil(actions.length / ITEMS_PER_PAGE)}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
-            </div>
+          {actions.length > 0 && (
+            <PaginationControls
+              total={actions.length}
+              page={actionsPage}
+              pageSize={actionsPageSize}
+              onPageChange={setActionsPage}
+              onPageSizeChange={(s) => { setActionsPageSize(s); setActionsPage(1); }}
+              itemLabel="actions"
+            />
           )}
         </div>
         )}
