@@ -25676,10 +25676,20 @@ AgencyBoost CRM`
       res.status(500).json({ error: "Failed to reorder asset statuses", message: error?.message });
     }
   });
-  function emitWorkflowEvent(eventName, payload) {
+  function fireClientAssetEvent(type, data, actorUserId) {
     try {
-      console.log(`[event] ${eventName}`, JSON.stringify(payload));
-    } catch {
+      void emitTrigger({
+        type,
+        data,
+        context: {
+          userId: actorUserId ?? void 0,
+          timestamp: /* @__PURE__ */ new Date()
+        }
+      }).catch((err) => {
+        console.error(`[client_asset workflow event ${type}] emit failed:`, err);
+      });
+    } catch (err) {
+      console.error(`[client_asset workflow event ${type}] sync failure:`, err);
     }
   }
   async function loadClientForAgency(clientId, _agencyId) {
@@ -25758,12 +25768,16 @@ AgencyBoost CRM`
         agencyId: CURRENT_AGENCY_ID,
         clientId
       }).returning();
-      emitWorkflowEvent("client_asset.created", {
-        agencyId: CURRENT_AGENCY_ID,
-        clientId,
+      const actorUserId = req.user?.id ?? null;
+      fireClientAssetEvent("client_asset.created", {
         assetId: created.id,
-        actorUserId: req.user?.id ?? null
-      });
+        clientId,
+        assetName: created.name,
+        assetTypeId: created.assetTypeId,
+        assetStatusId: created.assetStatusId,
+        ownerStaffId: created.ownerStaffId,
+        triggeredByStaffId: actorUserId
+      }, actorUserId);
       const [hydrated] = await hydrateClientAssets([created]);
       res.status(201).json(hydrated);
     } catch (error) {
@@ -25807,41 +25821,52 @@ AgencyBoost CRM`
         if (!o) return res.status(400).json({ error: "Invalid ownerStaffId" });
       }
       const [updated] = await db.update(clientAssets).set({ ...patch, updatedAt: /* @__PURE__ */ new Date() }).where(eq21(clientAssets.id, assetId)).returning();
-      const baseEventPayload = {
-        agencyId: CURRENT_AGENCY_ID,
-        clientId,
-        assetId,
-        actorUserId: req.user?.id ?? null
-      };
+      const [hydrated] = await hydrateClientAssets([updated]);
+      const [hydratedOld] = await hydrateClientAssets([existing]);
+      const actorUserId = req.user?.id ?? null;
       if (patch.assetStatusId !== void 0 && patch.assetStatusId !== existing.assetStatusId) {
-        emitWorkflowEvent("client_asset.status_changed", {
-          ...baseEventPayload,
+        fireClientAssetEvent("client_asset.status_changed", {
+          assetId,
+          clientId,
+          assetName: updated.name,
           oldStatusId: existing.assetStatusId,
-          newStatusId: updated.assetStatusId
-        });
+          newStatusId: updated.assetStatusId,
+          oldStatusName: hydratedOld?.status?.name ?? null,
+          newStatusName: hydrated?.status?.name ?? null,
+          triggeredByStaffId: actorUserId
+        }, actorUserId);
       }
       if (patch.ownerStaffId !== void 0 && patch.ownerStaffId !== existing.ownerStaffId) {
-        emitWorkflowEvent("client_asset.owner_changed", {
-          ...baseEventPayload,
+        fireClientAssetEvent("client_asset.owner_changed", {
+          assetId,
+          clientId,
+          assetName: updated.name,
           oldOwnerId: existing.ownerStaffId,
-          newOwnerId: updated.ownerStaffId
-        });
+          newOwnerId: updated.ownerStaffId,
+          oldOwnerName: hydratedOld?.owner?.name ?? null,
+          newOwnerName: hydrated?.owner?.name ?? null,
+          triggeredByStaffId: actorUserId
+        }, actorUserId);
       }
       if (patch.linkUrl !== void 0 && patch.linkUrl !== existing.linkUrl) {
-        emitWorkflowEvent("client_asset.link_updated", {
-          ...baseEventPayload,
+        fireClientAssetEvent("client_asset.link_updated", {
+          assetId,
+          clientId,
+          assetName: updated.name,
           oldLinkUrl: existing.linkUrl,
-          newLinkUrl: updated.linkUrl
-        });
+          newLinkUrl: updated.linkUrl,
+          triggeredByStaffId: actorUserId
+        }, actorUserId);
       }
       if (patch.portalVisible !== void 0 && patch.portalVisible !== existing.portalVisible) {
-        emitWorkflowEvent("client_asset.portal_visibility_changed", {
-          ...baseEventPayload,
-          oldPortalVisible: existing.portalVisible,
-          newPortalVisible: updated.portalVisible
-        });
+        fireClientAssetEvent("client_asset.portal_visibility_changed", {
+          assetId,
+          clientId,
+          assetName: updated.name,
+          portalVisible: updated.portalVisible,
+          triggeredByStaffId: actorUserId
+        }, actorUserId);
       }
-      const [hydrated] = await hydrateClientAssets([updated]);
       res.json(hydrated);
     } catch (error) {
       console.error("[PUT /api/clients/:clientId/assets/:assetId] error:", error);
@@ -25856,19 +25881,20 @@ AgencyBoost CRM`
       const { clientId, assetId } = req.params;
       const client = await loadClientForAgency(clientId, CURRENT_AGENCY_ID);
       if (!client) return res.status(404).json({ error: "Client not found" });
-      const [existing] = await db.select({ id: clientAssets.id }).from(clientAssets).where(and18(
+      const [existing] = await db.select({ id: clientAssets.id, name: clientAssets.name }).from(clientAssets).where(and18(
         eq21(clientAssets.id, assetId),
         eq21(clientAssets.clientId, clientId),
         eq21(clientAssets.agencyId, CURRENT_AGENCY_ID)
       )).limit(1);
       if (!existing) return res.status(404).json({ error: "Asset not found" });
       await db.delete(clientAssets).where(eq21(clientAssets.id, assetId));
-      emitWorkflowEvent("client_asset.deleted", {
-        agencyId: CURRENT_AGENCY_ID,
-        clientId,
+      const actorUserId = req.user?.id ?? null;
+      fireClientAssetEvent("client_asset.deleted", {
         assetId,
-        actorUserId: req.user?.id ?? null
-      });
+        clientId,
+        assetName: existing.name,
+        triggeredByStaffId: actorUserId
+      }, actorUserId);
       res.status(204).end();
     } catch (error) {
       console.error("[DELETE /api/clients/:clientId/assets/:assetId] error:", error);
@@ -34448,6 +34474,69 @@ AgencyBoost CRM`
               defaultValue: true
             }
           },
+          isActive: true
+        },
+        // ----- Client Assets triggers (Step 8) -----
+        {
+          name: "Client Asset Created",
+          type: "client_asset.created",
+          description: "Triggers when a new asset is added to a client",
+          category: "client_assets",
+          configSchema: {
+            assetTypeId: { type: "asset_type_select", label: "Asset Type" },
+            assetStatusId: { type: "asset_status_select", label: "Initial Status" },
+            ownerStaffId: { type: "staff_select", label: "Owner" }
+          },
+          isActive: true
+        },
+        {
+          name: "Client Asset Status Changed",
+          type: "client_asset.status_changed",
+          description: "Triggers when an asset's status changes (optionally to a specific status)",
+          category: "client_assets",
+          configSchema: {
+            newStatusId: { type: "asset_status_select", label: "When status changes to" }
+          },
+          isActive: true
+        },
+        {
+          name: "Client Asset Owner Changed",
+          type: "client_asset.owner_changed",
+          description: "Triggers when an asset's owner changes (optionally to a specific staff member)",
+          category: "client_assets",
+          configSchema: {
+            newOwnerId: { type: "staff_select", label: "When assigned to" }
+          },
+          isActive: true
+        },
+        {
+          name: "Client Asset Link Updated",
+          type: "client_asset.link_updated",
+          description: "Triggers when an asset's link URL is changed",
+          category: "client_assets",
+          configSchema: {},
+          isActive: true
+        },
+        {
+          name: "Client Asset Portal Visibility Changed",
+          type: "client_asset.portal_visibility_changed",
+          description: "Triggers when an asset is shown or hidden from the client portal",
+          category: "client_assets",
+          configSchema: {
+            portalVisible: {
+              type: "boolean",
+              label: "When visibility becomes",
+              options: [true, false]
+            }
+          },
+          isActive: true
+        },
+        {
+          name: "Client Asset Deleted",
+          type: "client_asset.deleted",
+          description: "Triggers when a client asset is deleted",
+          category: "client_assets",
+          configSchema: {},
           isActive: true
         }
       ];

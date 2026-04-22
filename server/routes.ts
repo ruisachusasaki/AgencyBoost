@@ -936,11 +936,27 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   });
 
   // ----- Client Assets (CRUD scoped under a client) -----
-  // No-op event emitter placeholder (Prompt 8 will wire up the real workflow event bus).
-  function emitWorkflowEvent(eventName: string, payload: Record<string, any>) {
+  // Real workflow event emitter — wraps emitTrigger from workflow-engine.
+  // Wrapped in try/catch so workflow failures never break CRUD. emitTrigger
+  // already has its own internal try/catch + non-blocking execute, but we
+  // belt-and-suspenders here in case the import or matching query throws.
+  function fireClientAssetEvent(type: string, data: Record<string, any>, actorUserId: string | null) {
     try {
-      console.log(`[event] ${eventName}`, JSON.stringify(payload));
-    } catch {}
+      // Fire-and-forget. emitTrigger never throws (per its own try/catch),
+      // but we still attach a .catch to be defensive against future changes.
+      void emitTrigger({
+        type,
+        data,
+        context: {
+          userId: actorUserId ?? undefined,
+          timestamp: new Date(),
+        },
+      }).catch((err) => {
+        console.error(`[client_asset workflow event ${type}] emit failed:`, err);
+      });
+    } catch (err) {
+      console.error(`[client_asset workflow event ${type}] sync failure:`, err);
+    }
   }
 
   // Helper: load a client + verify it belongs to this agency.
@@ -1057,12 +1073,16 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         clientId,
       }).returning();
 
-      emitWorkflowEvent('client_asset.created', {
-        agencyId: CURRENT_AGENCY_ID,
-        clientId,
+      const actorUserId = (req.user as any)?.id ?? null;
+      fireClientAssetEvent('client_asset.created', {
         assetId: created.id,
-        actorUserId: (req.user as any)?.id ?? null,
-      });
+        clientId,
+        assetName: created.name,
+        assetTypeId: created.assetTypeId,
+        assetStatusId: created.assetStatusId,
+        ownerStaffId: created.ownerStaffId,
+        triggeredByStaffId: actorUserId,
+      }, actorUserId);
 
       const [hydrated] = await hydrateClientAssets([created]);
       res.status(201).json(hydrated);
@@ -1124,42 +1144,56 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         .where(eq(clientAssets.id, assetId))
         .returning();
 
-      const baseEventPayload = {
-        agencyId: CURRENT_AGENCY_ID,
-        clientId,
-        assetId,
-        actorUserId: (req.user as any)?.id ?? null,
-      };
+      // Hydrate old + new for human-readable status/owner names in event payloads.
+      const [hydrated] = await hydrateClientAssets([updated]);
+      const [hydratedOld] = await hydrateClientAssets([existing]);
+
+      const actorUserId = (req.user as any)?.id ?? null;
+
       if (patch.assetStatusId !== undefined && patch.assetStatusId !== existing.assetStatusId) {
-        emitWorkflowEvent('client_asset.status_changed', {
-          ...baseEventPayload,
+        fireClientAssetEvent('client_asset.status_changed', {
+          assetId,
+          clientId,
+          assetName: updated.name,
           oldStatusId: existing.assetStatusId,
           newStatusId: updated.assetStatusId,
-        });
+          oldStatusName: hydratedOld?.status?.name ?? null,
+          newStatusName: hydrated?.status?.name ?? null,
+          triggeredByStaffId: actorUserId,
+        }, actorUserId);
       }
       if (patch.ownerStaffId !== undefined && patch.ownerStaffId !== existing.ownerStaffId) {
-        emitWorkflowEvent('client_asset.owner_changed', {
-          ...baseEventPayload,
+        fireClientAssetEvent('client_asset.owner_changed', {
+          assetId,
+          clientId,
+          assetName: updated.name,
           oldOwnerId: existing.ownerStaffId,
           newOwnerId: updated.ownerStaffId,
-        });
+          oldOwnerName: hydratedOld?.owner?.name ?? null,
+          newOwnerName: hydrated?.owner?.name ?? null,
+          triggeredByStaffId: actorUserId,
+        }, actorUserId);
       }
       if (patch.linkUrl !== undefined && patch.linkUrl !== existing.linkUrl) {
-        emitWorkflowEvent('client_asset.link_updated', {
-          ...baseEventPayload,
+        fireClientAssetEvent('client_asset.link_updated', {
+          assetId,
+          clientId,
+          assetName: updated.name,
           oldLinkUrl: existing.linkUrl,
           newLinkUrl: updated.linkUrl,
-        });
+          triggeredByStaffId: actorUserId,
+        }, actorUserId);
       }
       if (patch.portalVisible !== undefined && patch.portalVisible !== existing.portalVisible) {
-        emitWorkflowEvent('client_asset.portal_visibility_changed', {
-          ...baseEventPayload,
-          oldPortalVisible: existing.portalVisible,
-          newPortalVisible: updated.portalVisible,
-        });
+        fireClientAssetEvent('client_asset.portal_visibility_changed', {
+          assetId,
+          clientId,
+          assetName: updated.name,
+          portalVisible: updated.portalVisible,
+          triggeredByStaffId: actorUserId,
+        }, actorUserId);
       }
 
-      const [hydrated] = await hydrateClientAssets([updated]);
       res.json(hydrated);
     } catch (error: any) {
       console.error("[PUT /api/clients/:clientId/assets/:assetId] error:", error);
@@ -1177,7 +1211,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const client = await loadClientForAgency(clientId, CURRENT_AGENCY_ID);
       if (!client) return res.status(404).json({ error: "Client not found" });
 
-      const [existing] = await db.select({ id: clientAssets.id }).from(clientAssets)
+      const [existing] = await db.select({ id: clientAssets.id, name: clientAssets.name }).from(clientAssets)
         .where(and(
           eq(clientAssets.id, assetId),
           eq(clientAssets.clientId, clientId),
@@ -1187,12 +1221,13 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
       await db.delete(clientAssets).where(eq(clientAssets.id, assetId));
 
-      emitWorkflowEvent('client_asset.deleted', {
-        agencyId: CURRENT_AGENCY_ID,
-        clientId,
+      const actorUserId = (req.user as any)?.id ?? null;
+      fireClientAssetEvent('client_asset.deleted', {
         assetId,
-        actorUserId: (req.user as any)?.id ?? null,
-      });
+        clientId,
+        assetName: existing.name,
+        triggeredByStaffId: actorUserId,
+      }, actorUserId);
 
       res.status(204).end();
     } catch (error: any) {
@@ -12230,7 +12265,70 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             }
           },
           isActive: true
-        }
+        },
+        // ----- Client Assets triggers (Step 8) -----
+        {
+          name: "Client Asset Created",
+          type: "client_asset.created",
+          description: "Triggers when a new asset is added to a client",
+          category: "client_assets",
+          configSchema: {
+            assetTypeId: { type: "asset_type_select", label: "Asset Type" },
+            assetStatusId: { type: "asset_status_select", label: "Initial Status" },
+            ownerStaffId: { type: "staff_select", label: "Owner" },
+          },
+          isActive: true,
+        },
+        {
+          name: "Client Asset Status Changed",
+          type: "client_asset.status_changed",
+          description: "Triggers when an asset's status changes (optionally to a specific status)",
+          category: "client_assets",
+          configSchema: {
+            newStatusId: { type: "asset_status_select", label: "When status changes to" },
+          },
+          isActive: true,
+        },
+        {
+          name: "Client Asset Owner Changed",
+          type: "client_asset.owner_changed",
+          description: "Triggers when an asset's owner changes (optionally to a specific staff member)",
+          category: "client_assets",
+          configSchema: {
+            newOwnerId: { type: "staff_select", label: "When assigned to" },
+          },
+          isActive: true,
+        },
+        {
+          name: "Client Asset Link Updated",
+          type: "client_asset.link_updated",
+          description: "Triggers when an asset's link URL is changed",
+          category: "client_assets",
+          configSchema: {},
+          isActive: true,
+        },
+        {
+          name: "Client Asset Portal Visibility Changed",
+          type: "client_asset.portal_visibility_changed",
+          description: "Triggers when an asset is shown or hidden from the client portal",
+          category: "client_assets",
+          configSchema: {
+            portalVisible: {
+              type: "boolean",
+              label: "When visibility becomes",
+              options: [true, false],
+            },
+          },
+          isActive: true,
+        },
+        {
+          name: "Client Asset Deleted",
+          type: "client_asset.deleted",
+          description: "Triggers when a client asset is deleted",
+          category: "client_assets",
+          configSchema: {},
+          isActive: true,
+        },
       ];
 
       // Only create triggers that don't already exist (by type)
