@@ -6728,6 +6728,41 @@ export default function EnhancedClientDetail() {
                           {opt.label}
                         </Button>
                       ))}
+                      {(() => {
+                        const visibleBundleIds = filteredClientProducts
+                          .filter((p: any) => p.itemType === 'bundle')
+                          .map((p: any) => p.productId);
+                        const hasBundles = visibleBundleIds.length > 0;
+                        const allExpanded = hasBundles && visibleBundleIds.every((id: string) => expandedBundles.has(id));
+                        return hasBundles ? (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setExpandedBundles(new Set([...expandedBundles, ...visibleBundleIds]))}
+                              disabled={allExpanded}
+                              data-testid="button-expand-all-bundles"
+                            >
+                              <ChevronDown className="h-4 w-4 mr-1" />
+                              Expand All
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const next = new Set(expandedBundles);
+                                visibleBundleIds.forEach((id: string) => next.delete(id));
+                                setExpandedBundles(next);
+                              }}
+                              disabled={!visibleBundleIds.some((id: string) => expandedBundles.has(id))}
+                              data-testid="button-collapse-all-bundles"
+                            >
+                              <ChevronRight className="h-4 w-4 mr-1" />
+                              Collapse All
+                            </Button>
+                          </>
+                        ) : null;
+                      })()}
                       <span className="text-sm text-gray-500 ml-auto">
                         Showing {filteredClientProducts.length} of {clientProductsData.length}
                       </span>
