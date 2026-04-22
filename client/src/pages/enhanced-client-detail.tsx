@@ -3449,6 +3449,7 @@ export default function EnhancedClientDetail() {
   const [filteredBundles, setFilteredBundles] = useState<any[]>([]);
   const [showServiceSuggestions, setShowServiceSuggestions] = useState(false);
   const [expandedBundles, setExpandedBundles] = useState<Set<string>>(new Set());
+  const [productsFilter, setProductsFilter] = useState<'all' | 'monthly' | 'one_time'>('all');
   const [hubExpandedBundles, setHubExpandedBundles] = useState<Set<string>>(new Set());
   const [editingBundleQuantities, setEditingBundleQuantities] = useState<string | null>(null);
   const [hubEditingBundleQuantities, setHubEditingBundleQuantities] = useState<string | null>(null);
@@ -3886,6 +3887,18 @@ export default function EnhancedClientDetail() {
   });
 
   // Calculate total cost of all client products and bundles
+  // Apply Monthly / One-Time filter to the products list (Clients > Products tab)
+  const filteredClientProducts = useMemo(() => {
+    if (!Array.isArray(clientProductsData)) return [];
+    if (productsFilter === 'all') return clientProductsData;
+    return clientProductsData.filter((product: any) => {
+      const type = product.itemType === 'bundle'
+        ? (product.bundleCostType || 'recurring')
+        : (product.productType || 'recurring');
+      return productsFilter === 'one_time' ? type === 'one_time' : type !== 'one_time';
+    });
+  }, [clientProductsData, productsFilter]);
+
   const { monthlyCost, oneTimeCost, totalProductsCost } = useMemo(() => {
     if (!clientProductsData || !Array.isArray(clientProductsData)) return { monthlyCost: 0, oneTimeCost: 0, totalProductsCost: 0 };
     
@@ -6697,7 +6710,34 @@ export default function EnhancedClientDetail() {
               <CardContent>
                 {clientProductsData && clientProductsData.length > 0 ? (
                   <div className="space-y-4">
-                    {clientProductsData.map((product) => (
+                    <div className="flex items-center gap-2 flex-wrap" data-testid="filter-products">
+                      <span className="text-sm text-gray-600">Filter:</span>
+                      {([
+                        { value: 'all', label: 'All' },
+                        { value: 'monthly', label: 'Monthly' },
+                        { value: 'one_time', label: 'One-Time / Onboarding' },
+                      ] as const).map((opt) => (
+                        <Button
+                          key={opt.value}
+                          variant={productsFilter === opt.value ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setProductsFilter(opt.value)}
+                          className={productsFilter === opt.value ? 'bg-primary hover:bg-primary/90 text-primary-foreground' : ''}
+                          data-testid={`button-filter-products-${opt.value}`}
+                        >
+                          {opt.label}
+                        </Button>
+                      ))}
+                      <span className="text-sm text-gray-500 ml-auto">
+                        Showing {filteredClientProducts.length} of {clientProductsData.length}
+                      </span>
+                    </div>
+
+                    {filteredClientProducts.length === 0 ? (
+                      <div className="text-center py-8 text-sm text-gray-500" data-testid="text-no-filtered-products">
+                        No {productsFilter === 'monthly' ? 'monthly' : 'one-time / onboarding'} products to show.
+                      </div>
+                    ) : filteredClientProducts.map((product) => (
                       <div key={product.id} className="border border-gray-200 rounded-lg p-4">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
