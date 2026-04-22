@@ -6033,6 +6033,7 @@ export const assetStatuses = pgTable("asset_statuses", {
   name: text("name").notNull(),
   color: varchar("color", { length: 16 }).notNull().default("#6B7280"),
   sortOrder: integer("sort_order").notNull().default(0),
+  active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
