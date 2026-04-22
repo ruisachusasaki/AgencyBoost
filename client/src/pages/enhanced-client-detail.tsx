@@ -3914,8 +3914,9 @@ export default function EnhancedClientDetail() {
             const costValue = item.productCost || item.cost || item.price || item.productPrice || 0;
             const cost = typeof costValue === 'string' ? parseFloat(costValue) : Number(costValue);
             const validCost = isNaN(cost) ? 0 : cost;
-            const quantity = parseInt(item.quantity || '1');
-            itemCost += validCost * quantity;
+            const rawQty = item.quantity;
+            const quantity = (rawQty === null || rawQty === undefined || rawQty === '') ? 1 : parseInt(String(rawQty));
+            itemCost += validCost * (isNaN(quantity) ? 1 : quantity);
           });
         }
         const bundleType = product.bundleCostType || 'recurring';
@@ -3951,7 +3952,9 @@ export default function EnhancedClientDetail() {
       const cost = typeof costValue === 'string' ? parseFloat(costValue) : Number(costValue);
       const validCost = isNaN(cost) ? 0 : cost;
       
-      const quantity = parseInt(item.quantity || '1');
+      const rawQty = item.quantity;
+      const parsedQty = (rawQty === null || rawQty === undefined || rawQty === '') ? 1 : parseInt(String(rawQty));
+      const quantity = isNaN(parsedQty) ? 1 : parsedQty;
       return total + (validCost * quantity);
     }, 0);
   }, [bundleDetailsData]);
@@ -6858,7 +6861,7 @@ export default function EnhancedClientDetail() {
                                     if (bundleDetails) {
                                       const currentQuantities: Record<string, number> = {};
                                       bundleDetails.forEach((item: any) => {
-                                        currentQuantities[item.productId] = item.quantity || 1;
+                                        currentQuantities[item.productId] = item.quantity ?? 1;
                                       });
                                       setTempQuantities(currentQuantities);
                                     }
@@ -6912,17 +6915,18 @@ export default function EnhancedClientDetail() {
                                       <input
                                         type="number"
                                         min="0"
-                                        value={tempQuantities[item.productId] || item.quantity || 1}
+                                        value={tempQuantities[item.productId] ?? item.quantity ?? 1}
                                         onChange={(e) => {
                                           const newQuantities = { ...tempQuantities };
-                                          newQuantities[item.productId] = parseInt(e.target.value) || 0;
+                                          const parsed = parseInt(e.target.value);
+                                          newQuantities[item.productId] = isNaN(parsed) ? 0 : parsed;
                                           setTempQuantities(newQuantities);
                                         }}
                                         className="ml-2 w-16 px-2 py-1 border border-gray-300 rounded text-center"
                                         data-testid={`input-quantity-${item.productId}`}
                                       />
                                     ) : (
-                                      <span className="ml-2 text-primary">x{item.quantity || 1}</span>
+                                      <span className="ml-2 text-primary">x{item.quantity ?? 1}</span>
                                     )}
                                   </span>
                                   {canViewCosts && (
@@ -6933,7 +6937,7 @@ export default function EnhancedClientDetail() {
                                         const costValue = item.productCost || item.cost || item.price || item.productPrice || 0;
                                         const cost = typeof costValue === 'string' ? parseFloat(costValue) : Number(costValue);
                                         const validCost = isNaN(cost) ? 0 : cost;
-                                        const quantity = item.quantity || 1;
+                                        const quantity = item.quantity ?? 1;
                                         const totalCost = validCost * quantity;
                                         return totalCost.toFixed(2);
                                       })()}

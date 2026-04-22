@@ -15928,7 +15928,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       // Apply custom quantities to the products (default to 1 if no custom quantity)
       const productsWithCustomQuantities = bundleProductsList.map(product => ({
         ...product,
-        quantity: customQuantities[product.productId] || 1, // Default to 1 unit
+        quantity: customQuantities[product.productId] ?? 1, // Default to 1 unit (allow 0 to exclude item)
         baseQuantity: 1 // Base bundle always has 1 unit of each product
       }));
 
@@ -15968,7 +15968,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       bundleProductsList.forEach(product => {
         if (!product.productId) return; // Skip if productId is null/undefined
         
-        const quantity = customQuantities[product.productId] || product.baseQuantity || 1;
+        const quantity = customQuantities[product.productId] ?? product.baseQuantity ?? 1;
         const cost = parseFloat(product.productCost || '0');
         
         totalCost += cost * quantity;
