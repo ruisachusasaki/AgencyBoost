@@ -933,7 +933,9 @@ export const tasks = pgTable("tasks", {
   // all readers/writers go through `task_time_entries`. To permanently
   // retire this column, run `scripts/migrate-prod-time-entries.sql` against
   // production, then remove this field in a follow-up deploy.
-  timeEntries: jsonb("time_entries"),
+  // The `'[]'::jsonb` default mirrors the existing production column default
+  // so deploy diffs do not propose a `DROP DEFAULT` (cosmetic but noisy).
+  timeEntries: jsonb("time_entries").default(sql`'[]'::jsonb`),
 
   
   // Sub-task hierarchy support (up to 5 levels deep)
