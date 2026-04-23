@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, ArrowDownLeft, ArrowUpRight, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil, ClipboardList, Repeat, Layers, ClipboardCheck, Copy, Link2, Reply, UserPlus } from "lucide-react";
+import { ArrowLeft, ArrowDownLeft, ArrowUpRight, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil, ClipboardList, Repeat, Layers, ClipboardCheck, Copy, Link2, Reply, UserPlus, Info } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 import ContactCardField from "@/components/contact-card-field";
 
@@ -6830,6 +6830,18 @@ export default function EnhancedClientDetail() {
                                   </span>
                                 )}
                               </h4>
+                              {product.salesTooltip && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Info className="h-4 w-4 text-amber-500 shrink-0 cursor-help" data-testid={`tooltip-product-sales-${product.id}`} />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs">
+                                      <p className="text-sm whitespace-pre-wrap">{product.salesTooltip}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
                             </div>
                             {(product.productDescription || product.description) && (
                               <p className="text-sm text-gray-600 mt-1" data-testid={`text-product-description-${product.id}`}>

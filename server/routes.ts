@@ -15885,6 +15885,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         type: products.type,
         categoryId: products.categoryId,
         status: products.status,
+        salesTooltip: products.salesTooltip,
         usageCount: products.usageCount,
         createdAt: products.createdAt,
         updatedAt: products.updatedAt,
@@ -15910,10 +15911,12 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         id: products.id,
         name: products.name,
         description: products.description,
+        price: products.price,
         cost: products.cost,
         type: products.type,
         categoryId: products.categoryId,
         status: products.status,
+        salesTooltip: products.salesTooltip,
         usageCount: products.usageCount,
         createdAt: products.createdAt,
         updatedAt: products.updatedAt,
@@ -15952,6 +15955,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           productDescription: products.description,
           productCost: products.cost,
           productType: products.type,
+          salesTooltip: products.salesTooltip,
           itemType: sql<string>`'product'`
         })
         .from(clientProducts)
@@ -17033,7 +17037,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
                     cost: row.cost ? String(row.cost) : null,
                     type: String(row.type || 'one_time').trim(),
                     categoryId: categoryId,
-                    status: String(row.status || 'active').trim()
+                    status: String(row.status || 'active').trim(),
+                    salesTooltip: row.salesTooltip ? String(row.salesTooltip).trim() : null
                   };
 
                   // Validate required fields
@@ -17123,6 +17128,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       if (body.type !== undefined) updateData.type = body.type;
       if (body.categoryId !== undefined) updateData.categoryId = body.categoryId || null;
       if (body.status !== undefined) updateData.status = body.status;
+      if (body.salesTooltip !== undefined) updateData.salesTooltip = body.salesTooltip;
       
       console.log('[DEBUG] PUT /api/products/:id - updateData:', JSON.stringify(updateData));
       
