@@ -3456,6 +3456,8 @@ export default function EnhancedClientDetail() {
   const [editingBundleQuantities, setEditingBundleQuantities] = useState<string | null>(null);
   const [hubEditingBundleQuantities, setHubEditingBundleQuantities] = useState<string | null>(null);
   const [tempQuantities, setTempQuantities] = useState<Record<string, number>>({});
+  const [editingProductQuantity, setEditingProductQuantity] = useState<string | null>(null);
+  const [tempProductQuantity, setTempProductQuantity] = useState<number>(1);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [showImportQuoteModal, setShowImportQuoteModal] = useState(false);
@@ -3929,7 +3931,11 @@ export default function EnhancedClientDetail() {
         }
       } else {
         const cost = parseFloat(product.cost || product.productCost || '0');
-        itemCost = cost;
+        const validCost = isNaN(cost) ? 0 : cost;
+        const rawQty = product.quantity;
+        const parsedQty = (rawQty === null || rawQty === undefined || rawQty === '') ? 1 : parseInt(String(rawQty));
+        const quantity = isNaN(parsedQty) ? 1 : parsedQty;
+        itemCost = validCost * quantity;
         const prodType = product.productType || 'recurring';
         if (prodType === 'one_time') {
           oneTime += itemCost;
@@ -4642,6 +4648,36 @@ export default function EnhancedClientDetail() {
       toast({
         title: "Error",
         description: "Failed to update bundle quantities.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update individual client product quantity mutation
+  const updateProductQuantityMutation = useMutation({
+    mutationFn: async ({ productId, quantity }: { productId: string; quantity: number }) => {
+      const response = await fetch(`/api/clients/${clientId}/products/${productId}/quantity`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity }),
+      });
+      if (!response.ok) throw new Error('Failed to update product quantity');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
+      setEditingProductQuantity(null);
+      setTempProductQuantity(1);
+      toast({
+        title: "Quantity updated",
+        variant: "default",
+        description: "Product quantity has been saved.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update product quantity.",
         variant: "destructive",
       });
     },
@@ -6848,7 +6884,7 @@ export default function EnhancedClientDetail() {
                                 {product.productDescription || product.description}
                               </p>
                             )}
-                            <div className="flex items-center gap-4 mt-2">
+                            <div className="flex items-center gap-4 mt-2 flex-wrap">
                               {product.itemType === 'bundle' && canViewCosts && (
                                 <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded" data-testid={`text-bundle-total-${product.id}`}>
                                   Bundle Total: ${calculateIndividualBundleCost(product.productId).toFixed(2)}
@@ -6859,6 +6895,60 @@ export default function EnhancedClientDetail() {
                                   ${product.price}
                                 </span>
                               )}
+                              {product.itemType !== 'bundle' && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <span className="text-gray-600">Qty:</span>
+                                  {editingProductQuantity === product.productId ? (
+                                    <>
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        value={tempProductQuantity}
+                                        onChange={(e) => {
+                                          const parsed = parseInt(e.target.value);
+                                          setTempProductQuantity(isNaN(parsed) || parsed < 1 ? 1 : parsed);
+                                        }}
+                                        className="w-16 px-2 py-1 border border-gray-300 rounded text-center"
+                                        data-testid={`input-product-quantity-${product.id}`}
+                                      />
+                                      <Button
+                                        size="sm"
+                                        onClick={() => updateProductQuantityMutation.mutate({ productId: product.productId, quantity: tempProductQuantity })}
+                                        disabled={updateProductQuantityMutation.isPending}
+                                        className="bg-green-600 hover:bg-green-700 text-white h-7 px-2"
+                                        data-testid={`button-save-product-quantity-${product.id}`}
+                                      >
+                                        Save
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => { setEditingProductQuantity(null); setTempProductQuantity(1); }}
+                                        className="h-7 px-2"
+                                        data-testid={`button-cancel-product-quantity-${product.id}`}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <span className="font-medium text-primary" data-testid={`text-product-quantity-${product.id}`}>
+                                      x{product.quantity ?? 1}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              {product.itemType !== 'bundle' && canViewCosts && (() => {
+                                const cost = parseFloat(product.cost || product.productCost || '0');
+                                const validCost = isNaN(cost) ? 0 : cost;
+                                const qty = product.quantity ?? 1;
+                                const lineTotal = validCost * qty;
+                                if (lineTotal === 0 && validCost === 0) return null;
+                                return (
+                                  <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded" data-testid={`text-product-line-total-${product.id}`}>
+                                    Line Total: ${lineTotal.toFixed(2)}
+                                  </span>
+                                );
+                              })()}
                               {product.category && (
                                 <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full" data-testid={`text-product-category-${product.id}`}>
                                   {product.category}
@@ -6901,9 +6991,15 @@ export default function EnhancedClientDetail() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
-                                  // TODO: Implement product editing functionality
-                                  console.log('Edit product:', product);
+                                  if (editingProductQuantity === product.productId) {
+                                    setEditingProductQuantity(null);
+                                    setTempProductQuantity(1);
+                                  } else {
+                                    setEditingProductQuantity(product.productId);
+                                    setTempProductQuantity(product.quantity ?? 1);
+                                  }
                                 }}
+                                className="text-primary hover:text-primary/80 hover:bg-primary/10"
                                 data-testid={`button-edit-product-${product.id}`}
                               >
                                 <Edit2 className="h-4 w-4" />

@@ -15953,6 +15953,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           id: clientProducts.id,
           productId: clientProducts.productId,
           price: clientProducts.price,
+          quantity: clientProducts.quantity,
           status: clientProducts.status,
           createdAt: clientProducts.createdAt,
           productName: products.name,
@@ -16914,6 +16915,34 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     } catch (error) {
       console.error('Error fetching bundle products:', error);
       res.status(500).json({ message: "Failed to fetch bundle products" });
+    }
+  });
+
+  // Update quantity for an individual client product (non-bundle)
+  app.patch("/api/clients/:clientId/products/:productId/quantity", requireAuth(), requirePermission('products', 'canEdit'), async (req, res) => {
+    try {
+      const { clientId, productId } = req.params;
+      const { quantity } = req.body;
+
+      const parsed = Number(quantity);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        return res.status(400).json({ message: "Quantity must be a positive integer (>= 1)" });
+      }
+
+      const result = await db
+        .update(clientProducts)
+        .set({ quantity: parsed })
+        .where(and(eq(clientProducts.clientId, clientId), eq(clientProducts.productId, productId)))
+        .returning();
+
+      if (result.length === 0) {
+        return res.status(404).json({ message: "Client product not found" });
+      }
+
+      res.json({ success: true, clientProduct: result[0] });
+    } catch (error) {
+      console.error('Error updating client product quantity:', error);
+      res.status(500).json({ message: "Failed to update product quantity" });
     }
   });
 

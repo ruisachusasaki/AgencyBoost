@@ -271,6 +271,7 @@ export const clientProducts = pgTable("client_products", {
   clientId: varchar("client_id").notNull().references(() => clients.id),
   productId: varchar("product_id").notNull().references(() => products.id),
   price: decimal("price", { precision: 10, scale: 2 }),
+  quantity: integer("quantity").notNull().default(1), // per-client quantity (e.g. 4 hours/month)
   status: text("status").default("active"),
   createdAt: timestamp("created_at").defaultNow(),
 });
