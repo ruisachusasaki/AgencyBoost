@@ -2521,10 +2521,13 @@ async function ensureTaskTimeEntriesTable() {
       `);
       log(`✅ task_time_entries final backfill complete (rows inserted: ${(result as any)?.rowCount ?? 'n/a'})`);
 
-      // Drop the legacy JSONB column. All readers/writers now go through the
-      // normalized table; the schema no longer references this column.
-      await db.execute(sql`ALTER TABLE tasks DROP COLUMN IF EXISTS time_entries`);
-      log('✅ Legacy tasks.time_entries column dropped');
+      // NOTE: We intentionally do NOT drop the legacy `tasks.time_entries`
+      // column here. All readers/writers go through the normalized table,
+      // but keeping the column avoids destructive deploy diffs and preserves
+      // historical data on existing deployments. To permanently retire the
+      // column, run `scripts/migrate-prod-time-entries.sql` against
+      // production, then remove the field from `shared/schema.ts` in a
+      // follow-up deploy.
     } else {
       log('✅ task_time_entries table ensured (legacy tasks.time_entries already dropped)');
     }

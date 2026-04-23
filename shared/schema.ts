@@ -926,8 +926,14 @@ export const tasks = pgTable("tasks", {
   dueTime: text("due_time"), // HH:MM format
   timeEstimate: integer("time_estimate"), // estimated time in minutes
   timeTracked: integer("time_tracked").default(0), // actual time tracked, stored in SECONDS (changed from minutes 2026-04-23). Always = SUM(task_time_entries.duration) for non-running entries.
-  // Legacy `time_entries` JSONB column has been retired. Per-entry time tracking
-  // now lives in the normalized `task_time_entries` table (see below).
+  // DEPRECATED: Per-entry time tracking now lives in the normalized
+  // `task_time_entries` table. This column is retained ONLY to preserve
+  // historical data on existing deployments and to keep deploy diffs
+  // non-destructive. Do NOT read from or write to this column in app code —
+  // all readers/writers go through `task_time_entries`. To permanently
+  // retire this column, run `scripts/migrate-prod-time-entries.sql` against
+  // production, then remove this field in a follow-up deploy.
+  timeEntries: jsonb("time_entries"),
 
   
   // Sub-task hierarchy support (up to 5 levels deep)
@@ -1576,6 +1582,7 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   taskPath: true, // Auto-calculated based on parent hierarchy
   hasSubTasks: true, // Auto-calculated when sub-tasks exist
   clientApprovalDate: true, // Auto-calculated when client approves/rejects
+  timeEntries: true, // DEPRECATED legacy JSONB column — never accept from clients; all time entries go through `task_time_entries`.
 }).extend({
   startDate: z.union([z.string(), z.date(), z.null()]).optional().transform((val) => {
     if (!val || val === '' || val === null) return null;

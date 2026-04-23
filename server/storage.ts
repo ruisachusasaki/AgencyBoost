@@ -5673,8 +5673,12 @@ export class DbStorage implements IStorage {
         timeTrackedInStage: 0
       }];
       
+      // Defensive: strip the legacy `timeEntries` JSONB column. All time-entry
+      // mutations must go through the normalized `task_time_entries` table.
+      const { timeEntries: _ignoredTimeEntries, ...taskWithoutTimeEntries } = task as InsertTask & { timeEntries?: unknown };
+
       const result = await db.insert(tasks).values({
-        ...task,
+        ...taskWithoutTimeEntries,
         id: sql`gen_random_uuid()`,
         createdAt: now,
         statusHistory: statusHistory,
