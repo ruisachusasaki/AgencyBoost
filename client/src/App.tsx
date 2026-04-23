@@ -1002,7 +1002,42 @@ function Router() {
   );
 }
 
+function useUnstickBodyPointerEvents() {
+  useEffect(() => {
+    // Workaround for a known Radix UI bug where closing a Dialog/AlertDialog
+    // (especially when combined with a toast firing or rapid state changes
+    // after a mutation) leaves `pointer-events: none` on <body>, blocking
+    // every click on the page until the user refreshes.
+    // See: https://github.com/radix-ui/primitives/issues/2122
+    const clearIfStuck = () => {
+      if (document.body.style.pointerEvents === "none") {
+        const stillOpen = document.querySelector(
+          '[data-state="open"][role="dialog"], [data-state="open"][role="alertdialog"]'
+        );
+        if (!stillOpen) {
+          document.body.style.pointerEvents = "";
+        }
+      }
+    };
+
+    const observer = new MutationObserver(clearIfStuck);
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["style"],
+    });
+
+    // Safety net in case the mutation observer misses an edge case.
+    const interval = window.setInterval(clearIfStuck, 1000);
+
+    return () => {
+      observer.disconnect();
+      window.clearInterval(interval);
+    };
+  }, []);
+}
+
 function App() {
+  useUnstickBodyPointerEvents();
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
