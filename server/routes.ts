@@ -2612,9 +2612,11 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         }
         
         const user = userMap.get(eventEntry.userId);
-        user.totalTime += eventEntry.duration || 0;
+        // event_time_entries.duration is in MINUTES; task time totals are in SECONDS — convert.
+        const eventDurationSeconds = (eventEntry.duration || 0) * 60;
+        user.totalTime += eventDurationSeconds;
         user.tasksWorked.add(`event-${eventEntry.id}`); // Use event prefix to distinguish from tasks
-        user.dailyTotals[entryDate] = (user.dailyTotals[entryDate] || 0) + (eventEntry.duration || 0);
+        user.dailyTotals[entryDate] = (user.dailyTotals[entryDate] || 0) + eventDurationSeconds;
         
         console.log("⏱️ Event time entry added:", {
           eventId: eventEntry.id,
@@ -3045,8 +3047,10 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  // Get time entries for a specific user on a specific date (for editing)
-  app.get("/api/reports/time-entries/:userId/:date", requireAuth(), async (req, res) => {
+  // Get time entries for a specific user on a specific date (for editing).
+  // NOTE: path is /by-user-date/:userId/:date — the older shorter form
+  // /:userId/:date was shadowing the sibling /user/:userId route below.
+  app.get("/api/reports/time-entries/by-user-date/:userId/:date", requireAuth(), async (req, res) => {
     try {
       const user = (req as any).session?.user;
       const currentUserId = (req as any).session?.userId || user?.id || user?.staffId;
@@ -3405,8 +3409,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         const taskIds = allTasks.map(t => t.id);
         const allEntries = await db
           .select()
-          .from(taskTimeEntriesTable)
-          .where(inArray(taskTimeEntriesTable.taskId, taskIds));
+          .from(taskTimeEntries)
+          .where(inArray(taskTimeEntries.taskId, taskIds));
         for (const e of allEntries) {
           (timeEntriesByTaskId[e.taskId] ||= []).push(e);
         }
@@ -21927,7 +21931,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
               dueDate: startTime,
               startDate: startTime,
               timeEstimate: durationMinutes,
-              timeTracked: durationMinutes,
+              // tasks.timeTracked is in SECONDS (recomputed from task_time_entries SUM after the append below).
+              timeTracked: durationMinutes * 60,
               visibleToClient: false,
               fathomRecordingUrl: fathomRecordingUrl,
               calendarEventId: id,
@@ -21936,6 +21941,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             .returning();
 
           // Insert per-row time entry into normalized table.
+          // task_time_entries.duration is SECONDS (see schema).
           await appStorage.appendTaskTimeEntry({
             id: timeEntry.id,
             taskId,
@@ -21944,7 +21950,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             userName: timeEntry.userName,
             startTime,
             endTime,
-            duration: durationMinutes,
+            duration: durationMinutes * 60,
             isRunning: false,
             source: 'auto',
             notes: timeEntry.description,
@@ -32110,7 +32116,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           taskTitle,
           startTime,
           endTime: now,
-          duration: durationMinutes,
+          // task_time_entries.duration is SECONDS (see schema).
+          duration: durationMinutes * 60,
           isRunning: false,
           source: 'auto',
         });
@@ -38060,7 +38067,12 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       }
       const { entry, task, totalTracked } = result;
 
-      console.log(`[TimeTracker] Timer stopped for user ${authenticatedUserId} on task ${task.id} — ${entry.duration} minutes`);
+      // entry.duration is SECONDS; format as Xm Ys for human-readable log.
+      const stopSecs = entry.duration ?? 0;
+      const stopMins = Math.floor(stopSecs / 60);
+      const stopRemSec = stopSecs % 60;
+      const stopLabel = stopMins > 0 ? `${stopMins}m ${stopRemSec}s` : `${stopRemSec}s`;
+      console.log(`[TimeTracker] Timer stopped for user ${authenticatedUserId} on task ${task.id} — ${stopLabel} (${stopSecs}s)`);
 
       // Activity feed entry for the stop action.
       try {
@@ -38069,7 +38081,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           'time_tracking',
           'timeEntries',
           'Timer running',
-          `Timer stopped — ${entry.duration ?? 0} minutes`,
+          `Timer stopped — ${stopLabel}`,
           authenticatedUserId,
           entry.userName || 'System',
         );
@@ -38186,7 +38198,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           'time_tracking',
           'timeEntries',
           null,
-          `Manual time entry added — ${durationMinutes} minutes`,
+          `Manual time entry added — ${durationMinutes} minute${durationMinutes === 1 ? '' : 's'}`,
           authenticatedUserId,
           userName,
         );
@@ -42458,6 +42470,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         }
 
         // Atomic single-row INSERT into the normalized table.
+        // task_time_entries.duration is SECONDS (see schema).
         const pxDurationMinutes = Math.floor(durationSeconds / 60);
         await appStorage.appendTaskTimeEntry({
           id: `px-${meetingId}-${staffId}-${Date.now()}`,
@@ -42466,7 +42479,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           taskTitle,
           startTime,
           endTime: now,
-          duration: pxDurationMinutes,
+          duration: durationSeconds,
           isRunning: false,
           source: 'auto',
         });
@@ -44437,10 +44450,13 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           };
         }
 
-        costData[uid].clients[cid].totalMinutes += entry.duration;
-        costData[uid].clients[cid].totalCost += (entry.duration / 60) * hourlyRate;
-        costData[uid].totalMinutes += entry.duration;
-        costData[uid].totalCost += (entry.duration / 60) * hourlyRate;
+        // entry.duration is SECONDS; convert to minutes for the totalMinutes
+        // field (kept for client-side compatibility) and to hours for cost.
+        const entryMinutes = entry.duration / 60;
+        costData[uid].clients[cid].totalMinutes += entryMinutes;
+        costData[uid].clients[cid].totalCost += (entry.duration / 3600) * hourlyRate;
+        costData[uid].totalMinutes += entryMinutes;
+        costData[uid].totalCost += (entry.duration / 3600) * hourlyRate;
       }
 
       // Format response

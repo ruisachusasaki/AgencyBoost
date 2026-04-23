@@ -1148,7 +1148,7 @@ export default function TaskDetail() {
                         </TooltipProvider>
                       )}
                       <span className="text-sm text-slate-600">
-                        {task.timeTracked ? `${Math.floor(task.timeTracked / 60)}h ${task.timeTracked % 60}m` : '0m'} tracked
+                        {task.timeTracked ? `${Math.floor(task.timeTracked / 3600)}h ${Math.floor((task.timeTracked % 3600) / 60)}m` : '0m'} tracked
                       </span>
                     </div>
                   </div>

@@ -94,23 +94,28 @@ const formatLocalDateStr = (d: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-// Utility function for user-friendly time formatting
-const formatDuration = (minutes: number, mode: 'friendly' | 'decimal' = 'friendly'): string => {
+// Utility function for user-friendly time formatting.
+// Input is SECONDS (matches task_time_entries.duration and tasks.timeTracked).
+const formatDuration = (seconds: number, mode: 'friendly' | 'decimal' = 'friendly'): string => {
+  const totalSeconds = Math.max(0, Math.round(seconds || 0));
   if (mode === 'decimal') {
-    return `${(minutes / 60).toFixed(2)}h`;
+    return `${(totalSeconds / 3600).toFixed(2)}h`;
   }
-  
-  if (minutes < 60) {
-    return `${Math.round(minutes)}m`;
+
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`;
   }
-  
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = Math.round(minutes % 60);
-  
+  if (totalSeconds < 3600) {
+    return `${Math.floor(totalSeconds / 60)}m`;
+  }
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const remainingMinutes = Math.floor((totalSeconds % 3600) / 60);
+
   if (remainingMinutes === 0) {
     return `${hours}h`;
   }
-  
+
   return `${hours}h ${remainingMinutes}m`;
 };
 
@@ -3951,7 +3956,7 @@ export default function Reports() {
                                                   const targetUserId = isAllUsers ? row.id : userIdFilter;
                                                   const taskIdFilter = isAllUsers ? null : row.id;
                                                   
-                                                  const response = await fetch(`/api/reports/time-entries/${targetUserId}/${dateString}`, { credentials: 'include' });
+                                                  const response = await fetch(`/api/reports/time-entries/by-user-date/${targetUserId}/${dateString}`, { credentials: 'include' });
                                                   if (!response.ok) {
                                                     const errorText = await response.text();
                                                     toast({
@@ -6402,7 +6407,8 @@ export default function Reports() {
                       min="0"
                       step="1"
                       className="w-20 text-center"
-                      value={editedDurations[entry.id] !== undefined ? editedDurations[entry.id] : entry.duration}
+                      // Display value is MINUTES; entry.duration is stored in SECONDS — convert.
+                      value={editedDurations[entry.id] !== undefined ? editedDurations[entry.id] : Math.round((entry.duration || 0) / 60)}
                       onChange={(e) => setEditedDurations(prev => ({
                         ...prev,
                         [entry.id]: parseInt(e.target.value) || 0
@@ -6439,7 +6445,8 @@ export default function Reports() {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
-                        body: JSON.stringify({ duration: editedMinutes })
+                        // PATCH endpoint expects duration in SECONDS (matches column).
+                        body: JSON.stringify({ duration: Math.max(0, editedMinutes) * 60 })
                       });
                       console.log("DEBUG save - response status:", response.status);
                       if (!response.ok) {

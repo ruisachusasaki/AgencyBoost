@@ -5311,13 +5311,15 @@ export class DbStorage implements IStorage {
       .limit(1);
     if (!running) return undefined;
 
-    const durationMin = Math.max(0, Math.floor((now.getTime() - new Date(running.startTime).getTime()) / 1000 / 60));
+    // duration is stored in SECONDS (see schema). Short timers (<60s) are
+    // preserved instead of being floor'd to zero.
+    const durationSec = Math.max(0, Math.floor((now.getTime() - new Date(running.startTime).getTime()) / 1000));
     // Predicate is_running=true makes the UPDATE a no-op if another writer
     // (e.g. the auto-stop service) already stopped the timer between our
     // SELECT and UPDATE — preventing duplicate stop overwrites.
     const [updated] = await db
       .update(taskTimeEntries)
-      .set({ endTime: now, duration: durationMin, isRunning: false, updatedAt: now })
+      .set({ endTime: now, duration: durationSec, isRunning: false, updatedAt: now })
       .where(and(eq(taskTimeEntries.id, running.id), eq(taskTimeEntries.isRunning, true)))
       .returning();
     if (!updated) return undefined;
@@ -5350,7 +5352,8 @@ export class DbStorage implements IStorage {
         taskTitle: input.taskTitle,
         startTime: input.entryDate,
         endTime: input.entryDate,
-        duration: input.durationMinutes,
+        // Caller passes minutes (UI-friendly); column stores SECONDS.
+        duration: Math.max(0, Math.round(input.durationMinutes * 60)),
         isRunning: false,
         source: input.source || 'manual',
         notes: input.notes,
@@ -9327,21 +9330,22 @@ export class DbStorage implements IStorage {
       startOfWeek.setHours(0, 0, 0, 0);
 
       // Use SQL to filter and sum time entries from this week
-      // This is more reliable than parsing JSONB in TypeScript
-      // Sum entries from the normalized task_time_entries table for this user.
+      // task_time_entries.duration is stored in SECONDS (see schema).
       const result = await db.execute(sql`
-        SELECT COALESCE(SUM(tte.duration), 0) AS total_minutes
+        SELECT COALESCE(SUM(tte.duration), 0) AS total_seconds
         FROM ${taskTimeEntries} tte
         WHERE tte.user_id = ${userId}
         AND tte.end_time IS NOT NULL
         AND tte.end_time >= ${startOfWeek.toISOString()}::timestamp
       `);
 
-      const totalMinutes = Number(result.rows[0]?.total_minutes || 0);
-      const hours = Math.floor(totalMinutes / 60);
-      const minutes = totalMinutes % 60;
+      const totalSeconds = Number(result.rows[0]?.total_seconds || 0);
+      const totalMinutes = Math.floor(totalSeconds / 60);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
 
       return {
+        totalSeconds,
         totalMinutes,
         hours,
         minutes,
@@ -9349,7 +9353,7 @@ export class DbStorage implements IStorage {
       };
     } catch (error) {
       console.error("Error fetching time tracked this week:", error);
-      return { totalMinutes: 0, hours: 0, minutes: 0, formatted: '0h 0m' };
+      return { totalSeconds: 0, totalMinutes: 0, hours: 0, minutes: 0, formatted: '0h 0m' };
     }
   }
 

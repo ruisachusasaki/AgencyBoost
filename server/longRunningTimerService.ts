@@ -188,7 +188,9 @@ async function runLongRunningTimerCheck() {
         // unbounded time for an obviously abandoned timer.
         const startMs = timer.startTime.getTime();
         const cappedEnd = new Date(startMs + autoStopThresholdMs);
-        const durationMinutes = Math.floor(autoStopThresholdMs / 1000 / 60);
+        // duration column stores SECONDS (see schema).
+        const durationSeconds = Math.floor(autoStopThresholdMs / 1000);
+        const durationMinutes = Math.floor(durationSeconds / 60);
 
         // Single-row UPDATE on the normalized table — sets stop metadata and
         // marks the entry stopped. task.timeTracked is then recomputed from
@@ -200,7 +202,7 @@ async function runLongRunningTimerCheck() {
           .set({
             isRunning: false,
             endTime: cappedEnd,
-            duration: durationMinutes,
+            duration: durationSeconds,
             stoppedBy: 'system',
             stopReason: 'auto-stopped',
             autoStoppedAt: new Date(now),

@@ -1787,8 +1787,9 @@ export default function Tasks() {
           if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
           return `${m}:${s.toString().padStart(2, '0')}`;
         };
-        const trackHours = Math.floor((task.timeTracked || 0) / 60);
-        const trackMinutes = (task.timeTracked || 0) % 60;
+        // task.timeTracked is in SECONDS (see shared/schema.ts).
+        const trackHours = Math.floor((task.timeTracked || 0) / 3600);
+        const trackMinutes = Math.floor(((task.timeTracked || 0) % 3600) / 60);
         const timeDisplay = task.timeTracked
           ? `${trackHours > 0 ? `${trackHours}h ` : ''}${trackMinutes > 0 ? `${trackMinutes}m` : trackHours > 0 ? '' : '0m'}`
           : null;

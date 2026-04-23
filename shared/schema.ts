@@ -925,7 +925,7 @@ export const tasks = pgTable("tasks", {
   startDate: timestamp("start_date"),
   dueTime: text("due_time"), // HH:MM format
   timeEstimate: integer("time_estimate"), // estimated time in minutes
-  timeTracked: integer("time_tracked").default(0), // actual time tracked in minutes
+  timeTracked: integer("time_tracked").default(0), // actual time tracked, stored in SECONDS (changed from minutes 2026-04-23). Always = SUM(task_time_entries.duration) for non-running entries.
   // Legacy `time_entries` JSONB column has been retired. Per-entry time tracking
   // now lives in the normalized `task_time_entries` table (see below).
 
@@ -988,7 +988,7 @@ export const taskTimeEntries = pgTable("task_time_entries", {
   userName: text("user_name"),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time"),
-  duration: integer("duration"), // minutes
+  duration: integer("duration"), // SECONDS (changed from minutes 2026-04-23). All writers MUST convert input units to seconds before insert/update; all readers/formatters MUST treat this as seconds.
   isRunning: boolean("is_running").default(false).notNull(),
   source: text("source").default("timer").notNull(), // 'timer' | 'manual' | 'auto' | 'legacy'
   notes: text("notes"),
