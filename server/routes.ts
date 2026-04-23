@@ -3046,12 +3046,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   });
 
   // Get time entries for a specific user on a specific date (for editing)
-  app.get("/api/reports/time-entries/:userId/:date", requireAuth(), async (req, res, next) => {
-    // Disambiguate from `/api/reports/time-entries/user/:userId` (registered later):
-    // if `:date` is not a YYYY-MM-DD string, defer to the next matching route.
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(req.params.date)) {
-      return next();
-    }
+  app.get("/api/reports/time-entries/:userId/:date", requireAuth(), async (req, res) => {
     try {
       const user = (req as any).session?.user;
       const currentUserId = (req as any).session?.userId || user?.id || user?.staffId;
@@ -3410,8 +3405,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         const taskIds = allTasks.map(t => t.id);
         const allEntries = await db
           .select()
-          .from(taskTimeEntries)
-          .where(inArray(taskTimeEntries.taskId, taskIds));
+          .from(taskTimeEntriesTable)
+          .where(inArray(taskTimeEntriesTable.taskId, taskIds));
         for (const e of allEntries) {
           (timeEntriesByTaskId[e.taskId] ||= []).push(e);
         }
