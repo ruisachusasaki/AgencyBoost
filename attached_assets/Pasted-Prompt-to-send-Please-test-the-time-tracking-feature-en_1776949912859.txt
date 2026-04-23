@@ -1,0 +1,36 @@
+Prompt to send:
+
+Please test the time-tracking feature end-to-end as a real user would, in the UI. Do not test by inspecting code or running queries — actually click through the app. Use a real account with existing data where possible.
+
+Run through these scenarios and record what you observe at each step (what you clicked, what you saw, what you expected):
+
+Time-tracking report page — Open the report, run it across a date range that has data, with and without filters (user, client). Check that rows appear, totals are non-zero, and per-day breakdowns look right. Export to CSV and open the file — confirm the time-entry data is populated.
+
+User time-entries report — Same idea: run it for a user with known activity, check that the entries and totals match what's on that user's tasks.
+
+Start, stop, edit, and delete a time entry on a task — From a task detail view, start a timer, wait a moment, stop it. Then edit the duration, then delete it. After each action, refresh and check the task's activity log shows a corresponding entry.
+
+"Time tracked this week" dashboard widget — Log in as a user with time entries this week and confirm the widget shows the correct hours/minutes (cross-check by adding up that user's entries manually).
+
+Auto-stop long-running timer — Start a timer and either wait for the auto-stop scan or trigger it (lower the threshold temporarily if needed). Confirm the entry gets stopped automatically and that the "recent auto-stopped entries" view shows it with who/when/why information.
+
+1-on-1 meeting and PX meeting flows — Create or complete a meeting that logs time. Confirm the task gets created and the time entry shows up on it.
+
+Stage analytics report — Run it for a date range with data and confirm the per-stage time-tracked numbers are non-zero and look reasonable.
+
+For each scenario, give me a structured report with this exact format:
+
+Scenario name
+Steps taken (numbered, brief)
+Expected result
+Actual result
+Pass / Fail / Partial
+Screenshots or log snippets if anything looks off
+Severity if failed (blocker / major / minor / cosmetic)
+At the end, give me:
+
+A one-line overall verdict (safe to ship / needs fixes / blocked)
+A list of any bugs found, ranked by severity
+Any data inconsistencies between the UI and what the database actually contains
+Any console errors or network failures seen during testing
+Do not fix anything. Just test and report.

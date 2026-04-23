@@ -27084,7 +27084,10 @@ AgencyBoost CRM`
       res.status(500).json({ error: "Failed to generate cost per client report" });
     }
   });
-  app2.get("/api/reports/time-entries/:userId/:date", requireAuth(), async (req, res) => {
+  app2.get("/api/reports/time-entries/:userId/:date", requireAuth(), async (req, res, next) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(req.params.date)) {
+      return next();
+    }
     try {
       const user = req.session?.user;
       const currentUserId2 = req.session?.userId || user?.id || user?.staffId;
@@ -27329,7 +27332,7 @@ AgencyBoost CRM`
       const timeEntriesByTaskId = {};
       if (allTasks.length > 0) {
         const taskIds = allTasks.map((t) => t.id);
-        const allEntries = await db.select().from(taskTimeEntriesTable).where(inArray8(taskTimeEntriesTable.taskId, taskIds));
+        const allEntries = await db.select().from(taskTimeEntries).where(inArray8(taskTimeEntries.taskId, taskIds));
         for (const e of allEntries) {
           (timeEntriesByTaskId[e.taskId] ||= []).push(e);
         }
