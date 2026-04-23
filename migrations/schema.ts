@@ -2940,7 +2940,6 @@ export const tasks = pgTable("tasks", {
 	startDate: timestamp("start_date", { mode: 'string' }),
 	timeEstimate: integer("time_estimate"),
 	timeTracked: integer("time_tracked").default(0),
-	timeEntries: jsonb("time_entries").default([]),
 	parentTaskId: varchar("parent_task_id"),
 	level: integer().default(0),
 	taskPath: text("task_path"),

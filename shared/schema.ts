@@ -926,7 +926,9 @@ export const tasks = pgTable("tasks", {
   dueTime: text("due_time"), // HH:MM format
   timeEstimate: integer("time_estimate"), // estimated time in minutes
   timeTracked: integer("time_tracked").default(0), // actual time tracked in minutes
-  timeEntries: jsonb("time_entries").default(sql`'[]'`), // array of time tracking entries
+  // Legacy `time_entries` JSONB column has been retired. Per-entry time tracking
+  // now lives in the normalized `task_time_entries` table (see below).
+
   
   // Sub-task hierarchy support (up to 5 levels deep)
   parentTaskId: varchar("parent_task_id"), // Self-reference added after table definition
@@ -990,6 +992,11 @@ export const taskTimeEntries = pgTable("task_time_entries", {
   isRunning: boolean("is_running").default(false).notNull(),
   source: text("source").default("timer").notNull(), // 'timer' | 'manual' | 'auto' | 'legacy'
   notes: text("notes"),
+  // Auto-stop / abandoned-timer metadata (populated by longRunningTimerService).
+  stoppedBy: text("stopped_by"), // 'system' when auto-stopped, otherwise null
+  stopReason: text("stop_reason"), // e.g. 'auto-stopped'
+  autoStoppedAt: timestamp("auto_stopped_at"),
+  autoStoppedThresholdHours: integer("auto_stopped_threshold_hours"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -4404,6 +4411,11 @@ export interface TimeEntry {
   duration?: number; // in minutes
   source?: string;
   notes?: string;
+  // Auto-stop / abandoned-timer metadata mirrored from `task_time_entries`.
+  stoppedBy?: string;
+  stopReason?: string;
+  autoStoppedAt?: string;
+  autoStoppedThresholdHours?: number;
 }
 
 export interface UserSummary {

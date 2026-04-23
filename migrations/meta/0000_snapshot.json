@@ -18557,13 +18557,6 @@
           "notNull": false,
           "default": 0
         },
-        "time_entries": {
-          "name": "time_entries",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'[]'"
-        },
         "parent_task_id": {
           "name": "parent_task_id",
           "type": "varchar",

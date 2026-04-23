@@ -58,7 +58,7 @@ import {
   productTaskTemplates, insertProductTaskTemplateSchema, clientTaskGenerations, clientRecurringConfig,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientContacts, documents, clientTransactions, clientHealthScores, clients, projects,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, eventTimeEntries, smsIntegrations, emailIntegrations, customFieldFileUploads,
-  forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments,
+  forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, taskTimeEntries,
   socialMediaAccounts, socialMediaPosts, workflows, workflowTemplates, workflowExecutions, workflowActionAnalytics, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses, taskTemplates,
   timeOffPolicies, timeOffTypes, timeOffRequests, timeOffRequestDays, jobApplications, jobApplicationComments, jobApplicationWatchers, applicationStageHistory, timeOffBalances,
@@ -3202,7 +3202,24 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         return res.status(404).json({ error: "Time entry not found" });
       }
       const updatedTask = result.task;
-      
+
+      // Mirror this edit into the task activity feed so the per-task history
+      // page keeps surfacing time-entry changes (legacy `timeEntries` column
+      // is gone — these activity rows are the only audit trail for users).
+      try {
+        await logTaskActivity(
+          taskId,
+          'time_tracking',
+          'timeEntries',
+          `Time entry ${entryId} (previous duration)`,
+          `Time entry ${entryId} updated (duration=${duration})`,
+          userId || 'system',
+          user?.email || 'System',
+        );
+      } catch (e) {
+        console.warn('[TIME_ENTRY_PATCH] failed to log task activity:', e);
+      }
+
       // Log the action
       await appStorage.createAuditLog({
         userId: userId || 'unknown',
@@ -3287,6 +3304,21 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         return res.status(404).json({ error: "Time entry not found" });
       }
 
+      // Mirror deletion into the per-task activity feed.
+      try {
+        await logTaskActivity(
+          taskId,
+          'time_tracking',
+          'timeEntries',
+          `Time entry ${entryId}`,
+          'Time entry deleted',
+          userId || 'system',
+          user?.email || 'System',
+        );
+      } catch (e) {
+        console.warn('[TIME_ENTRY_DELETE] failed to log task activity:', e);
+      }
+
       await appStorage.createAuditLog({
         userId: userId || 'unknown',
         userName: user?.email || 'Unknown',
@@ -3366,10 +3398,24 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         };
       });
       
+      // Pre-fetch all time entries for the filtered tasks from the normalized
+      // task_time_entries table (legacy tasks.time_entries jsonb was dropped).
+      const timeEntriesByTaskId: Record<string, any[]> = {};
+      if (allTasks.length > 0) {
+        const taskIds = allTasks.map(t => t.id);
+        const allEntries = await db
+          .select()
+          .from(taskTimeEntriesTable)
+          .where(inArray(taskTimeEntriesTable.taskId, taskIds));
+        for (const e of allEntries) {
+          (timeEntriesByTaskId[e.taskId] ||= []).push(e);
+        }
+      }
+
       // Process each task
       for (const task of allTasks) {
         const statusHistory = (task.statusHistory as any[]) || [];
-        const timeEntries = (task.timeEntries as any[]) || [];
+        const timeEntries = timeEntriesByTaskId[task.id] || [];
         
         // Track which stages this task has been in and how many times
         const stageHitCounts: Record<string, number> = {};
@@ -8770,13 +8816,9 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         await logTaskActivity(req.params.id, 'time_tracking', 'timeTracked', currentTask.timeTracked, validatedData.timeTracked, currentUser, currentUserName);
       }
 
-      if (validatedData.timeEntries !== undefined) {
-        const oldEntries = currentTask.timeEntries || [];
-        const newEntries = validatedData.timeEntries || [];
-        if (JSON.stringify(oldEntries) !== JSON.stringify(newEntries)) {
-          await logTaskActivity(req.params.id, 'time_tracking', 'timeEntries', 'Time entry updated', 'Time tracking session', currentUser, currentUserName);
-        }
-      }
+      // Time entries are no longer carried on the task payload — every
+      // start/stop/edit/delete on the normalized task_time_entries table emits
+      // its own `time_tracking` activity row (see /api/time-entries/*).
 
       // Check for time estimate changes
       if (validatedData.timeEstimate !== undefined && validatedData.timeEstimate !== currentTask.timeEstimate) {
@@ -21902,6 +21944,21 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             notes: timeEntry.description,
           });
 
+          // Activity feed mirror for the auto-logged calendar entry.
+          try {
+            await logTaskActivity(
+              taskId,
+              'time_tracking',
+              'timeEntries',
+              null,
+              `Auto-logged calendar entry — ${durationMinutes} minutes`,
+              userId,
+              timeEntry.userName || 'System',
+            );
+          } catch (e) {
+            console.warn('[CalendarAuto] failed to log time activity:', e);
+          }
+
           await db
             .insert(eventTimeEntries)
             .values({
@@ -32035,7 +32092,6 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             priority: "normal",
             assignedTo: staffId,
             tags: [],
-            timeEntries: sql`'[]'`,
           }).returning();
           taskId = newTask.id;
         }
@@ -32052,6 +32108,21 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           isRunning: false,
           source: 'auto',
         });
+
+        // Activity feed mirror for the 1-on-1 auto entry.
+        try {
+          await logTaskActivity(
+            taskId,
+            'time_tracking',
+            'timeEntries',
+            null,
+            `1-on-1 meeting auto-logged — ${durationMinutes} minutes`,
+            staffId,
+            'System',
+          );
+        } catch (e) {
+          console.warn('[1on1Finish] failed to log time activity:', e);
+        }
       }
       
       // Generate next recurring meeting instance if this is a recurring meeting
@@ -37937,6 +38008,22 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       });
 
       console.log(`[TimeTracker] Timer started for user ${authenticatedUserId} on task ${taskId}`);
+
+      // Activity feed: surface "timer started" so per-task history stays visible.
+      try {
+        await logTaskActivity(
+          taskId,
+          'time_tracking',
+          'timeEntries',
+          null,
+          `Timer started by ${userName}`,
+          authenticatedUserId,
+          userName,
+        );
+      } catch (e) {
+        console.warn('[TimeTracker] failed to log start activity:', e);
+      }
+
       res.json({
         id: newEntry.id,
         taskId: newEntry.taskId,
@@ -37968,6 +38055,22 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const { entry, task, totalTracked } = result;
 
       console.log(`[TimeTracker] Timer stopped for user ${authenticatedUserId} on task ${task.id} — ${entry.duration} minutes`);
+
+      // Activity feed entry for the stop action.
+      try {
+        await logTaskActivity(
+          task.id,
+          'time_tracking',
+          'timeEntries',
+          'Timer running',
+          `Timer stopped — ${entry.duration ?? 0} minutes`,
+          authenticatedUserId,
+          entry.userName || 'System',
+        );
+      } catch (e) {
+        console.warn('[TimeTracker] failed to log stop activity:', e);
+      }
+
       res.json({
         id: entry.id,
         taskId: task.id,
@@ -37996,37 +38099,42 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!authenticatedUserId) return;
 
-      const matchPattern = JSON.stringify([{ stoppedBy: 'system', userId: authenticatedUserId }]);
-      const candidateTasks = await db
-        .select({ id: tasks.id, title: tasks.title, timeEntries: tasks.timeEntries })
-        .from(tasks)
-        .where(sql`${tasks.timeEntries} @> ${matchPattern}::jsonb`)
-        .limit(50);
+      // Single normalized lookup against task_time_entries — pull the most
+      // recent system-stopped entry for this user within the last hour.
+      const cutoffIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const rows = await db
+        .select({ entry: taskTimeEntries, taskTitle: tasks.title })
+        .from(taskTimeEntries)
+        .innerJoin(tasks, eq(taskTimeEntries.taskId, tasks.id))
+        .where(
+          and(
+            eq(taskTimeEntries.userId, authenticatedUserId),
+            eq(taskTimeEntries.stoppedBy, 'system'),
+            sql`${taskTimeEntries.autoStoppedAt} IS NOT NULL`,
+            sql`${taskTimeEntries.autoStoppedAt} >= ${cutoffIso}::timestamp`,
+          ),
+        )
+        .orderBy(desc(taskTimeEntries.autoStoppedAt))
+        .limit(1);
 
-      const cutoff = Date.now() - 60 * 60 * 1000;
-      let latest: any = null;
-
-      for (const task of candidateTasks) {
-        if (!task.timeEntries || !Array.isArray(task.timeEntries)) continue;
-        for (const entry of task.timeEntries as any[]) {
-          if (
-            entry.stoppedBy === 'system' &&
-            entry.userId === authenticatedUserId &&
-            entry.autoStoppedAt
-          ) {
-            const ts = new Date(entry.autoStoppedAt).getTime();
-            if (ts >= cutoff && (!latest || ts > latest._ts)) {
-              latest = { ...entry, taskId: task.id, taskTitle: task.title, _ts: ts };
-            }
-          }
-        }
-      }
-
-      if (!latest) {
+      if (rows.length === 0) {
         return res.json(null);
       }
-      const { _ts, ...rest } = latest;
-      res.json(rest);
+      const { entry, taskTitle } = rows[0];
+      res.json({
+        id: entry.id,
+        taskId: entry.taskId,
+        taskTitle: entry.taskTitle || taskTitle,
+        userId: entry.userId,
+        userName: entry.userName,
+        startTime: entry.startTime instanceof Date ? entry.startTime.toISOString() : entry.startTime,
+        endTime: entry.endTime instanceof Date ? entry.endTime?.toISOString() : entry.endTime,
+        duration: entry.duration,
+        stoppedBy: entry.stoppedBy,
+        stopReason: entry.stopReason,
+        autoStoppedAt: entry.autoStoppedAt instanceof Date ? entry.autoStoppedAt.toISOString() : entry.autoStoppedAt,
+        autoStoppedThresholdHours: entry.autoStoppedThresholdHours,
+      });
     } catch (error) {
       console.error("Error fetching recent auto-stopped entry:", error);
       res.status(500).json({ error: "Failed to fetch recent auto-stopped entry" });
@@ -38064,6 +38172,21 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         durationMinutes,
         notes: notes || undefined,
       });
+
+      // Activity feed entry for the manual log.
+      try {
+        await logTaskActivity(
+          taskId,
+          'time_tracking',
+          'timeEntries',
+          null,
+          `Manual time entry added — ${durationMinutes} minutes`,
+          authenticatedUserId,
+          userName,
+        );
+      } catch (e) {
+        console.warn('[TimeTracker] failed to log manual activity:', e);
+      }
 
       res.json({
         id: entry.id,
@@ -42324,12 +42447,12 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             assignedTo: staffId,
             clientId: meeting.clientId || undefined,
             tags: meeting.tags || [],
-            timeEntries: sql`'[]'`,
           }).returning();
           taskId = newTask.id;
         }
 
         // Atomic single-row INSERT into the normalized table.
+        const pxDurationMinutes = Math.floor(durationSeconds / 60);
         await appStorage.appendTaskTimeEntry({
           id: `px-${meetingId}-${staffId}-${Date.now()}`,
           taskId,
@@ -42337,10 +42460,25 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           taskTitle,
           startTime,
           endTime: now,
-          duration: Math.floor(durationSeconds / 60),
+          duration: pxDurationMinutes,
           isRunning: false,
           source: 'auto',
         });
+
+        // Activity feed mirror for the PX auto entry.
+        try {
+          await logTaskActivity(
+            taskId,
+            'time_tracking',
+            'timeEntries',
+            null,
+            `PX meeting auto-logged — ${pxDurationMinutes} minutes`,
+            staffId,
+            'System',
+          );
+        } catch (e) {
+          console.warn('[PXFinish] failed to log time activity:', e);
+        }
       }
       
       // Generate next recurring meeting instance if this is a recurring meeting

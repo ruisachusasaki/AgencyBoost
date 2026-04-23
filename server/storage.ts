@@ -775,6 +775,12 @@ function taskTimeEntryToLegacy(entry: TaskTimeEntry, taskTitle?: string): import
     duration: entry.duration ?? undefined,
     source: entry.source ?? undefined,
     notes: entry.notes ?? undefined,
+    stoppedBy: entry.stoppedBy ?? undefined,
+    stopReason: entry.stopReason ?? undefined,
+    autoStoppedAt: entry.autoStoppedAt
+      ? (entry.autoStoppedAt instanceof Date ? entry.autoStoppedAt.toISOString() : String(entry.autoStoppedAt))
+      : undefined,
+    autoStoppedThresholdHours: entry.autoStoppedThresholdHours ?? undefined,
   };
 }
 
@@ -2600,7 +2606,6 @@ export class MemStorage implements IStorage {
       dueTime: insertTask.dueTime || null,
       timeEstimate: insertTask.timeEstimate || null,
       timeTracked: insertTask.timeTracked || 0,
-      timeEntries: insertTask.timeEntries || [],
       
       // Sub-task hierarchy fields
       parentTaskId: insertTask.parentTaskId || null,
@@ -2628,8 +2633,8 @@ export class MemStorage implements IStorage {
     const task = this.tasks.get(id);
     if (!task) return undefined;
 
-    // Strip legacy timeEntries to keep all time entry mutations on the
-    // normalized task_time_entries table only.
+    // Defensive: strip any legacy `timeEntries` payload (column has been
+    // retired; all time-entry mutations live on the normalized table).
     const { timeEntries: _ignored, ...taskWithoutTimeEntries } = taskUpdate as Partial<InsertTask> & { timeEntries?: unknown };
 
     const updatedTask = {
@@ -2821,295 +2826,34 @@ export class MemStorage implements IStorage {
   }
 
   // Time Tracking Reports
-  async getTimeTrackingReport(filters: import("@shared/schema").TimeTrackingReportFilters): Promise<import("@shared/schema").TimeTrackingReportData> {
-    const { dateFrom, dateTo, userId, clientId, taskStatus, reportType } = filters;
-    
-    // Get all tasks with time entries in the date range
-    const allTasks = Array.from(this.tasks.values());
-    const filteredTasks = allTasks.filter(task => {
-      // Filter by user if specified
-      if (userId && task.assignedTo !== userId) return false;
-      
-      // Filter by client if specified  
-      if (clientId && task.clientId !== clientId) return false;
-      
-      // Filter by task status if specified
-      if (taskStatus && taskStatus.length > 0 && !taskStatus.includes(task.status)) return false;
-      
-      // Check if task has time entries in the date range
-      if (!task.timeEntries || task.timeEntries.length === 0) return false;
-      
-      const hasEntriesInRange = (task.timeEntries as any[]).some((entry: any) => {
-        if (!entry.startTime) return false;
-        const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
-        return entryDate >= dateFrom && entryDate <= dateTo;
-      });
-      
-      return hasEntriesInRange;
-    });
-    
-    // Process tasks and aggregate data
-    const tasksWithDetails = filteredTasks.map(task => {
-      const timeEntriesByDate: Record<string, import("@shared/schema").TimeEntry[]> = {};
-      
-      (task.timeEntries as any[]).forEach((entry: any) => {
-        if (!entry.startTime) return;
-        const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
-        if (entryDate >= dateFrom && entryDate <= dateTo) {
-          if (!timeEntriesByDate[entryDate]) {
-            timeEntriesByDate[entryDate] = [];
-          }
-          timeEntriesByDate[entryDate].push(entry as import("@shared/schema").TimeEntry);
-        }
-      });
-      
-      const totalTracked = Object.values(timeEntriesByDate)
-        .flat()
-        .reduce((sum, entry) => sum + (entry.duration || 0), 0);
-      
-      return {
-        ...task,
-        userInfo: undefined, // MemStorage doesn't have user info
-        clientInfo: undefined, // MemStorage doesn't have client info  
-        timeEntriesByDate,
-        totalTracked
-      };
-    });
-    
-    // Calculate user summaries
-    const userSummaries: import("@shared/schema").UserSummary[] = [];
-    const userTimeMap = new Map<string, any>();
-    
-    tasksWithDetails.forEach(task => {
-      Object.entries(task.timeEntriesByDate).forEach(([date, entries]) => {
-        entries.forEach(entry => {
-          if (!userTimeMap.has(entry.userId)) {
-            userTimeMap.set(entry.userId, {
-              userId: entry.userId,
-              userName: `User ${entry.userId}`,
-              userRole: 'User',
-              totalTime: 0,
-              tasksWorked: new Set(),
-              dailyTotals: {}
-            });
-          }
-          
-          const userData = userTimeMap.get(entry.userId);
-          userData.totalTime += entry.duration || 0;
-          userData.tasksWorked.add(task.id);
-          
-          if (!userData.dailyTotals[date]) {
-            userData.dailyTotals[date] = 0;
-          }
-          userData.dailyTotals[date] += entry.duration || 0;
-        });
-      });
-    });
-    
-    userTimeMap.forEach((userData, userId) => {
-      userSummaries.push({
-        userId,
-        userName: userData.userName,
-        userRole: userData.userRole,
-        totalTime: userData.totalTime,
-        tasksWorked: userData.tasksWorked.size,
-        dailyTotals: userData.dailyTotals
-      });
-    });
-    
-    // Calculate client breakdowns
-    const clientBreakdowns: import("@shared/schema").ClientBreakdown[] = [];
-    const clientTimeMap = new Map<string, any>();
-    
-    tasksWithDetails.forEach(task => {
-      if (!task.clientId) return;
-      
-      if (!clientTimeMap.has(task.clientId)) {
-        clientTimeMap.set(task.clientId, {
-          clientId: task.clientId,
-          clientName: `Client ${task.clientId}`,
-          totalTime: 0,
-          tasksCount: new Set(),
-          users: new Map()
-        });
-      }
-      
-      const clientData = clientTimeMap.get(task.clientId);
-      clientData.tasksCount.add(task.id);
-      
-      Object.entries(task.timeEntriesByDate).forEach(([date, entries]) => {
-        entries.forEach(entry => {
-          clientData.totalTime += entry.duration || 0;
-          
-          if (!clientData.users.has(entry.userId)) {
-            clientData.users.set(entry.userId, {
-              userId: entry.userId,
-              userName: `User ${entry.userId}`,
-              timeSpent: 0
-            });
-          }
-          
-          clientData.users.get(entry.userId).timeSpent += entry.duration || 0;
-        });
-      });
-    });
-    
-    clientTimeMap.forEach((clientData, clientId) => {
-      clientBreakdowns.push({
-        clientId,
-        clientName: clientData.clientName,
-        totalTime: clientData.totalTime,
-        tasksCount: clientData.tasksCount.size,
-        users: Array.from(clientData.users.values())
-      });
-    });
-    
-    // Calculate daily totals
-    const dailyTotals: Record<string, number> = {};
-    tasksWithDetails.forEach(task => {
-      Object.entries(task.timeEntriesByDate).forEach(([date, entries]) => {
-        if (!dailyTotals[date]) {
-          dailyTotals[date] = 0;
-        }
-        entries.forEach(entry => {
-          dailyTotals[date] += entry.duration || 0;
-        });
-      });
-    });
-    
-    const grandTotal = Object.values(dailyTotals).reduce((sum, total) => sum + total, 0);
-    
-    return {
-      tasks: tasksWithDetails,
-      userSummaries,
-      clientBreakdowns,
-      dailyTotals,
-      grandTotal
-    };
+  // The methods below were originally backed by tasks.timeEntries (JSONB).
+  // That column has been retired: production uses PostgresStorage which now
+  // sources everything from the normalized task_time_entries table.
+  // MemStorage retains these methods only to satisfy the IStorage contract.
+  async getTimeTrackingReport(_filters: import('@shared/schema').TimeTrackingReportFilters): Promise<import('@shared/schema').TimeTrackingReportData> {
+    return { tasks: [], userSummaries: [], clientBreakdowns: [], dailyTotals: {}, grandTotal: 0 };
   }
-  
-  async getUserTimeEntries(userId: string, dateFrom: string, dateTo: string): Promise<Array<Task & { timeEntries: import("@shared/schema").TimeEntry[] }>> {
-    const allTasks = Array.from(this.tasks.values());
-    
-    return allTasks.filter(task => {
-      if (task.assignedTo !== userId) return false;
-      if (!task.timeEntries || task.timeEntries.length === 0) return false;
-      
-      // Check if task has time entries in the date range
-      const hasEntriesInRange = (task.timeEntries as any[]).some((entry: any) => {
-        if (!entry.startTime) return false;
-        const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
-        return entryDate >= dateFrom && entryDate <= dateTo;
-      });
-      
-      return hasEntriesInRange;
-    }).map(task => ({
-      ...task,
-      timeEntries: (task.timeEntries as any[]).filter((entry: any) => {
-        if (!entry.startTime) return false;
-        const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
-        return entryDate >= dateFrom && entryDate <= dateTo;
-      }) as import("@shared/schema").TimeEntry[]
-    }));
+
+  async getUserTimeEntries(_userId: string, _dateFrom: string, _dateTo: string): Promise<Array<Task & { timeEntries: import('@shared/schema').TimeEntry[] }>> {
+    return [];
   }
-  
+
   async getRunningTimeEntries(): Promise<Array<{ taskId: string; userId: string; startTime: string }>> {
-    const allTasks = Array.from(this.tasks.values());
-    const runningEntries: Array<{ taskId: string; userId: string; startTime: string }> = [];
-    
-    allTasks.forEach(task => {
-      if (!task.timeEntries || task.timeEntries.length === 0) return;
-      
-      (task.timeEntries as any[]).forEach((entry: any) => {
-        if (entry.isRunning) {
-          runningEntries.push({
-            taskId: task.id,
-            userId: entry.userId,
-            startTime: entry.startTime
-          });
-        }
-      });
-    });
-    
-    return runningEntries;
+    return [];
   }
-  
-  async getTimeEntriesByDateRange(dateFrom: string, dateTo: string, userId?: string, clientId?: string): Promise<Array<Task & { timeEntries: import("@shared/schema").TimeEntry[] }>> {
-    const allTasks = Array.from(this.tasks.values());
-    
-    return allTasks.filter(task => {
-      // Filter by client if specified  
-      if (clientId && task.clientId !== clientId) return false;
-      
-      // Check if task has time entries
-      if (!task.timeEntries || task.timeEntries.length === 0) return false;
-      
-      // Check if task has time entries in the date range (and by user if specified)
-      // Note: We filter by userId on time entries, NOT on task.assignedTo
-      // This ensures we show tasks where the user logged time, even if they're not the assignee
-      const hasEntriesInRange = (task.timeEntries as any[]).some((entry: any) => {
-        if (!entry.startTime) return false;
-        const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
-        const dateMatch = entryDate >= dateFrom && entryDate <= dateTo;
-        const userMatch = !userId || entry.userId === userId;
-        return dateMatch && userMatch;
-      });
-      
-      return hasEntriesInRange;
-    }).map(task => ({
-      ...task,
-      timeEntries: (task.timeEntries as any[]).filter((entry: any) => {
-        if (!entry.startTime) return false;
-        const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
-        const dateMatch = entryDate >= dateFrom && entryDate <= dateTo;
-        const userMatch = !userId || entry.userId === userId;
-        return dateMatch && userMatch;
-      }) as import("@shared/schema").TimeEntry[]
-    }));
+
+  async getTimeEntriesByDateRange(_dateFrom: string, _dateTo: string, _userId?: string, _clientId?: string): Promise<Array<Task & { timeEntries: import('@shared/schema').TimeEntry[] }>> {
+    return [];
   }
-  
-  async updateTimeEntry(taskId: string, entryId: string, updates: { duration?: number; startTime?: string; endTime?: string }): Promise<Task | undefined> {
-    const task = this.tasks.get(taskId);
-    if (!task || !task.timeEntries) return undefined;
-    
-    const entries = task.timeEntries as any[];
-    const entryIndex = entries.findIndex((e: any) => e.id === entryId);
-    if (entryIndex === -1) return undefined;
-    
-    const entry = entries[entryIndex];
-    if (updates.duration !== undefined) entry.duration = updates.duration;
-    if (updates.startTime !== undefined) entry.startTime = updates.startTime;
-    if (updates.endTime !== undefined) entry.endTime = updates.endTime;
-    
-    entries[entryIndex] = entry;
-    const updatedTask = { ...task, timeEntries: entries };
-    this.tasks.set(taskId, updatedTask);
-    return updatedTask;
+
+  async updateTimeEntry(_taskId: string, _entryId: string, _updates: { duration?: number; startTime?: string; endTime?: string }): Promise<Task | undefined> {
+    return undefined;
   }
-  
-  async getTimeEntriesForUserOnDate(userId: string, date: string): Promise<Array<{ taskId: string; taskTitle: string; entries: import("@shared/schema").TimeEntry[] }>> {
-    const results: Array<{ taskId: string; taskTitle: string; entries: import("@shared/schema").TimeEntry[] }> = [];
-    
-    for (const task of this.tasks.values()) {
-      if (!task.timeEntries) continue;
-      
-      const matchingEntries = (task.timeEntries as any[]).filter((entry: any) => {
-        if (!entry.startTime) return false;
-        const entryDate = new Date(entry.startTime).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-        return entryDate === date && entry.userId === userId;
-      });
-      
-      if (matchingEntries.length > 0) {
-        results.push({
-          taskId: task.id,
-          taskTitle: task.title,
-          entries: matchingEntries as import("@shared/schema").TimeEntry[]
-        });
-      }
-    }
-    
-    return results;
+
+  async getTimeEntriesForUserOnDate(_userId: string, _date: string): Promise<Array<{ taskId: string; taskTitle: string; entries: import('@shared/schema').TimeEntry[] }>> {
+    return [];
   }
+
 
   // ---- New normalized per-row methods (MemStorage stubs / not used in prod) ----
   async startTaskTimer(_input: { taskId: string; userId: string; taskTitle: string; userName: string }): Promise<TaskTimeEntry> {
@@ -5254,72 +4998,64 @@ export class DbStorage implements IStorage {
   async getTimeTrackingReport(filters: import("@shared/schema").TimeTrackingReportFilters): Promise<import("@shared/schema").TimeTrackingReportData> {
     const { dateFrom, dateTo, userId, clientId, taskStatus, reportType } = filters;
     
-    // Build base query conditions
-    const conditions: any[] = [];
-    
-    // Add date range conditions for timeEntries (JSONB query)
-    // We'll filter tasks that have time entries within the date range
-    conditions.push(
-      sql`EXISTS (
-        SELECT 1 FROM jsonb_array_elements(${tasks.timeEntries}) AS entry
-        WHERE entry->>'startTime' IS NOT NULL
-        AND (entry->>'startTime')::date >= ${dateFrom}::date
-        AND (entry->>'startTime')::date <= ${dateTo}::date
-      )`
-    );
-    
-    // Filter by user if specified
-    if (userId) {
-      conditions.push(eq(tasks.assignedTo, userId));
-    }
-    
-    // Filter by client if specified
-    if (clientId) {
-      conditions.push(eq(tasks.clientId, clientId));
-    }
-    
-    // Filter by task status if specified
+    // Sourced from the normalized task_time_entries table (legacy
+    // tasks.time_entries JSONB column has been retired). We still pull the
+    // related task / staff / client metadata so reports can group + label.
+    const conditions: any[] = [
+      sql`(${taskTimeEntries.startTime})::date >= ${dateFrom}::date`,
+      sql`(${taskTimeEntries.startTime})::date <= ${dateTo}::date`,
+    ];
+    if (userId) conditions.push(eq(taskTimeEntries.userId, userId));
+    if (clientId) conditions.push(eq(tasks.clientId, clientId));
     if (taskStatus && taskStatus.length > 0) {
       conditions.push(sql`${tasks.status} IN (${sql.join(taskStatus.map(status => sql`${status}`), sql`, `)})`);
     }
-    
-    // Get basic task data first to avoid complex join issues
-    const tasksQuery = db
-      .select()
-      .from(tasks)
+
+    const rows = await db
+      .select({
+        entry: taskTimeEntries,
+        task: tasks,
+        staff: staff,
+        client: clients,
+      })
+      .from(taskTimeEntries)
+      .innerJoin(tasks, eq(taskTimeEntries.taskId, tasks.id))
+      .leftJoin(staff, eq(staff.id, taskTimeEntries.userId))
+      .leftJoin(clients, eq(clients.id, tasks.clientId))
       .where(and(...conditions));
-    
-    const tasksData = await tasksQuery;
-    
-    // Process the results to format time entries by date
-    const tasksWithDetails = tasksData.map(task => {
-      const timeEntriesByDate: Record<string, import("@shared/schema").TimeEntry[]> = {};
-      
-      if (task.timeEntries && Array.isArray(task.timeEntries)) {
-        (task.timeEntries as any[]).forEach((entry: any) => {
-          if (!entry.startTime) return;
-          const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
-          if (entryDate >= dateFrom && entryDate <= dateTo) {
-            if (!timeEntriesByDate[entryDate]) {
-              timeEntriesByDate[entryDate] = [];
-            }
-            timeEntriesByDate[entryDate].push(entry as import("@shared/schema").TimeEntry);
-          }
-        });
-      }
-      
-      const totalTracked = Object.values(timeEntriesByDate)
-        .flat()
-        .reduce((sum, entry) => sum + (entry.duration || 0), 0);
-      
-      return {
-        ...task,
-        userInfo: undefined, // Simplified - we'll get this info separately if needed
-        clientInfo: undefined, // Simplified - we'll get this info separately if needed  
-        timeEntriesByDate,
-        totalTracked
+
+    // Group entries by task, materialising the legacy timeEntriesByDate shape.
+    const tasksMap = new Map<string, any>();
+    for (const row of rows) {
+      const t = row.task;
+      const e = row.entry;
+      if (!e.startTime) continue;
+      const dateKey = new Date(e.startTime as any).toISOString().split('T')[0];
+      const userName = row.staff
+        ? `${row.staff.firstName ?? ''} ${row.staff.lastName ?? ''}`.trim() || (e.userName ?? `User ${e.userId}`)
+        : (e.userName ?? `User ${e.userId}`);
+      const legacyEntry: import("@shared/schema").TimeEntry = {
+        ...taskTimeEntryToLegacy(e, t.title),
+        userName,
       };
-    });
+      let bucket = tasksMap.get(t.id);
+      if (!bucket) {
+        bucket = {
+          ...t,
+          userInfo: row.staff
+            ? { firstName: row.staff.firstName, lastName: row.staff.lastName, role: (row.staff as any).role, department: row.staff.department }
+            : undefined,
+          clientInfo: row.client ? { name: row.client.name } : undefined,
+          timeEntriesByDate: {} as Record<string, import("@shared/schema").TimeEntry[]>,
+          totalTracked: 0,
+        };
+        tasksMap.set(t.id, bucket);
+      }
+      if (!bucket.timeEntriesByDate[dateKey]) bucket.timeEntriesByDate[dateKey] = [];
+      bucket.timeEntriesByDate[dateKey].push(legacyEntry);
+      bucket.totalTracked += legacyEntry.duration || 0;
+    }
+    const tasksWithDetails = Array.from(tasksMap.values());
     
     // Calculate user summaries
     const userSummaries: import("@shared/schema").UserSummary[] = [];
@@ -5331,9 +5067,9 @@ export class DbStorage implements IStorage {
           if (!userTimeMap.has(entry.userId)) {
             userTimeMap.set(entry.userId, {
               userId: entry.userId,
-              userName: task.userInfo?.firstName ? `${task.userInfo.firstName} ${task.userInfo.lastName}` : `User ${entry.userId}`,
-              userRole: task.userInfo?.role || 'User',
-              department: task.userInfo ? tasksData.find(t => t.userId === entry.userId)?.userDepartment : undefined,
+              userName: entry.userName || (task.userInfo?.firstName ? `${task.userInfo.firstName} ${task.userInfo.lastName}` : `User ${entry.userId}`),
+              userRole: (task.userInfo as any)?.role || 'User',
+              department: (task.userInfo as any)?.department,
               totalTime: 0,
               tasksWorked: new Set(),
               dailyTotals: {}
@@ -5391,7 +5127,7 @@ export class DbStorage implements IStorage {
           if (!clientData.users.has(entry.userId)) {
             clientData.users.set(entry.userId, {
               userId: entry.userId,
-              userName: task.userInfo?.firstName ? `${task.userInfo.firstName} ${task.userInfo.lastName}` : `User ${entry.userId}`,
+              userName: entry.userName || (task.userInfo?.firstName ? `${task.userInfo.firstName} ${task.userInfo.lastName}` : `User ${entry.userId}`),
               timeSpent: 0
             });
           }
@@ -5576,11 +5312,15 @@ export class DbStorage implements IStorage {
     if (!running) return undefined;
 
     const durationMin = Math.max(0, Math.floor((now.getTime() - new Date(running.startTime).getTime()) / 1000 / 60));
+    // Predicate is_running=true makes the UPDATE a no-op if another writer
+    // (e.g. the auto-stop service) already stopped the timer between our
+    // SELECT and UPDATE — preventing duplicate stop overwrites.
     const [updated] = await db
       .update(taskTimeEntries)
       .set({ endTime: now, duration: durationMin, isRunning: false, updatedAt: now })
-      .where(eq(taskTimeEntries.id, running.id))
+      .where(and(eq(taskTimeEntries.id, running.id), eq(taskTimeEntries.isRunning, true)))
       .returning();
+    if (!updated) return undefined;
 
     const totalTracked = await this.recomputeTaskTimeTracked(updated.taskId);
     const [task] = await db.select().from(tasks).where(eq(tasks.id, updated.taskId));
@@ -9588,12 +9328,13 @@ export class DbStorage implements IStorage {
 
       // Use SQL to filter and sum time entries from this week
       // This is more reliable than parsing JSONB in TypeScript
+      // Sum entries from the normalized task_time_entries table for this user.
       const result = await db.execute(sql`
-        SELECT COALESCE(SUM((entry->>'duration')::int), 0) as total_minutes
-        FROM ${tasks} t,
-        jsonb_array_elements(t.time_entries) AS entry
-        WHERE t.assigned_to = ${userId}
-        AND (entry->>'endTime')::timestamp >= ${startOfWeek}::timestamp
+        SELECT COALESCE(SUM(tte.duration), 0) AS total_minutes
+        FROM ${taskTimeEntries} tte
+        WHERE tte.user_id = ${userId}
+        AND tte.end_time IS NOT NULL
+        AND tte.end_time >= ${startOfWeek.toISOString()}::timestamp
       `);
 
       const totalMinutes = Number(result.rows[0]?.total_minutes || 0);

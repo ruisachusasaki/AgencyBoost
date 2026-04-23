@@ -2306,7 +2306,6 @@ CREATE TABLE "tasks" (
 	"due_time" text,
 	"time_estimate" integer,
 	"time_tracked" integer DEFAULT 0,
-	"time_entries" jsonb DEFAULT '[]',
 	"parent_task_id" varchar,
 	"level" integer DEFAULT 0,
 	"task_path" text,

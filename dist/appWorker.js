@@ -1369,8 +1369,8 @@ var init_schema = __esm({
       // estimated time in minutes
       timeTracked: integer("time_tracked").default(0),
       // actual time tracked in minutes
-      timeEntries: jsonb("time_entries").default(sql`'[]'`),
-      // array of time tracking entries
+      // Legacy `time_entries` JSONB column has been retired. Per-entry time tracking
+      // now lives in the normalized `task_time_entries` table (see below).
       // Sub-task hierarchy support (up to 5 levels deep)
       parentTaskId: varchar("parent_task_id"),
       // Self-reference added after table definition
@@ -1437,6 +1437,13 @@ var init_schema = __esm({
       source: text("source").default("timer").notNull(),
       // 'timer' | 'manual' | 'auto' | 'legacy'
       notes: text("notes"),
+      // Auto-stop / abandoned-timer metadata (populated by longRunningTimerService).
+      stoppedBy: text("stopped_by"),
+      // 'system' when auto-stopped, otherwise null
+      stopReason: text("stop_reason"),
+      // e.g. 'auto-stopped'
+      autoStoppedAt: timestamp("auto_stopped_at"),
+      autoStoppedThresholdHours: integer("auto_stopped_threshold_hours"),
       createdAt: timestamp("created_at").defaultNow(),
       updatedAt: timestamp("updated_at").defaultNow()
     }, (table) => [
@@ -5802,7 +5809,11 @@ function taskTimeEntryToLegacy(entry, taskTitle) {
     isRunning: !!entry.isRunning,
     duration: entry.duration ?? void 0,
     source: entry.source ?? void 0,
-    notes: entry.notes ?? void 0
+    notes: entry.notes ?? void 0,
+    stoppedBy: entry.stoppedBy ?? void 0,
+    stopReason: entry.stopReason ?? void 0,
+    autoStoppedAt: entry.autoStoppedAt ? entry.autoStoppedAt instanceof Date ? entry.autoStoppedAt.toISOString() : String(entry.autoStoppedAt) : void 0,
+    autoStoppedThresholdHours: entry.autoStoppedThresholdHours ?? void 0
   };
 }
 function groupEntriesByTask(rows, extra) {
@@ -7516,7 +7527,6 @@ var init_storage = __esm({
           dueTime: insertTask.dueTime || null,
           timeEstimate: insertTask.timeEstimate || null,
           timeTracked: insertTask.timeTracked || 0,
-          timeEntries: insertTask.timeEntries || [],
           // Sub-task hierarchy fields
           parentTaskId: insertTask.parentTaskId || null,
           level,
@@ -7670,231 +7680,27 @@ var init_storage = __esm({
         return path3;
       }
       // Time Tracking Reports
-      async getTimeTrackingReport(filters) {
-        const { dateFrom, dateTo, userId: userId2, clientId, taskStatus, reportType } = filters;
-        const allTasks = Array.from(this.tasks.values());
-        const filteredTasks = allTasks.filter((task) => {
-          if (userId2 && task.assignedTo !== userId2) return false;
-          if (clientId && task.clientId !== clientId) return false;
-          if (taskStatus && taskStatus.length > 0 && !taskStatus.includes(task.status)) return false;
-          if (!task.timeEntries || task.timeEntries.length === 0) return false;
-          const hasEntriesInRange = task.timeEntries.some((entry) => {
-            if (!entry.startTime) return false;
-            const entryDate = new Date(entry.startTime).toISOString().split("T")[0];
-            return entryDate >= dateFrom && entryDate <= dateTo;
-          });
-          return hasEntriesInRange;
-        });
-        const tasksWithDetails = filteredTasks.map((task) => {
-          const timeEntriesByDate = {};
-          task.timeEntries.forEach((entry) => {
-            if (!entry.startTime) return;
-            const entryDate = new Date(entry.startTime).toISOString().split("T")[0];
-            if (entryDate >= dateFrom && entryDate <= dateTo) {
-              if (!timeEntriesByDate[entryDate]) {
-                timeEntriesByDate[entryDate] = [];
-              }
-              timeEntriesByDate[entryDate].push(entry);
-            }
-          });
-          const totalTracked = Object.values(timeEntriesByDate).flat().reduce((sum, entry) => sum + (entry.duration || 0), 0);
-          return {
-            ...task,
-            userInfo: void 0,
-            // MemStorage doesn't have user info
-            clientInfo: void 0,
-            // MemStorage doesn't have client info  
-            timeEntriesByDate,
-            totalTracked
-          };
-        });
-        const userSummaries = [];
-        const userTimeMap = /* @__PURE__ */ new Map();
-        tasksWithDetails.forEach((task) => {
-          Object.entries(task.timeEntriesByDate).forEach(([date2, entries]) => {
-            entries.forEach((entry) => {
-              if (!userTimeMap.has(entry.userId)) {
-                userTimeMap.set(entry.userId, {
-                  userId: entry.userId,
-                  userName: `User ${entry.userId}`,
-                  userRole: "User",
-                  totalTime: 0,
-                  tasksWorked: /* @__PURE__ */ new Set(),
-                  dailyTotals: {}
-                });
-              }
-              const userData = userTimeMap.get(entry.userId);
-              userData.totalTime += entry.duration || 0;
-              userData.tasksWorked.add(task.id);
-              if (!userData.dailyTotals[date2]) {
-                userData.dailyTotals[date2] = 0;
-              }
-              userData.dailyTotals[date2] += entry.duration || 0;
-            });
-          });
-        });
-        userTimeMap.forEach((userData, userId3) => {
-          userSummaries.push({
-            userId: userId3,
-            userName: userData.userName,
-            userRole: userData.userRole,
-            totalTime: userData.totalTime,
-            tasksWorked: userData.tasksWorked.size,
-            dailyTotals: userData.dailyTotals
-          });
-        });
-        const clientBreakdowns = [];
-        const clientTimeMap = /* @__PURE__ */ new Map();
-        tasksWithDetails.forEach((task) => {
-          if (!task.clientId) return;
-          if (!clientTimeMap.has(task.clientId)) {
-            clientTimeMap.set(task.clientId, {
-              clientId: task.clientId,
-              clientName: `Client ${task.clientId}`,
-              totalTime: 0,
-              tasksCount: /* @__PURE__ */ new Set(),
-              users: /* @__PURE__ */ new Map()
-            });
-          }
-          const clientData = clientTimeMap.get(task.clientId);
-          clientData.tasksCount.add(task.id);
-          Object.entries(task.timeEntriesByDate).forEach(([date2, entries]) => {
-            entries.forEach((entry) => {
-              clientData.totalTime += entry.duration || 0;
-              if (!clientData.users.has(entry.userId)) {
-                clientData.users.set(entry.userId, {
-                  userId: entry.userId,
-                  userName: `User ${entry.userId}`,
-                  timeSpent: 0
-                });
-              }
-              clientData.users.get(entry.userId).timeSpent += entry.duration || 0;
-            });
-          });
-        });
-        clientTimeMap.forEach((clientData, clientId2) => {
-          clientBreakdowns.push({
-            clientId: clientId2,
-            clientName: clientData.clientName,
-            totalTime: clientData.totalTime,
-            tasksCount: clientData.tasksCount.size,
-            users: Array.from(clientData.users.values())
-          });
-        });
-        const dailyTotals = {};
-        tasksWithDetails.forEach((task) => {
-          Object.entries(task.timeEntriesByDate).forEach(([date2, entries]) => {
-            if (!dailyTotals[date2]) {
-              dailyTotals[date2] = 0;
-            }
-            entries.forEach((entry) => {
-              dailyTotals[date2] += entry.duration || 0;
-            });
-          });
-        });
-        const grandTotal = Object.values(dailyTotals).reduce((sum, total) => sum + total, 0);
-        return {
-          tasks: tasksWithDetails,
-          userSummaries,
-          clientBreakdowns,
-          dailyTotals,
-          grandTotal
-        };
+      // The methods below were originally backed by tasks.timeEntries (JSONB).
+      // That column has been retired: production uses PostgresStorage which now
+      // sources everything from the normalized task_time_entries table.
+      // MemStorage retains these methods only to satisfy the IStorage contract.
+      async getTimeTrackingReport(_filters) {
+        return { tasks: [], userSummaries: [], clientBreakdowns: [], dailyTotals: {}, grandTotal: 0 };
       }
-      async getUserTimeEntries(userId2, dateFrom, dateTo) {
-        const allTasks = Array.from(this.tasks.values());
-        return allTasks.filter((task) => {
-          if (task.assignedTo !== userId2) return false;
-          if (!task.timeEntries || task.timeEntries.length === 0) return false;
-          const hasEntriesInRange = task.timeEntries.some((entry) => {
-            if (!entry.startTime) return false;
-            const entryDate = new Date(entry.startTime).toISOString().split("T")[0];
-            return entryDate >= dateFrom && entryDate <= dateTo;
-          });
-          return hasEntriesInRange;
-        }).map((task) => ({
-          ...task,
-          timeEntries: task.timeEntries.filter((entry) => {
-            if (!entry.startTime) return false;
-            const entryDate = new Date(entry.startTime).toISOString().split("T")[0];
-            return entryDate >= dateFrom && entryDate <= dateTo;
-          })
-        }));
+      async getUserTimeEntries(_userId, _dateFrom, _dateTo) {
+        return [];
       }
       async getRunningTimeEntries() {
-        const allTasks = Array.from(this.tasks.values());
-        const runningEntries = [];
-        allTasks.forEach((task) => {
-          if (!task.timeEntries || task.timeEntries.length === 0) return;
-          task.timeEntries.forEach((entry) => {
-            if (entry.isRunning) {
-              runningEntries.push({
-                taskId: task.id,
-                userId: entry.userId,
-                startTime: entry.startTime
-              });
-            }
-          });
-        });
-        return runningEntries;
+        return [];
       }
-      async getTimeEntriesByDateRange(dateFrom, dateTo, userId2, clientId) {
-        const allTasks = Array.from(this.tasks.values());
-        return allTasks.filter((task) => {
-          if (clientId && task.clientId !== clientId) return false;
-          if (!task.timeEntries || task.timeEntries.length === 0) return false;
-          const hasEntriesInRange = task.timeEntries.some((entry) => {
-            if (!entry.startTime) return false;
-            const entryDate = new Date(entry.startTime).toISOString().split("T")[0];
-            const dateMatch = entryDate >= dateFrom && entryDate <= dateTo;
-            const userMatch = !userId2 || entry.userId === userId2;
-            return dateMatch && userMatch;
-          });
-          return hasEntriesInRange;
-        }).map((task) => ({
-          ...task,
-          timeEntries: task.timeEntries.filter((entry) => {
-            if (!entry.startTime) return false;
-            const entryDate = new Date(entry.startTime).toISOString().split("T")[0];
-            const dateMatch = entryDate >= dateFrom && entryDate <= dateTo;
-            const userMatch = !userId2 || entry.userId === userId2;
-            return dateMatch && userMatch;
-          })
-        }));
+      async getTimeEntriesByDateRange(_dateFrom, _dateTo, _userId, _clientId) {
+        return [];
       }
-      async updateTimeEntry(taskId, entryId, updates) {
-        const task = this.tasks.get(taskId);
-        if (!task || !task.timeEntries) return void 0;
-        const entries = task.timeEntries;
-        const entryIndex = entries.findIndex((e) => e.id === entryId);
-        if (entryIndex === -1) return void 0;
-        const entry = entries[entryIndex];
-        if (updates.duration !== void 0) entry.duration = updates.duration;
-        if (updates.startTime !== void 0) entry.startTime = updates.startTime;
-        if (updates.endTime !== void 0) entry.endTime = updates.endTime;
-        entries[entryIndex] = entry;
-        const updatedTask = { ...task, timeEntries: entries };
-        this.tasks.set(taskId, updatedTask);
-        return updatedTask;
+      async updateTimeEntry(_taskId, _entryId, _updates) {
+        return void 0;
       }
-      async getTimeEntriesForUserOnDate(userId2, date2) {
-        const results = [];
-        for (const task of this.tasks.values()) {
-          if (!task.timeEntries) continue;
-          const matchingEntries = task.timeEntries.filter((entry) => {
-            if (!entry.startTime) return false;
-            const entryDate = new Date(entry.startTime).toLocaleDateString("en-CA", { timeZone: "America/New_York" });
-            return entryDate === date2 && entry.userId === userId2;
-          });
-          if (matchingEntries.length > 0) {
-            results.push({
-              taskId: task.id,
-              taskTitle: task.title,
-              entries: matchingEntries
-            });
-          }
-        }
-        return results;
+      async getTimeEntriesForUserOnDate(_userId, _date) {
+        return [];
       }
       // ---- New normalized per-row methods (MemStorage stubs / not used in prod) ----
       async startTaskTimer(_input) {
@@ -9616,51 +9422,48 @@ var init_storage = __esm({
       // Time Tracking Reports - Database Implementation
       async getTimeTrackingReport(filters) {
         const { dateFrom, dateTo, userId: userId2, clientId, taskStatus, reportType } = filters;
-        const conditions = [];
-        conditions.push(
-          sql3`EXISTS (
-        SELECT 1 FROM jsonb_array_elements(${tasks.timeEntries}) AS entry
-        WHERE entry->>'startTime' IS NOT NULL
-        AND (entry->>'startTime')::date >= ${dateFrom}::date
-        AND (entry->>'startTime')::date <= ${dateTo}::date
-      )`
-        );
-        if (userId2) {
-          conditions.push(eq3(tasks.assignedTo, userId2));
-        }
-        if (clientId) {
-          conditions.push(eq3(tasks.clientId, clientId));
-        }
+        const conditions = [
+          sql3`(${taskTimeEntries.startTime})::date >= ${dateFrom}::date`,
+          sql3`(${taskTimeEntries.startTime})::date <= ${dateTo}::date`
+        ];
+        if (userId2) conditions.push(eq3(taskTimeEntries.userId, userId2));
+        if (clientId) conditions.push(eq3(tasks.clientId, clientId));
         if (taskStatus && taskStatus.length > 0) {
           conditions.push(sql3`${tasks.status} IN (${sql3.join(taskStatus.map((status) => sql3`${status}`), sql3`, `)})`);
         }
-        const tasksQuery = db.select().from(tasks).where(and2(...conditions));
-        const tasksData = await tasksQuery;
-        const tasksWithDetails = tasksData.map((task) => {
-          const timeEntriesByDate = {};
-          if (task.timeEntries && Array.isArray(task.timeEntries)) {
-            task.timeEntries.forEach((entry) => {
-              if (!entry.startTime) return;
-              const entryDate = new Date(entry.startTime).toISOString().split("T")[0];
-              if (entryDate >= dateFrom && entryDate <= dateTo) {
-                if (!timeEntriesByDate[entryDate]) {
-                  timeEntriesByDate[entryDate] = [];
-                }
-                timeEntriesByDate[entryDate].push(entry);
-              }
-            });
-          }
-          const totalTracked = Object.values(timeEntriesByDate).flat().reduce((sum, entry) => sum + (entry.duration || 0), 0);
-          return {
-            ...task,
-            userInfo: void 0,
-            // Simplified - we'll get this info separately if needed
-            clientInfo: void 0,
-            // Simplified - we'll get this info separately if needed  
-            timeEntriesByDate,
-            totalTracked
+        const rows = await db.select({
+          entry: taskTimeEntries,
+          task: tasks,
+          staff,
+          client: clients
+        }).from(taskTimeEntries).innerJoin(tasks, eq3(taskTimeEntries.taskId, tasks.id)).leftJoin(staff, eq3(staff.id, taskTimeEntries.userId)).leftJoin(clients, eq3(clients.id, tasks.clientId)).where(and2(...conditions));
+        const tasksMap = /* @__PURE__ */ new Map();
+        for (const row of rows) {
+          const t = row.task;
+          const e = row.entry;
+          if (!e.startTime) continue;
+          const dateKey = new Date(e.startTime).toISOString().split("T")[0];
+          const userName = row.staff ? `${row.staff.firstName ?? ""} ${row.staff.lastName ?? ""}`.trim() || (e.userName ?? `User ${e.userId}`) : e.userName ?? `User ${e.userId}`;
+          const legacyEntry = {
+            ...taskTimeEntryToLegacy(e, t.title),
+            userName
           };
-        });
+          let bucket = tasksMap.get(t.id);
+          if (!bucket) {
+            bucket = {
+              ...t,
+              userInfo: row.staff ? { firstName: row.staff.firstName, lastName: row.staff.lastName, role: row.staff.role, department: row.staff.department } : void 0,
+              clientInfo: row.client ? { name: row.client.name } : void 0,
+              timeEntriesByDate: {},
+              totalTracked: 0
+            };
+            tasksMap.set(t.id, bucket);
+          }
+          if (!bucket.timeEntriesByDate[dateKey]) bucket.timeEntriesByDate[dateKey] = [];
+          bucket.timeEntriesByDate[dateKey].push(legacyEntry);
+          bucket.totalTracked += legacyEntry.duration || 0;
+        }
+        const tasksWithDetails = Array.from(tasksMap.values());
         const userSummaries = [];
         const userTimeMap = /* @__PURE__ */ new Map();
         tasksWithDetails.forEach((task) => {
@@ -9669,9 +9472,9 @@ var init_storage = __esm({
               if (!userTimeMap.has(entry.userId)) {
                 userTimeMap.set(entry.userId, {
                   userId: entry.userId,
-                  userName: task.userInfo?.firstName ? `${task.userInfo.firstName} ${task.userInfo.lastName}` : `User ${entry.userId}`,
+                  userName: entry.userName || (task.userInfo?.firstName ? `${task.userInfo.firstName} ${task.userInfo.lastName}` : `User ${entry.userId}`),
                   userRole: task.userInfo?.role || "User",
-                  department: task.userInfo ? tasksData.find((t) => t.userId === entry.userId)?.userDepartment : void 0,
+                  department: task.userInfo?.department,
                   totalTime: 0,
                   tasksWorked: /* @__PURE__ */ new Set(),
                   dailyTotals: {}
@@ -9719,7 +9522,7 @@ var init_storage = __esm({
               if (!clientData.users.has(entry.userId)) {
                 clientData.users.set(entry.userId, {
                   userId: entry.userId,
-                  userName: task.userInfo?.firstName ? `${task.userInfo.firstName} ${task.userInfo.lastName}` : `User ${entry.userId}`,
+                  userName: entry.userName || (task.userInfo?.firstName ? `${task.userInfo.firstName} ${task.userInfo.lastName}` : `User ${entry.userId}`),
                   timeSpent: 0
                 });
               }
@@ -9853,7 +9656,8 @@ var init_storage = __esm({
         const [running] = await db.select().from(taskTimeEntries).where(and2(eq3(taskTimeEntries.userId, userId2), eq3(taskTimeEntries.isRunning, true))).orderBy(taskTimeEntries.startTime).limit(1);
         if (!running) return void 0;
         const durationMin = Math.max(0, Math.floor((now.getTime() - new Date(running.startTime).getTime()) / 1e3 / 60));
-        const [updated] = await db.update(taskTimeEntries).set({ endTime: now, duration: durationMin, isRunning: false, updatedAt: now }).where(eq3(taskTimeEntries.id, running.id)).returning();
+        const [updated] = await db.update(taskTimeEntries).set({ endTime: now, duration: durationMin, isRunning: false, updatedAt: now }).where(and2(eq3(taskTimeEntries.id, running.id), eq3(taskTimeEntries.isRunning, true))).returning();
+        if (!updated) return void 0;
         const totalTracked = await this.recomputeTaskTimeTracked(updated.taskId);
         const [task] = await db.select().from(tasks).where(eq3(tasks.id, updated.taskId));
         return { entry: updated, task, totalTracked };
@@ -13007,11 +12811,11 @@ var init_storage = __esm({
           startOfWeek.setDate(now.getDate() - now.getDay());
           startOfWeek.setHours(0, 0, 0, 0);
           const result = await db.execute(sql3`
-        SELECT COALESCE(SUM((entry->>'duration')::int), 0) as total_minutes
-        FROM ${tasks} t,
-        jsonb_array_elements(t.time_entries) AS entry
-        WHERE t.assigned_to = ${userId2}
-        AND (entry->>'endTime')::timestamp >= ${startOfWeek}::timestamp
+        SELECT COALESCE(SUM(tte.duration), 0) AS total_minutes
+        FROM ${taskTimeEntries} tte
+        WHERE tte.user_id = ${userId2}
+        AND tte.end_time IS NOT NULL
+        AND tte.end_time >= ${startOfWeek.toISOString()}::timestamp
       `);
           const totalMinutes = Number(result.rows[0]?.total_minutes || 0);
           const hours = Math.floor(totalMinutes / 60);
@@ -21330,6 +21134,7 @@ __export(longRunningTimerService_exports, {
   stopLongRunningTimerCheck: () => stopLongRunningTimerCheck
 });
 import { eq as eq27, and as and23, sql as sql15 } from "drizzle-orm";
+import { randomUUID as randomUUID6 } from "crypto";
 function startLongRunningTimerCheck() {
   if (checkIntervalId2) {
     console.log("[LongRunningTimerCheck] Already running");
@@ -21417,35 +21222,28 @@ async function runLongRunningTimerCheck() {
     const autoStopThresholdHours = await getAutoStopThresholdHours();
     const autoStopThresholdMs = autoStopThresholdHours * 60 * 60 * 1e3;
     const now = Date.now();
-    const matchPattern = JSON.stringify([{ isRunning: true }]);
-    const candidateTasks = await db.select({ id: tasks.id, title: tasks.title, timeEntries: tasks.timeEntries }).from(tasks).where(sql15`${tasks.timeEntries} @> ${matchPattern}::jsonb`);
+    const rows = await db.select({ entry: taskTimeEntries, taskTitle: tasks.title }).from(taskTimeEntries).innerJoin(tasks, eq27(tasks.id, taskTimeEntries.taskId)).where(eq27(taskTimeEntries.isRunning, true));
     const longRunningTimers = [];
     const autoStopTimers = [];
-    for (const task of candidateTasks) {
-      if (!task.timeEntries || !Array.isArray(task.timeEntries)) continue;
-      const entries = task.timeEntries;
-      for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i];
-        if (!entry.isRunning || !entry.startTime || !entry.userId) continue;
-        const startMs = new Date(entry.startTime).getTime();
-        const elapsed = now - startMs;
-        const candidate = {
-          taskId: task.id,
-          taskTitle: task.title,
-          userId: entry.userId,
-          startTime: entry.startTime,
-          durationMs: elapsed,
-          entryId: entry.id || `${task.id}-${entry.userId}-${entry.startTime}`,
-          entryIndex: i,
-          allEntries: entries
-        };
-        if (autoStopEnabled && elapsed >= autoStopThresholdMs) {
-          autoStopTimers.push(candidate);
-        } else if (enabled && elapsed >= thresholdMs) {
-          const timerKey = `${task.id}-${entry.userId}-${entry.startTime}`;
-          if (!alertedTimers.has(timerKey)) {
-            longRunningTimers.push(candidate);
-          }
+    for (const row of rows) {
+      const e = row.entry;
+      if (!e.startTime || !e.userId) continue;
+      const startMs = (e.startTime instanceof Date ? e.startTime : new Date(e.startTime)).getTime();
+      const elapsed = now - startMs;
+      const candidate = {
+        entryId: e.id,
+        taskId: e.taskId,
+        taskTitle: row.taskTitle,
+        userId: e.userId,
+        startTime: e.startTime instanceof Date ? e.startTime : new Date(e.startTime),
+        durationMs: elapsed
+      };
+      if (autoStopEnabled && elapsed >= autoStopThresholdMs) {
+        autoStopTimers.push(candidate);
+      } else if (enabled && elapsed >= thresholdMs) {
+        const timerKey = candidate.entryId;
+        if (!alertedTimers.has(timerKey)) {
+          longRunningTimers.push(candidate);
         }
       }
     }
@@ -21459,28 +21257,45 @@ async function runLongRunningTimerCheck() {
     const staffMap = new Map(staffMembers.map((s) => [s.id, `${s.firstName} ${s.lastName}`]));
     for (const timer of autoStopTimers) {
       try {
-        const startMs = new Date(timer.startTime).getTime();
-        const cappedEndMs = startMs + autoStopThresholdMs;
-        const endIso = new Date(cappedEndMs).toISOString();
+        const startMs = timer.startTime.getTime();
+        const cappedEnd = new Date(startMs + autoStopThresholdMs);
         const durationMinutes = Math.floor(autoStopThresholdMs / 1e3 / 60);
-        const updatedEntries = [...timer.allEntries];
-        const original = updatedEntries[timer.entryIndex];
-        updatedEntries[timer.entryIndex] = {
-          ...original,
+        const updated = await db.update(taskTimeEntries).set({
           isRunning: false,
-          endTime: endIso,
+          endTime: cappedEnd,
           duration: durationMinutes,
           stoppedBy: "system",
           stopReason: "auto-stopped",
-          autoStoppedAt: new Date(now).toISOString(),
-          autoStoppedThresholdHours: autoStopThresholdHours
-        };
-        const totalTracked = updatedEntries.reduce(
-          (total, e) => total + (e.duration || 0),
-          0
-        );
-        await db.update(tasks).set({ timeEntries: updatedEntries, timeTracked: totalTracked }).where(eq27(tasks.id, timer.taskId));
+          autoStoppedAt: new Date(now),
+          autoStoppedThresholdHours: autoStopThresholdHours,
+          updatedAt: /* @__PURE__ */ new Date()
+        }).where(and23(eq27(taskTimeEntries.id, timer.entryId), eq27(taskTimeEntries.isRunning, true))).returning({ id: taskTimeEntries.id });
+        if (updated.length === 0) {
+          continue;
+        }
+        const totalRow = await db.execute(sql15`
+          SELECT COALESCE(SUM(duration), 0) AS total
+          FROM ${taskTimeEntries}
+          WHERE task_id = ${timer.taskId}
+        `);
+        const totalTracked = Number(totalRow.rows[0]?.total || 0);
+        await db.update(tasks).set({ timeTracked: totalTracked }).where(eq27(tasks.id, timer.taskId));
         const staffName = staffMap.get(timer.userId) || "Unknown";
+        try {
+          await db.insert(taskActivities).values({
+            id: randomUUID6(),
+            taskId: timer.taskId,
+            actionType: "time_tracking",
+            fieldName: "timeEntries",
+            oldValue: "Timer running",
+            newValue: `Timer auto-stopped after ${autoStopThresholdHours}h (capped at ${durationMinutes}m)`,
+            userId: timer.userId,
+            userName: staffName,
+            createdAt: /* @__PURE__ */ new Date()
+          });
+        } catch (e) {
+          console.warn("[LongRunningTimerCheck] failed to log auto-stop activity:", e);
+        }
         await notificationService.notify({
           userId: timer.userId,
           type: "task_assigned",
@@ -21506,8 +21321,7 @@ async function runLongRunningTimerCheck() {
             priority: "high"
           });
         }
-        const timerKey = `${timer.taskId}-${timer.userId}-${timer.startTime}`;
-        alertedTimers.delete(timerKey);
+        alertedTimers.delete(timer.entryId);
         console.log(`[LongRunningTimerCheck] Auto-stopped timer for user ${timer.userId} on task ${timer.taskId} (${autoStopThresholdHours}h cap)`);
       } catch (err) {
         console.error(`[LongRunningTimerCheck] Failed to auto-stop timer on task ${timer.taskId}:`, err);
@@ -21516,7 +21330,6 @@ async function runLongRunningTimerCheck() {
     if (longRunningTimers.length > 0) {
       console.log(`[LongRunningTimerCheck] Found ${longRunningTimers.length} long-running timer(s) exceeding ${thresholdHours}h`);
       for (const timer of longRunningTimers) {
-        const timerKey = `${timer.taskId}-${timer.userId}-${timer.startTime}`;
         const staffName = staffMap.get(timer.userId) || "Unknown";
         const hours = Math.round(timer.durationMs / (1e3 * 60 * 60) * 10) / 10;
         await notificationService.notify({
@@ -21544,7 +21357,7 @@ async function runLongRunningTimerCheck() {
             priority: "high"
           });
         }
-        alertedTimers.add(timerKey);
+        alertedTimers.add(timer.entryId);
       }
       console.log(`[LongRunningTimerCheck] Sent alerts for ${longRunningTimers.length} timer(s)`);
     }
@@ -27376,6 +27189,19 @@ AgencyBoost CRM`
         return res.status(404).json({ error: "Time entry not found" });
       }
       const updatedTask = result.task;
+      try {
+        await logTaskActivity(
+          taskId,
+          "time_tracking",
+          "timeEntries",
+          `Time entry ${entryId} (previous duration)`,
+          `Time entry ${entryId} updated (duration=${duration})`,
+          userId2 || "system",
+          user?.email || "System"
+        );
+      } catch (e) {
+        console.warn("[TIME_ENTRY_PATCH] failed to log task activity:", e);
+      }
       await storage2.createAuditLog({
         userId: userId2 || "unknown",
         userName: user?.email || "Unknown",
@@ -27436,6 +27262,19 @@ AgencyBoost CRM`
       if (!result) {
         return res.status(404).json({ error: "Time entry not found" });
       }
+      try {
+        await logTaskActivity(
+          taskId,
+          "time_tracking",
+          "timeEntries",
+          `Time entry ${entryId}`,
+          "Time entry deleted",
+          userId2 || "system",
+          user?.email || "System"
+        );
+      } catch (e) {
+        console.warn("[TIME_ENTRY_DELETE] failed to log task activity:", e);
+      }
       await storage2.createAuditLog({
         userId: userId2 || "unknown",
         userName: user?.email || "Unknown",
@@ -27487,9 +27326,17 @@ AgencyBoost CRM`
           backAndForthCount: 0
         };
       });
+      const timeEntriesByTaskId = {};
+      if (allTasks.length > 0) {
+        const taskIds = allTasks.map((t) => t.id);
+        const allEntries = await db.select().from(taskTimeEntriesTable).where(inArray8(taskTimeEntriesTable.taskId, taskIds));
+        for (const e of allEntries) {
+          (timeEntriesByTaskId[e.taskId] ||= []).push(e);
+        }
+      }
       for (const task of allTasks) {
         const statusHistory = task.statusHistory || [];
-        const timeEntries = task.timeEntries || [];
+        const timeEntries = timeEntriesByTaskId[task.id] || [];
         const stageHitCounts = {};
         for (const entry of statusHistory) {
           const stage = entry.status;
@@ -31696,13 +31543,6 @@ AgencyBoost CRM`
       }
       if (validatedData.timeTracked !== void 0 && validatedData.timeTracked !== currentTask.timeTracked) {
         await logTaskActivity(req.params.id, "time_tracking", "timeTracked", currentTask.timeTracked, validatedData.timeTracked, currentUser, currentUserName);
-      }
-      if (validatedData.timeEntries !== void 0) {
-        const oldEntries = currentTask.timeEntries || [];
-        const newEntries = validatedData.timeEntries || [];
-        if (JSON.stringify(oldEntries) !== JSON.stringify(newEntries)) {
-          await logTaskActivity(req.params.id, "time_tracking", "timeEntries", "Time entry updated", "Time tracking session", currentUser, currentUserName);
-        }
       }
       if (validatedData.timeEstimate !== void 0 && validatedData.timeEstimate !== currentTask.timeEstimate) {
         const formatTimeEstimate = (minutes) => {
@@ -41743,6 +41583,19 @@ ${appointment.description || ""}
             source: "auto",
             notes: timeEntry.description
           });
+          try {
+            await logTaskActivity(
+              taskId,
+              "time_tracking",
+              "timeEntries",
+              null,
+              `Auto-logged calendar entry \u2014 ${durationMinutes} minutes`,
+              userId2,
+              timeEntry.userName || "System"
+            );
+          } catch (e) {
+            console.warn("[CalendarAuto] failed to log time activity:", e);
+          }
           await db.insert(eventTimeEntries).values({
             id: timeEntryId,
             calendarEventId: id,
@@ -48238,8 +48091,8 @@ ${appointment.description || ""}
   app2.post("/api/clients/:id/generate-onboarding-token", requireAuth(), requirePermission("settings", "canManage"), async (req, res) => {
     try {
       const { id } = req.params;
-      const { randomUUID: randomUUID6 } = await import("crypto");
-      const token = randomUUID6();
+      const { randomUUID: randomUUID7 } = await import("crypto");
+      const token = randomUUID7();
       await db.update(clients).set({ onboardingToken: token, onboardingCompleted: false }).where(eq21(clients.id, id));
       res.json({ token });
     } catch (error) {
@@ -49127,8 +48980,7 @@ ${appointment.description || ""}
             status: "completed",
             priority: "normal",
             assignedTo: staffId,
-            tags: [],
-            timeEntries: sql11`'[]'`
+            tags: []
           }).returning();
           taskId = newTask.id;
         }
@@ -49143,6 +48995,19 @@ ${appointment.description || ""}
           isRunning: false,
           source: "auto"
         });
+        try {
+          await logTaskActivity(
+            taskId,
+            "time_tracking",
+            "timeEntries",
+            null,
+            `1-on-1 meeting auto-logged \u2014 ${durationMinutes} minutes`,
+            staffId,
+            "System"
+          );
+        } catch (e) {
+          console.warn("[1on1Finish] failed to log time activity:", e);
+        }
       }
       let nextMeeting = null;
       if (meeting.isRecurring && meeting.recurringFrequency) {
@@ -53556,6 +53421,19 @@ ${appointment.description || ""}
         userName
       });
       console.log(`[TimeTracker] Timer started for user ${authenticatedUserId} on task ${taskId}`);
+      try {
+        await logTaskActivity(
+          taskId,
+          "time_tracking",
+          "timeEntries",
+          null,
+          `Timer started by ${userName}`,
+          authenticatedUserId,
+          userName
+        );
+      } catch (e) {
+        console.warn("[TimeTracker] failed to log start activity:", e);
+      }
       res.json({
         id: newEntry.id,
         taskId: newEntry.taskId,
@@ -53583,6 +53461,19 @@ ${appointment.description || ""}
       }
       const { entry, task, totalTracked } = result;
       console.log(`[TimeTracker] Timer stopped for user ${authenticatedUserId} on task ${task.id} \u2014 ${entry.duration} minutes`);
+      try {
+        await logTaskActivity(
+          task.id,
+          "time_tracking",
+          "timeEntries",
+          "Timer running",
+          `Timer stopped \u2014 ${entry.duration ?? 0} minutes`,
+          authenticatedUserId,
+          entry.userName || "System"
+        );
+      } catch (e) {
+        console.warn("[TimeTracker] failed to log stop activity:", e);
+      }
       res.json({
         id: entry.id,
         taskId: task.id,
@@ -53606,26 +53497,33 @@ ${appointment.description || ""}
     try {
       const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!authenticatedUserId) return;
-      const matchPattern = JSON.stringify([{ stoppedBy: "system", userId: authenticatedUserId }]);
-      const candidateTasks = await db.select({ id: tasks.id, title: tasks.title, timeEntries: tasks.timeEntries }).from(tasks).where(sql11`${tasks.timeEntries} @> ${matchPattern}::jsonb`).limit(50);
-      const cutoff = Date.now() - 60 * 60 * 1e3;
-      let latest = null;
-      for (const task of candidateTasks) {
-        if (!task.timeEntries || !Array.isArray(task.timeEntries)) continue;
-        for (const entry of task.timeEntries) {
-          if (entry.stoppedBy === "system" && entry.userId === authenticatedUserId && entry.autoStoppedAt) {
-            const ts = new Date(entry.autoStoppedAt).getTime();
-            if (ts >= cutoff && (!latest || ts > latest._ts)) {
-              latest = { ...entry, taskId: task.id, taskTitle: task.title, _ts: ts };
-            }
-          }
-        }
-      }
-      if (!latest) {
+      const cutoffIso = new Date(Date.now() - 60 * 60 * 1e3).toISOString();
+      const rows = await db.select({ entry: taskTimeEntries, taskTitle: tasks.title }).from(taskTimeEntries).innerJoin(tasks, eq21(taskTimeEntries.taskId, tasks.id)).where(
+        and18(
+          eq21(taskTimeEntries.userId, authenticatedUserId),
+          eq21(taskTimeEntries.stoppedBy, "system"),
+          sql11`${taskTimeEntries.autoStoppedAt} IS NOT NULL`,
+          sql11`${taskTimeEntries.autoStoppedAt} >= ${cutoffIso}::timestamp`
+        )
+      ).orderBy(desc5(taskTimeEntries.autoStoppedAt)).limit(1);
+      if (rows.length === 0) {
         return res.json(null);
       }
-      const { _ts, ...rest } = latest;
-      res.json(rest);
+      const { entry, taskTitle } = rows[0];
+      res.json({
+        id: entry.id,
+        taskId: entry.taskId,
+        taskTitle: entry.taskTitle || taskTitle,
+        userId: entry.userId,
+        userName: entry.userName,
+        startTime: entry.startTime instanceof Date ? entry.startTime.toISOString() : entry.startTime,
+        endTime: entry.endTime instanceof Date ? entry.endTime?.toISOString() : entry.endTime,
+        duration: entry.duration,
+        stoppedBy: entry.stoppedBy,
+        stopReason: entry.stopReason,
+        autoStoppedAt: entry.autoStoppedAt instanceof Date ? entry.autoStoppedAt.toISOString() : entry.autoStoppedAt,
+        autoStoppedThresholdHours: entry.autoStoppedThresholdHours
+      });
     } catch (error) {
       console.error("Error fetching recent auto-stopped entry:", error);
       res.status(500).json({ error: "Failed to fetch recent auto-stopped entry" });
@@ -53655,6 +53553,19 @@ ${appointment.description || ""}
         durationMinutes,
         notes: notes2 || void 0
       });
+      try {
+        await logTaskActivity(
+          taskId,
+          "time_tracking",
+          "timeEntries",
+          null,
+          `Manual time entry added \u2014 ${durationMinutes} minutes`,
+          authenticatedUserId,
+          userName
+        );
+      } catch (e) {
+        console.warn("[TimeTracker] failed to log manual activity:", e);
+      }
       res.json({
         id: entry.id,
         taskId: entry.taskId,
@@ -56711,11 +56622,11 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
             priority: "normal",
             assignedTo: staffId,
             clientId: meeting.clientId || void 0,
-            tags: meeting.tags || [],
-            timeEntries: sql11`'[]'`
+            tags: meeting.tags || []
           }).returning();
           taskId = newTask.id;
         }
+        const pxDurationMinutes = Math.floor(durationSeconds / 60);
         await storage2.appendTaskTimeEntry({
           id: `px-${meetingId}-${staffId}-${Date.now()}`,
           taskId,
@@ -56723,10 +56634,23 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
           taskTitle,
           startTime,
           endTime: now,
-          duration: Math.floor(durationSeconds / 60),
+          duration: pxDurationMinutes,
           isRunning: false,
           source: "auto"
         });
+        try {
+          await logTaskActivity(
+            taskId,
+            "time_tracking",
+            "timeEntries",
+            null,
+            `PX meeting auto-logged \u2014 ${pxDurationMinutes} minutes`,
+            staffId,
+            "System"
+          );
+        } catch (e) {
+          console.warn("[PXFinish] failed to log time activity:", e);
+        }
       }
       let nextMeeting = null;
       if (meeting.isRecurring && meeting.recurringFrequency) {
@@ -63127,28 +63051,51 @@ async function ensureTaskTimeEntriesTable() {
     await db.execute(sql17`CREATE INDEX IF NOT EXISTS idx_task_time_entries_user ON task_time_entries(user_id)`);
     await db.execute(sql17`CREATE INDEX IF NOT EXISTS idx_task_time_entries_start ON task_time_entries(start_time)`);
     await db.execute(sql17`CREATE INDEX IF NOT EXISTS idx_task_time_entries_user_running ON task_time_entries(user_id, is_running)`);
-    const result = await db.execute(sql17`
-      INSERT INTO task_time_entries (id, task_id, user_id, task_title, user_name, start_time, end_time, duration, is_running, source, notes)
-      SELECT
-        COALESCE(NULLIF(entry->>'id', ''), gen_random_uuid()::varchar),
-        t.id,
-        entry->>'userId',
-        COALESCE(entry->>'taskTitle', t.title),
-        entry->>'userName',
-        (entry->>'startTime')::timestamp,
-        CASE WHEN (entry->>'endTime') IS NOT NULL AND (entry->>'endTime') <> '' THEN (entry->>'endTime')::timestamp ELSE NULL END,
-        CASE WHEN (entry->>'duration') IS NOT NULL AND (entry->>'duration') <> '' THEN (entry->>'duration')::int ELSE NULL END,
-        COALESCE((entry->>'isRunning')::boolean, false),
-        COALESCE(NULLIF(entry->>'source', ''), 'legacy'),
-        entry->>'notes'
-      FROM tasks t,
-           LATERAL jsonb_array_elements(COALESCE(t.time_entries, '[]'::jsonb)) AS entry
-      WHERE entry->>'userId' IS NOT NULL
-        AND entry->>'startTime' IS NOT NULL
-        AND entry->>'startTime' <> ''
-      ON CONFLICT (id) DO NOTHING
+    await db.execute(sql17`ALTER TABLE task_time_entries ADD COLUMN IF NOT EXISTS stopped_by TEXT`);
+    await db.execute(sql17`ALTER TABLE task_time_entries ADD COLUMN IF NOT EXISTS stop_reason TEXT`);
+    await db.execute(sql17`ALTER TABLE task_time_entries ADD COLUMN IF NOT EXISTS auto_stopped_at TIMESTAMP`);
+    await db.execute(sql17`ALTER TABLE task_time_entries ADD COLUMN IF NOT EXISTS auto_stopped_threshold_hours INTEGER`);
+    const legacyColumnExists = await db.execute(sql17`
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'tasks' AND column_name = 'time_entries'
+      LIMIT 1
     `);
-    log(`\u2705 task_time_entries table ensured (backfill rows inserted: ${result?.rowCount ?? "n/a"})`);
+    if (legacyColumnExists?.rows?.length) {
+      const result = await db.execute(sql17`
+        INSERT INTO task_time_entries (
+          id, task_id, user_id, task_title, user_name,
+          start_time, end_time, duration, is_running, source, notes,
+          stopped_by, stop_reason, auto_stopped_at, auto_stopped_threshold_hours
+        )
+        SELECT
+          COALESCE(NULLIF(entry->>'id', ''), gen_random_uuid()::varchar),
+          t.id,
+          entry->>'userId',
+          COALESCE(entry->>'taskTitle', t.title),
+          entry->>'userName',
+          (entry->>'startTime')::timestamp,
+          CASE WHEN (entry->>'endTime') IS NOT NULL AND (entry->>'endTime') <> '' THEN (entry->>'endTime')::timestamp ELSE NULL END,
+          CASE WHEN (entry->>'duration') IS NOT NULL AND (entry->>'duration') <> '' THEN (entry->>'duration')::int ELSE NULL END,
+          COALESCE((entry->>'isRunning')::boolean, false),
+          COALESCE(NULLIF(entry->>'source', ''), 'legacy'),
+          entry->>'notes',
+          NULLIF(entry->>'stoppedBy', ''),
+          NULLIF(entry->>'stopReason', ''),
+          CASE WHEN (entry->>'autoStoppedAt') IS NOT NULL AND (entry->>'autoStoppedAt') <> '' THEN (entry->>'autoStoppedAt')::timestamp ELSE NULL END,
+          CASE WHEN (entry->>'autoStoppedThresholdHours') IS NOT NULL AND (entry->>'autoStoppedThresholdHours') <> '' THEN (entry->>'autoStoppedThresholdHours')::int ELSE NULL END
+        FROM tasks t,
+             LATERAL jsonb_array_elements(COALESCE(t.time_entries, '[]'::jsonb)) AS entry
+        WHERE entry->>'userId' IS NOT NULL
+          AND entry->>'startTime' IS NOT NULL
+          AND entry->>'startTime' <> ''
+        ON CONFLICT (id) DO NOTHING
+      `);
+      log(`\u2705 task_time_entries final backfill complete (rows inserted: ${result?.rowCount ?? "n/a"})`);
+      await db.execute(sql17`ALTER TABLE tasks DROP COLUMN IF EXISTS time_entries`);
+      log("\u2705 Legacy tasks.time_entries column dropped");
+    } else {
+      log("\u2705 task_time_entries table ensured (legacy tasks.time_entries already dropped)");
+    }
   } catch (error) {
     log(`\u26A0\uFE0F ensureTaskTimeEntriesTable error: ${error}`);
   }

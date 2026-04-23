@@ -2472,29 +2472,62 @@ async function ensureTaskTimeEntriesTable() {
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_task_time_entries_start ON task_time_entries(start_time)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_task_time_entries_user_running ON task_time_entries(user_id, is_running)`);
 
-    // Backfill from legacy tasks.time_entries jsonb (idempotent via id PK).
-    const result: any = await db.execute(sql`
-      INSERT INTO task_time_entries (id, task_id, user_id, task_title, user_name, start_time, end_time, duration, is_running, source, notes)
-      SELECT
-        COALESCE(NULLIF(entry->>'id', ''), gen_random_uuid()::varchar),
-        t.id,
-        entry->>'userId',
-        COALESCE(entry->>'taskTitle', t.title),
-        entry->>'userName',
-        (entry->>'startTime')::timestamp,
-        CASE WHEN (entry->>'endTime') IS NOT NULL AND (entry->>'endTime') <> '' THEN (entry->>'endTime')::timestamp ELSE NULL END,
-        CASE WHEN (entry->>'duration') IS NOT NULL AND (entry->>'duration') <> '' THEN (entry->>'duration')::int ELSE NULL END,
-        COALESCE((entry->>'isRunning')::boolean, false),
-        COALESCE(NULLIF(entry->>'source', ''), 'legacy'),
-        entry->>'notes'
-      FROM tasks t,
-           LATERAL jsonb_array_elements(COALESCE(t.time_entries, '[]'::jsonb)) AS entry
-      WHERE entry->>'userId' IS NOT NULL
-        AND entry->>'startTime' IS NOT NULL
-        AND entry->>'startTime' <> ''
-      ON CONFLICT (id) DO NOTHING
+    // Idempotent column adds for the auto-stop / abandoned-timer metadata that
+    // the schema now exposes. Existing deployments may not have these columns.
+    await db.execute(sql`ALTER TABLE task_time_entries ADD COLUMN IF NOT EXISTS stopped_by TEXT`);
+    await db.execute(sql`ALTER TABLE task_time_entries ADD COLUMN IF NOT EXISTS stop_reason TEXT`);
+    await db.execute(sql`ALTER TABLE task_time_entries ADD COLUMN IF NOT EXISTS auto_stopped_at TIMESTAMP`);
+    await db.execute(sql`ALTER TABLE task_time_entries ADD COLUMN IF NOT EXISTS auto_stopped_threshold_hours INTEGER`);
+
+    // Final backfill from the legacy tasks.time_entries jsonb column. This
+    // includes the auto-stop metadata so we don't lose history when the legacy
+    // column is dropped below. Guarded by a check for the column's existence
+    // so it is a no-op once the column is gone (idempotent on re-runs).
+    const legacyColumnExists = await db.execute(sql`
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'tasks' AND column_name = 'time_entries'
+      LIMIT 1
     `);
-    log(`✅ task_time_entries table ensured (backfill rows inserted: ${(result as any)?.rowCount ?? 'n/a'})`);
+
+    if ((legacyColumnExists as any)?.rows?.length) {
+      const result: any = await db.execute(sql`
+        INSERT INTO task_time_entries (
+          id, task_id, user_id, task_title, user_name,
+          start_time, end_time, duration, is_running, source, notes,
+          stopped_by, stop_reason, auto_stopped_at, auto_stopped_threshold_hours
+        )
+        SELECT
+          COALESCE(NULLIF(entry->>'id', ''), gen_random_uuid()::varchar),
+          t.id,
+          entry->>'userId',
+          COALESCE(entry->>'taskTitle', t.title),
+          entry->>'userName',
+          (entry->>'startTime')::timestamp,
+          CASE WHEN (entry->>'endTime') IS NOT NULL AND (entry->>'endTime') <> '' THEN (entry->>'endTime')::timestamp ELSE NULL END,
+          CASE WHEN (entry->>'duration') IS NOT NULL AND (entry->>'duration') <> '' THEN (entry->>'duration')::int ELSE NULL END,
+          COALESCE((entry->>'isRunning')::boolean, false),
+          COALESCE(NULLIF(entry->>'source', ''), 'legacy'),
+          entry->>'notes',
+          NULLIF(entry->>'stoppedBy', ''),
+          NULLIF(entry->>'stopReason', ''),
+          CASE WHEN (entry->>'autoStoppedAt') IS NOT NULL AND (entry->>'autoStoppedAt') <> '' THEN (entry->>'autoStoppedAt')::timestamp ELSE NULL END,
+          CASE WHEN (entry->>'autoStoppedThresholdHours') IS NOT NULL AND (entry->>'autoStoppedThresholdHours') <> '' THEN (entry->>'autoStoppedThresholdHours')::int ELSE NULL END
+        FROM tasks t,
+             LATERAL jsonb_array_elements(COALESCE(t.time_entries, '[]'::jsonb)) AS entry
+        WHERE entry->>'userId' IS NOT NULL
+          AND entry->>'startTime' IS NOT NULL
+          AND entry->>'startTime' <> ''
+        ON CONFLICT (id) DO NOTHING
+      `);
+      log(`✅ task_time_entries final backfill complete (rows inserted: ${(result as any)?.rowCount ?? 'n/a'})`);
+
+      // Drop the legacy JSONB column. All readers/writers now go through the
+      // normalized table; the schema no longer references this column.
+      await db.execute(sql`ALTER TABLE tasks DROP COLUMN IF EXISTS time_entries`);
+      log('✅ Legacy tasks.time_entries column dropped');
+    } else {
+      log('✅ task_time_entries table ensured (legacy tasks.time_entries already dropped)');
+    }
   } catch (error) {
     log(`⚠️ ensureTaskTimeEntriesTable error: ${error}`);
   }

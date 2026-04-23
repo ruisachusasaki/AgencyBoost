@@ -1,8 +1,9 @@
 import { db } from "./db";
-import { taskSettings, tasks, staff } from "@shared/schema";
+import { taskSettings, tasks, staff, taskTimeEntries, taskActivities } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { NotificationService } from "./notification-service";
 import { storage } from "./storage";
+import { randomUUID } from "crypto";
 
 const CHECK_INTERVAL_MS = 15 * 60 * 1000;
 const DEFAULT_THRESHOLD_HOURS = 8;
@@ -101,14 +102,12 @@ async function getAdminUserIds(): Promise<string[]> {
 }
 
 interface RunningTimerCandidate {
+  entryId: string;
   taskId: string;
   taskTitle: string;
   userId: string;
-  startTime: string;
+  startTime: Date;
   durationMs: number;
-  entryId: string;
-  entryIndex: number;
-  allEntries: any[];
 }
 
 async function runLongRunningTimerCheck() {
@@ -133,45 +132,36 @@ async function runLongRunningTimerCheck() {
     const autoStopThresholdMs = autoStopThresholdHours * 60 * 60 * 1000;
     const now = Date.now();
 
-    // Only fetch tasks that have a running entry, using JSONB containment
-    const matchPattern = JSON.stringify([{ isRunning: true }]);
-    const candidateTasks = await db
-      .select({ id: tasks.id, title: tasks.title, timeEntries: tasks.timeEntries })
-      .from(tasks)
-      .where(sql`${tasks.timeEntries} @> ${matchPattern}::jsonb`);
+    // All running timers come from the normalized task_time_entries table now.
+    // Single SQL query, joined to the parent task for the title.
+    const rows = await db
+      .select({ entry: taskTimeEntries, taskTitle: tasks.title })
+      .from(taskTimeEntries)
+      .innerJoin(tasks, eq(tasks.id, taskTimeEntries.taskId))
+      .where(eq(taskTimeEntries.isRunning, true));
 
     const longRunningTimers: RunningTimerCandidate[] = [];
     const autoStopTimers: RunningTimerCandidate[] = [];
 
-    for (const task of candidateTasks) {
-      if (!task.timeEntries || !Array.isArray(task.timeEntries)) continue;
-
-      const entries = task.timeEntries as any[];
-      for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i];
-        if (!entry.isRunning || !entry.startTime || !entry.userId) continue;
-
-        const startMs = new Date(entry.startTime).getTime();
-        const elapsed = now - startMs;
-
-        const candidate: RunningTimerCandidate = {
-          taskId: task.id,
-          taskTitle: task.title,
-          userId: entry.userId,
-          startTime: entry.startTime,
-          durationMs: elapsed,
-          entryId: entry.id || `${task.id}-${entry.userId}-${entry.startTime}`,
-          entryIndex: i,
-          allEntries: entries,
-        };
-
-        if (autoStopEnabled && elapsed >= autoStopThresholdMs) {
-          autoStopTimers.push(candidate);
-        } else if (enabled && elapsed >= thresholdMs) {
-          const timerKey = `${task.id}-${entry.userId}-${entry.startTime}`;
-          if (!alertedTimers.has(timerKey)) {
-            longRunningTimers.push(candidate);
-          }
+    for (const row of rows) {
+      const e = row.entry;
+      if (!e.startTime || !e.userId) continue;
+      const startMs = (e.startTime instanceof Date ? e.startTime : new Date(e.startTime as any)).getTime();
+      const elapsed = now - startMs;
+      const candidate: RunningTimerCandidate = {
+        entryId: e.id,
+        taskId: e.taskId,
+        taskTitle: row.taskTitle,
+        userId: e.userId,
+        startTime: e.startTime instanceof Date ? e.startTime : new Date(e.startTime as any),
+        durationMs: elapsed,
+      };
+      if (autoStopEnabled && elapsed >= autoStopThresholdMs) {
+        autoStopTimers.push(candidate);
+      } else if (enabled && elapsed >= thresholdMs) {
+        const timerKey = candidate.entryId;
+        if (!alertedTimers.has(timerKey)) {
+          longRunningTimers.push(candidate);
         }
       }
     }
@@ -192,34 +182,62 @@ async function runLongRunningTimerCheck() {
       try {
         // Cap recorded duration at the auto-stop threshold so we don't credit
         // unbounded time for an obviously abandoned timer.
-        const startMs = new Date(timer.startTime).getTime();
-        const cappedEndMs = startMs + autoStopThresholdMs;
-        const endIso = new Date(cappedEndMs).toISOString();
+        const startMs = timer.startTime.getTime();
+        const cappedEnd = new Date(startMs + autoStopThresholdMs);
         const durationMinutes = Math.floor(autoStopThresholdMs / 1000 / 60);
 
-        const updatedEntries = [...timer.allEntries];
-        const original = updatedEntries[timer.entryIndex];
-        updatedEntries[timer.entryIndex] = {
-          ...original,
-          isRunning: false,
-          endTime: endIso,
-          duration: durationMinutes,
-          stoppedBy: 'system',
-          stopReason: 'auto-stopped',
-          autoStoppedAt: new Date(now).toISOString(),
-          autoStoppedThresholdHours: autoStopThresholdHours,
-        };
+        // Single-row UPDATE on the normalized table — sets stop metadata and
+        // marks the entry stopped. task.timeTracked is then recomputed from
+        // the SUM of all entries belonging to that task.
+        // Predicate is_running=true makes the UPDATE a no-op if the user
+        // (or another writer) already stopped the timer between our SELECT
+        // and UPDATE — preventing duplicate auto-stop overwrites.
+        const updated = await db.update(taskTimeEntries)
+          .set({
+            isRunning: false,
+            endTime: cappedEnd,
+            duration: durationMinutes,
+            stoppedBy: 'system',
+            stopReason: 'auto-stopped',
+            autoStoppedAt: new Date(now),
+            autoStoppedThresholdHours: autoStopThresholdHours,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(taskTimeEntries.id, timer.entryId), eq(taskTimeEntries.isRunning, true)))
+          .returning({ id: taskTimeEntries.id });
+        if (updated.length === 0) {
+          // Already stopped by someone else — skip recompute, activity log, and notification.
+          continue;
+        }
 
-        const totalTracked = updatedEntries.reduce(
-          (total: number, e: any) => total + (e.duration || 0),
-          0,
-        );
-
+        const totalRow = await db.execute(sql`
+          SELECT COALESCE(SUM(duration), 0) AS total
+          FROM ${taskTimeEntries}
+          WHERE task_id = ${timer.taskId}
+        `);
+        const totalTracked = Number((totalRow.rows[0] as any)?.total || 0);
         await db.update(tasks)
-          .set({ timeEntries: updatedEntries, timeTracked: totalTracked })
+          .set({ timeTracked: totalTracked })
           .where(eq(tasks.id, timer.taskId));
 
         const staffName = staffMap.get(timer.userId) || "Unknown";
+
+        // Activity feed mirror so users still see auto-stops in task history.
+        try {
+          await db.insert(taskActivities).values({
+            id: randomUUID(),
+            taskId: timer.taskId,
+            actionType: 'time_tracking',
+            fieldName: 'timeEntries',
+            oldValue: 'Timer running',
+            newValue: `Timer auto-stopped after ${autoStopThresholdHours}h (capped at ${durationMinutes}m)`,
+            userId: timer.userId,
+            userName: staffName,
+            createdAt: new Date(),
+          } as any);
+        } catch (e) {
+          console.warn('[LongRunningTimerCheck] failed to log auto-stop activity:', e);
+        }
 
         await notificationService.notify({
           userId: timer.userId,
@@ -248,8 +266,7 @@ async function runLongRunningTimerCheck() {
           });
         }
 
-        const timerKey = `${timer.taskId}-${timer.userId}-${timer.startTime}`;
-        alertedTimers.delete(timerKey);
+        alertedTimers.delete(timer.entryId);
 
         console.log(`[LongRunningTimerCheck] Auto-stopped timer for user ${timer.userId} on task ${timer.taskId} (${autoStopThresholdHours}h cap)`);
       } catch (err) {
@@ -261,7 +278,6 @@ async function runLongRunningTimerCheck() {
       console.log(`[LongRunningTimerCheck] Found ${longRunningTimers.length} long-running timer(s) exceeding ${thresholdHours}h`);
 
       for (const timer of longRunningTimers) {
-        const timerKey = `${timer.taskId}-${timer.userId}-${timer.startTime}`;
         const staffName = staffMap.get(timer.userId) || "Unknown";
         const hours = Math.round(timer.durationMs / (1000 * 60 * 60) * 10) / 10;
 
@@ -292,7 +308,7 @@ async function runLongRunningTimerCheck() {
           });
         }
 
-        alertedTimers.add(timerKey);
+        alertedTimers.add(timer.entryId);
       }
 
       console.log(`[LongRunningTimerCheck] Sent alerts for ${longRunningTimers.length} timer(s)`);
