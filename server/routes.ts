@@ -96,7 +96,7 @@ import {
   scheduledHiredEmails,
   assetTypes, insertAssetTypeSchema,
   assetStatuses, insertAssetStatusSchema,
-  clientAssets, insertClientAssetSchema
+  clientAssets, insertClientAssetSchema, clientAssetComments
 } from "@shared/schema";
 import { spawnOnboardingChecklist } from "./services/onboardingSpawnService";
 import { sendHiredNotifications, getWelcomeEmailPreview, startScheduledEmailProcessor } from "./services/hiredNotificationService";
@@ -1233,6 +1233,186 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     } catch (error: any) {
       console.error("[DELETE /api/clients/:clientId/assets/:assetId] error:", error);
       res.status(500).json({ error: "Failed to delete client asset", message: error?.message });
+    }
+  });
+
+  // GET /api/clients/:clientId/assets/:assetId/comments
+  app.get("/api/clients/:clientId/assets/:assetId/comments", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const { clientId, assetId } = req.params;
+      const client = await loadClientForAgency(clientId, CURRENT_AGENCY_ID);
+      if (!client) return res.status(404).json({ error: "Client not found" });
+
+      const [asset] = await db.select({ id: clientAssets.id }).from(clientAssets)
+        .where(and(
+          eq(clientAssets.id, assetId),
+          eq(clientAssets.clientId, clientId),
+          eq(clientAssets.agencyId, CURRENT_AGENCY_ID),
+        )).limit(1);
+      if (!asset) return res.status(404).json({ error: "Asset not found" });
+
+      const rows = await db
+        .select({
+          id: clientAssetComments.id,
+          assetId: clientAssetComments.assetId,
+          content: clientAssetComments.content,
+          mentions: clientAssetComments.mentions,
+          createdAt: clientAssetComments.createdAt,
+          authorId: clientAssetComments.authorId,
+          authorFirstName: staff.firstName,
+          authorLastName: staff.lastName,
+          authorEmail: staff.email,
+          authorImage: staff.profileImagePath,
+        })
+        .from(clientAssetComments)
+        .leftJoin(staff, eq(staff.id, clientAssetComments.authorId))
+        .where(eq(clientAssetComments.assetId, assetId))
+        .orderBy(asc(clientAssetComments.createdAt));
+
+      res.json(rows.map((r) => ({
+        id: r.id,
+        assetId: r.assetId,
+        content: r.content,
+        mentions: r.mentions || [],
+        createdAt: r.createdAt,
+        author: {
+          id: r.authorId,
+          firstName: r.authorFirstName ?? "Unknown",
+          lastName: r.authorLastName ?? "User",
+          email: r.authorEmail ?? "",
+          profileImage: r.authorImage ?? null,
+        },
+      })));
+    } catch (error: any) {
+      console.error("[GET asset comments] error:", error);
+      res.status(500).json({ error: "Failed to load comments", message: error?.message });
+    }
+  });
+
+  // POST /api/clients/:clientId/assets/:assetId/comments
+  app.post("/api/clients/:clientId/assets/:assetId/comments", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const { clientId, assetId } = req.params;
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const client = await loadClientForAgency(clientId, CURRENT_AGENCY_ID);
+      if (!client) return res.status(404).json({ error: "Client not found" });
+
+      const [asset] = await db.select({ id: clientAssets.id, name: clientAssets.name }).from(clientAssets)
+        .where(and(
+          eq(clientAssets.id, assetId),
+          eq(clientAssets.clientId, clientId),
+          eq(clientAssets.agencyId, CURRENT_AGENCY_ID),
+        )).limit(1);
+      if (!asset) return res.status(404).json({ error: "Asset not found" });
+
+      const content = (req.body?.content ?? "").toString();
+      const mentions: string[] = Array.isArray(req.body?.mentions) ? req.body.mentions : [];
+      if (!content.trim()) return res.status(400).json({ error: "Comment content is required" });
+
+      // Resolve mention names from content as a fallback
+      const validMentionIds = new Set<string>();
+      mentions.forEach((id) => { if (typeof id === "string" && id) validMentionIds.add(id); });
+
+      if (content.includes('@')) {
+        const mentionRegex = /@([\p{L}\p{M}\p{N}\s'-]+)/gu;
+        const mentionMatches = Array.from(content.matchAll(mentionRegex));
+        const mentionNames = mentionMatches.map((m: any) => (m[1] as string).trim().toLowerCase());
+        if (mentionNames.length > 0) {
+          const allStaff = await db.select().from(staff);
+          mentionNames.forEach((mentionName) => {
+            const sm = allStaff.find((s: any) => {
+              const fullName = `${s.firstName} ${s.lastName}`.toLowerCase();
+              const nm = (s.name || "").toLowerCase();
+              return fullName === mentionName || nm === mentionName ||
+                fullName.startsWith(mentionName) || mentionName.startsWith(fullName);
+            });
+            if (sm) validMentionIds.add(sm.id);
+          });
+        }
+      }
+
+      const [created] = await db.insert(clientAssetComments).values({
+        agencyId: CURRENT_AGENCY_ID,
+        assetId,
+        authorId: userId,
+        content: content.trim(),
+        mentions: Array.from(validMentionIds),
+      }).returning();
+
+      // Author payload
+      const [authorRow] = await db.select({
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+        email: staff.email,
+        profileImagePath: staff.profileImagePath,
+      }).from(staff).where(eq(staff.id, userId)).limit(1);
+
+      // Notify mentioned staff
+      const ns = (await import("./notification-service")).getNotificationService();
+      if (ns) {
+        const mentionerName = authorRow ? `${authorRow.firstName} ${authorRow.lastName}` : "Someone";
+        const preview = content.trim().substring(0, 100) + (content.trim().length > 100 ? "..." : "");
+        for (const mentionedId of validMentionIds) {
+          if (mentionedId === userId) continue;
+          void ns.notify({
+            userId: mentionedId,
+            type: 'mentioned',
+            title: `Mentioned on asset: ${asset.name}`,
+            message: `${mentionerName} mentioned you on "${asset.name}": ${preview}`,
+            entityType: 'client_asset',
+            entityId: assetId,
+            actionUrl: `/clients/${clientId}?tab=client-assets&assetId=${assetId}`,
+            actionText: 'View',
+            priority: 'normal',
+            metadata: { mentionedBy: userId, assetId, clientId },
+          }).catch((err: any) => console.error('[Notification] Failed asset mention notification:', err));
+        }
+      }
+
+      res.status(201).json({
+        id: created.id,
+        assetId: created.assetId,
+        content: created.content,
+        mentions: created.mentions || [],
+        createdAt: created.createdAt,
+        author: {
+          id: userId,
+          firstName: authorRow?.firstName ?? "Unknown",
+          lastName: authorRow?.lastName ?? "User",
+          email: authorRow?.email ?? "",
+          profileImage: authorRow?.profileImagePath ?? null,
+        },
+      });
+    } catch (error: any) {
+      console.error("[POST asset comments] error:", error);
+      res.status(500).json({ error: "Failed to create comment", message: error?.message });
+    }
+  });
+
+  // GET /api/clients/:clientId/assets/comment-counts - bulk count for table badges
+  app.get("/api/clients/:clientId/assets/comment-counts", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const client = await loadClientForAgency(clientId, CURRENT_AGENCY_ID);
+      if (!client) return res.status(404).json({ error: "Client not found" });
+
+      const rows = await db.execute(sql`
+        SELECT cac.asset_id AS asset_id, COUNT(*)::int AS count
+        FROM client_asset_comments cac
+        INNER JOIN client_assets ca ON ca.id = cac.asset_id
+        WHERE ca.client_id = ${clientId} AND ca.agency_id = ${CURRENT_AGENCY_ID}
+        GROUP BY cac.asset_id
+      `);
+      const result: Record<string, number> = {};
+      for (const r of rows.rows as any[]) {
+        result[r.asset_id] = Number(r.count) || 0;
+      }
+      res.json(result);
+    } catch (error: any) {
+      console.error("[GET asset comment-counts] error:", error);
+      res.status(500).json({ error: "Failed to load comment counts", message: error?.message });
     }
   });
 

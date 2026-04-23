@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,6 +7,7 @@ import { formatDistanceToNow, format as formatDate } from "date-fns";
 import {
   Plus, Search, ExternalLink, Pencil, Trash2, Eye, EyeOff,
   MoreVertical, FileText, Loader2, ArrowUp, ArrowDown, ArrowUpDown, HelpCircle,
+  MessageSquare, Send, AtSign,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -179,6 +180,19 @@ export default function ClientAssetsTab({ clientId }: ClientAssetsTabProps) {
   const { data: staffList = [] } = useQuery<StaffMember[]>({
     queryKey: ["/api/staff"],
   });
+
+  const commentCountsKey = ["/api/clients", clientId, "assets", "comment-counts"];
+  const { data: commentCounts = {} } = useQuery<Record<string, number>>({
+    queryKey: commentCountsKey,
+    queryFn: async () => {
+      const r = await fetch(`/api/clients/${clientId}/assets/comment-counts`, { credentials: "include" });
+      if (!r.ok) return {};
+      return r.json();
+    },
+    enabled: !!clientId,
+  });
+
+  const [commentsAsset, setCommentsAsset] = useState<ClientAssetRow | null>(null);
 
   const activeTypes = useMemo(() => types.filter((t) => t.active), [types]);
   const activeStatuses = useMemo(() => statuses.filter((s) => s.active), [statuses]);
@@ -415,13 +429,14 @@ export default function ClientAssetsTab({ clientId }: ClientAssetsTabProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <SortableHead k="name" className="w-[28%] min-w-[180px]">Name</SortableHead>
-                  <TableHead className="w-12">Link</TableHead>
-                  <SortableHead k="type" className="w-28">Type</SortableHead>
-                  <SortableHead k="status" className="w-32">Status</SortableHead>
-                  <SortableHead k="owner" className="w-44">Owner</SortableHead>
-                  <SortableHead k="portalVisible" className="w-32 whitespace-nowrap">Portal Visible</SortableHead>
-                  <SortableHead k="updatedAt" className="w-32 whitespace-nowrap">Last Updated</SortableHead>
+                  <SortableHead k="name" className="min-w-[180px] whitespace-nowrap">Name</SortableHead>
+                  <TableHead className="w-12 whitespace-nowrap">Link</TableHead>
+                  <SortableHead k="type" className="whitespace-nowrap">Type</SortableHead>
+                  <SortableHead k="status" className="whitespace-nowrap">Status</SortableHead>
+                  <SortableHead k="owner" className="whitespace-nowrap">Owner</SortableHead>
+                  <SortableHead k="portalVisible" className="whitespace-nowrap">Portal Visible</SortableHead>
+                  <SortableHead k="updatedAt" className="whitespace-nowrap">Last Updated</SortableHead>
+                  <TableHead className="w-20 whitespace-nowrap text-center">Comments</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -527,6 +542,22 @@ export default function ClientAssetsTab({ clientId }: ClientAssetsTabProps) {
                         </Tooltip>
                       </TooltipProvider>
                     </TableCell>
+                    <TableCell className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => setCommentsAsset(a)}
+                        className="relative inline-flex items-center justify-center h-8 w-8 rounded-md text-gray-500 hover:bg-gray-100 hover:text-primary"
+                        aria-label="View comments"
+                        data-testid={`button-comments-${a.id}`}
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                        {(commentCounts[a.id] ?? 0) > 0 && (
+                          <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-primary text-white text-[10px] font-medium leading-none">
+                            {commentCounts[a.id]}
+                          </span>
+                        )}
+                      </button>
+                    </TableCell>
                     <TableCell>
                       {canEdit && (
                         <DropdownMenu>
@@ -595,7 +626,235 @@ export default function ClientAssetsTab({ clientId }: ClientAssetsTabProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {commentsAsset && (
+        <AssetCommentsDialog
+          asset={commentsAsset}
+          clientId={clientId}
+          staffList={staffList}
+          onClose={() => setCommentsAsset(null)}
+        />
+      )}
     </Card>
+  );
+}
+
+type AssetCommentRow = {
+  id: string;
+  assetId: string;
+  content: string;
+  mentions: string[];
+  createdAt: string;
+  author: { id: string; firstName: string; lastName: string; email: string; profileImage: string | null };
+};
+
+function AssetCommentsDialog({
+  asset, clientId, staffList, onClose,
+}: {
+  asset: ClientAssetRow;
+  clientId: string;
+  staffList: StaffMember[];
+  onClose: () => void;
+}) {
+  const { toast } = useToast();
+  const commentsKey = ["/api/clients", clientId, "assets", asset.id, "comments"];
+  const countsKey = ["/api/clients", clientId, "assets", "comment-counts"];
+
+  const { data: comments = [], isLoading } = useQuery<AssetCommentRow[]>({
+    queryKey: commentsKey,
+    queryFn: async () => {
+      const r = await fetch(`/api/clients/${clientId}/assets/${asset.id}/comments`, { credentials: "include" });
+      if (!r.ok) throw new Error("Failed to load comments");
+      return r.json();
+    },
+  });
+
+  const [text, setText] = useState("");
+  const [showMention, setShowMention] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const [trackedMentions, setTrackedMentions] = useState<Array<{ id: string; name: string }>>([]);
+  const taRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const filteredStaff = useMemo(() => {
+    const q = mentionQuery.toLowerCase();
+    return staffList.filter((s) => {
+      const fn = `${s.firstName ?? ""} ${s.lastName ?? ""}`.toLowerCase();
+      return !q || fn.includes(q);
+    }).slice(0, 6);
+  }, [staffList, mentionQuery]);
+
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      const ids: string[] = [];
+      trackedMentions.forEach((m) => {
+        const re = new RegExp(`@${m.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=[\\s.,!?;:\\)\\]\\n]|$)`);
+        if (re.test(text) && !ids.includes(m.id)) ids.push(m.id);
+      });
+      const res = await apiRequest("POST", `/api/clients/${clientId}/assets/${asset.id}/comments`, {
+        content: text.trim(),
+        mentions: ids,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: commentsKey });
+      queryClient.invalidateQueries({ queryKey: countsKey });
+      setText("");
+      setTrackedMentions([]);
+    },
+    onError: (e: any) => {
+      toast({ title: "Could not post comment", description: e?.message ?? "Unknown error", variant: "destructive" });
+    },
+  });
+
+  const handleChange = (val: string) => {
+    setText(val);
+    const pos = taRef.current?.selectionStart ?? val.length;
+    const before = val.slice(0, pos);
+    const last = before.split(/\s/).pop() || "";
+    if (last.startsWith("@") && last.length >= 1) {
+      setShowMention(true);
+      setMentionQuery(last.slice(1).toLowerCase());
+      setSelectedIdx(0);
+    } else {
+      setShowMention(false);
+      setMentionQuery("");
+    }
+  };
+
+  const insertMention = (s: StaffMember) => {
+    const name = `${s.firstName} ${s.lastName}`.trim();
+    const ta = taRef.current;
+    if (!ta) return;
+    const pos = ta.selectionStart;
+    const before = text.slice(0, pos);
+    const after = text.slice(pos);
+    const words = before.split(/\s/);
+    words[words.length - 1] = `@${name}`;
+    const newText = words.join(" ") + " " + after;
+    setText(newText);
+    setShowMention(false);
+    setMentionQuery("");
+    setTrackedMentions((prev) => prev.some((m) => m.id === s.id) ? prev : [...prev, { id: s.id, name }]);
+    setTimeout(() => {
+      ta.focus();
+      const newPos = words.join(" ").length + 1;
+      ta.setSelectionRange(newPos, newPos);
+    }, 0);
+  };
+
+  const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showMention && filteredStaff.length > 0) {
+      if (e.key === "ArrowDown") { e.preventDefault(); setSelectedIdx((i) => (i + 1) % filteredStaff.length); return; }
+      if (e.key === "ArrowUp") { e.preventDefault(); setSelectedIdx((i) => (i - 1 + filteredStaff.length) % filteredStaff.length); return; }
+      if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); insertMention(filteredStaff[selectedIdx]); return; }
+      if (e.key === "Escape") { setShowMention(false); return; }
+    } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      if (text.trim()) addMutation.mutate();
+    }
+  };
+
+  const renderContent = (content: string) => {
+    const parts = content.split(/(@[\p{L}\p{M}\p{N}'-]+(?:\s[\p{L}\p{M}\p{N}'-]+)?)/gu);
+    return parts.map((p, i) => {
+      if (p.startsWith("@")) {
+        return <Badge key={i} variant="secondary" className="mx-0.5 bg-teal-100 text-teal-800 font-normal">{p}</Badge>;
+      }
+      return <span key={i}>{p}</span>;
+    });
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Comments — {asset.name}</DialogTitle>
+          <DialogDescription>
+            Use @ to mention a teammate. They'll get a notification.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto space-y-3 pr-2 min-h-[200px]">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8 text-gray-500">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading…
+            </div>
+          ) : comments.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 text-sm">
+              No comments yet. Start the conversation.
+            </div>
+          ) : (
+            comments.map((c) => (
+              <div key={c.id} className="flex items-start gap-3 p-3 border rounded-md bg-white">
+                {c.author.profileImage ? (
+                  <img src={c.author.profileImage} alt="" className="h-8 w-8 rounded-full object-cover" />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium">
+                    {(c.author.firstName?.[0] ?? "?")}{(c.author.lastName?.[0] ?? "")}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-medium text-sm text-gray-900">{c.author.firstName} {c.author.lastName}</span>
+                    <span className="text-xs text-gray-500">
+                      {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+                    {renderContent(c.content)}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="border-t pt-3 space-y-2 relative">
+          <div className="relative">
+            <textarea
+              ref={taRef}
+              value={text}
+              onChange={(e) => handleChange(e.target.value)}
+              onKeyDown={handleKey}
+              placeholder="Add a comment… use @ to mention"
+              rows={3}
+              className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              data-testid="textarea-asset-comment"
+            />
+            {showMention && filteredStaff.length > 0 && (
+              <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border rounded-md shadow-lg z-50 max-h-56 overflow-y-auto">
+                {filteredStaff.map((s, idx) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => insertMention(s)}
+                    className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 ${idx === selectedIdx ? "bg-gray-50" : ""}`}
+                  >
+                    <AtSign className="h-3 w-3 text-gray-400" />
+                    <span>{s.firstName} {s.lastName}</span>
+                    <span className="text-xs text-gray-400 truncate">{s.email}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-gray-400">⌘/Ctrl+Enter to post</span>
+            <Button
+              size="sm"
+              onClick={() => addMutation.mutate()}
+              disabled={!text.trim() || addMutation.isPending}
+              data-testid="button-post-asset-comment"
+            >
+              {addMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}
+              Post
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

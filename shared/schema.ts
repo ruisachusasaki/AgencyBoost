@@ -6056,6 +6056,23 @@ export const clientAssets = pgTable("client_assets", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const clientAssetComments = pgTable("client_asset_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agencyId: integer("agency_id").notNull().default(1),
+  assetId: varchar("asset_id").notNull().references(() => clientAssets.id, { onDelete: "cascade" }),
+  authorId: uuid("author_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  mentions: text("mentions").array().notNull().default(sql`'{}'::text[]`),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertClientAssetCommentSchema = createInsertSchema(clientAssetComments).omit({
+  id: true,
+  createdAt: true,
+});
+export type ClientAssetComment = typeof clientAssetComments.$inferSelect;
+export type InsertClientAssetComment = z.infer<typeof insertClientAssetCommentSchema>;
+
 export const insertAssetTypeSchema = createInsertSchema(assetTypes).omit({
   id: true,
   createdAt: true,
