@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { taskSettings, tasks, staff, taskTimeEntries, taskActivities } from "@shared/schema";
+import { taskSettings, tasks, staff, roles, taskTimeEntries, taskActivities } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { NotificationService } from "./notification-service";
 import { storage } from "./storage";
@@ -88,10 +88,14 @@ async function getAutoStopThresholdHours(): Promise<number> {
 
 async function getAdminUserIds(): Promise<string[]> {
   try {
+    // Resolve admins by joining staff -> roles via roleId and matching
+    // roles.name = 'Admin'. Mirrors the pattern used in server/auth.ts and
+    // server/replitAuth.ts. (staff has no `role` text column — only roleId.)
     const admins = await db.select({ id: staff.id })
       .from(staff)
+      .innerJoin(roles, eq(staff.roleId, roles.id))
       .where(and(
-        eq(staff.role, "Admin"),
+        eq(roles.name, "Admin"),
         eq(staff.isActive, true)
       ));
     return admins.map(a => a.id);
