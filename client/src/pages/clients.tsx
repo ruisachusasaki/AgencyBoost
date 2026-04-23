@@ -201,14 +201,14 @@ export default function Clients() {
       })
       .filter((value): value is string => Boolean(value) && value !== '-');
 
-    // Dedupe case-insensitively so values that only differ by case (e.g. "Active"
-    // and "active") are collapsed into a single option. The first occurrence's
-    // casing is preserved as the display value.
+    // Dedupe case-insensitively — prefer the capitalized (initcap) variant
+    // so "active" and "Active" always collapse to "Active".
     const seen = new Map<string, string>();
+    const initcap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
     for (const value of rawValues) {
       const key = value.toLowerCase();
       if (!seen.has(key)) {
-        seen.set(key, value);
+        seen.set(key, initcap(value));
       }
     }
 

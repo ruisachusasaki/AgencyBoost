@@ -2327,6 +2327,24 @@ async function ensureFormsTablesExist() {
   }
 }
 
+async function normalizeClientStatuses() {
+  try {
+    const result = await db.execute(sql`
+      UPDATE clients
+      SET status = initcap(status)
+      WHERE status != initcap(status)
+    `);
+    const count = (result as any).rowCount ?? 0;
+    if (count > 0) {
+      log(`Normalized ${count} client status values to proper casing`);
+    } else {
+      log("Client statuses already normalized - no action needed");
+    }
+  } catch (error: any) {
+    log(`Client status normalization error: ${error.message}`);
+  }
+}
+
 async function ensureTaskCommentsClientPortalColumn() {
   try {
     log("Running startup migration: ensureTaskCommentsClientPortalColumn");
@@ -2592,6 +2610,7 @@ async function runStartupMigrations() {
     await ensureCallCenterTimeEditPermissions();
     await ensureStickyNotesTable();
     await ensureTaskTimeEntriesTable();
+    await normalizeClientStatuses();
     log("✅ All startup migrations completed successfully");
   } catch (error) {
     log(`⚠️ Startup migrations encountered an error: ${error}`);
