@@ -627,7 +627,7 @@ function AssetFormModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{editing ? "Edit Asset" : "Add Asset"}</DialogTitle>
           <DialogDescription>
