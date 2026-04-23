@@ -16,7 +16,7 @@
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import pg from "pg";
+import pg, { type Notice } from "pg";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const sqlPath = resolve(__dirname, "migrate-prod-time-entries.sql");
@@ -31,9 +31,8 @@ const sql = readFileSync(sqlPath, "utf8");
 
 async function main() {
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
-  client.on("notice", (msg) => {
-    const text = (msg as any)?.message ?? msg;
-    console.log(`[db] ${text}`);
+  client.on("notice", (msg: Notice) => {
+    console.log(`[db] ${msg.message ?? String(msg)}`);
   });
 
   await client.connect();
