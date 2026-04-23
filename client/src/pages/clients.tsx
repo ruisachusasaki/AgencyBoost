@@ -102,19 +102,62 @@ export default function Clients() {
   // Bulk selection state
   const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set());
   
-  // Filtering state
-  const [showFollowedOnly, setShowFollowedOnly] = useState(false);
+  // Filtering state — persisted to localStorage so the user's active filter,
+  // smart list, and tab survive navigating away and back to the Clients page.
+  const FILTER_STORAGE_KEY = 'clients.filterState.v1';
+  type PersistedFilterState = {
+    currentFilter: ClientFilter;
+    activeSmartList: string | null;
+    activeTab: string;
+    showFollowedOnly: boolean;
+  };
+  const loadPersistedFilterState = (): Partial<PersistedFilterState> => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const raw = window.localStorage.getItem(FILTER_STORAGE_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw) as Partial<PersistedFilterState>;
+      return parsed ?? {};
+    } catch {
+      return {};
+    }
+  };
+  const persistedFilterState = React.useMemo(loadPersistedFilterState, []);
+
+  const [showFollowedOnly, setShowFollowedOnly] = useState<boolean>(
+    persistedFilterState.showFollowedOnly ?? false
+  );
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [currentFilter, setCurrentFilter] = useState<ClientFilter>({
-    conditions: [],
-    logic: 'AND'
-  });
-  const [activeSmartList, setActiveSmartList] = useState<string | null>(null);
+  const [currentFilter, setCurrentFilter] = useState<ClientFilter>(
+    persistedFilterState.currentFilter ?? {
+      conditions: [],
+      logic: 'AND'
+    }
+  );
+  const [activeSmartList, setActiveSmartList] = useState<string | null>(
+    persistedFilterState.activeSmartList ?? null
+  );
   const [smartListName, setSmartListName] = useState("");
   const [smartListDescription, setSmartListDescription] = useState("");
   const [isSaveSmartListOpen, setIsSaveSmartListOpen] = useState(false);
   const [savedSmartLists, setSavedSmartLists] = useState<SmartList[]>([]);
-  const [activeTab, setActiveTab] = useState("all-clients");
+  const [activeTab, setActiveTab] = useState<string>(persistedFilterState.activeTab ?? "all-clients");
+
+  // Persist filter state on every change so it survives navigating away and back.
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const toStore: PersistedFilterState = {
+        currentFilter,
+        activeSmartList,
+        activeTab,
+        showFollowedOnly,
+      };
+      window.localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(toStore));
+    } catch {
+      // Ignore quota / privacy mode errors.
+    }
+  }, [currentFilter, activeSmartList, activeTab, showFollowedOnly]);
   const [isShareSmartListOpen, setIsShareSmartListOpen] = useState(false);
   const [shareListId, setShareListId] = useState<string | null>(null);
   const [shareWithUsers, setShareWithUsers] = useState<string[]>([]);
@@ -139,7 +182,7 @@ export default function Clients() {
     }
     
     // For non-custom fields or custom fields without predefined options, get values from client data
-    const values = clients
+    const rawValues = clients
       .map(client => {
         switch (fieldName) {
           case 'status': return client.status;
@@ -156,11 +199,20 @@ export default function Clients() {
           }
         }
       })
-      .filter((value): value is string => Boolean(value) && value !== '-')
-      .filter((value, index, array) => array.indexOf(value) === index) // Remove duplicates
-      .sort();
-    
-    return values;
+      .filter((value): value is string => Boolean(value) && value !== '-');
+
+    // Dedupe case-insensitively so values that only differ by case (e.g. "Active"
+    // and "active") are collapsed into a single option. The first occurrence's
+    // casing is preserved as the display value.
+    const seen = new Map<string, string>();
+    for (const value of rawValues) {
+      const key = value.toLowerCase();
+      if (!seen.has(key)) {
+        seen.set(key, value);
+      }
+    }
+
+    return Array.from(seen.values()).sort();
   };
 
   // Check if a field should use dropdown for value selection
@@ -1981,7 +2033,17 @@ export default function Clients() {
               </Select>
             </div>
             <div className="text-sm text-gray-600">
-              Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} clients
+              {(() => {
+                const isFiltered =
+                  filteredAndSortedClients.length !== clients.length;
+                if (isFiltered) {
+                  const visible = filteredAndSortedClients.length;
+                  return visible === 0
+                    ? `Showing 0 of ${pagination.total} clients`
+                    : `Showing 1 to ${visible} of ${visible} clients (filtered from ${pagination.total})`;
+                }
+                return `Showing ${((pagination.page - 1) * pagination.limit) + 1} to ${Math.min(pagination.page * pagination.limit, pagination.total)} of ${pagination.total} clients`;
+              })()}
             </div>
           </div>
           
