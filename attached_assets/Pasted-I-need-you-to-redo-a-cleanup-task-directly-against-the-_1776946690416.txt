@@ -1,0 +1,40 @@
+I need you to redo a cleanup task directly against the current main codebase. Do not assume anything from prior conversations or other branches — work only from what is actually in main right now. Read every file before you change it. If anything is unclear, ask me before proceeding instead of guessing.
+
+Goal
+
+Fully retire the legacy tasks.time_entries JSONB column. After this work, no code, schema, migration, or frontend should reference it, and the live database column should be dropped via a startup migration.
+
+Required scope (do all of these — do not skip any)
+
+Schema — Remove the timeEntries field from the tasks table in shared/schema.ts. Add these columns to the task_time_entries table: stoppedBy (text), stopReason (text), autoStoppedAt (timestamp), autoStoppedThresholdHours (integer). Update the TimeEntry interface and the taskTimeEntryToLegacy converter so the new fields are surfaced in the legacy-shape API responses.
+
+Backend reads/writes — Rewrite every site in server/storage.ts, server/routes.ts, and server/longRunningTimerService.ts that reads or writes tasks.timeEntries / tasks.time_entries so they use the normalized task_time_entries table instead. Before you start, run a repo-wide search for tasks.time_entries, tasks.timeEntries, task.timeEntries, and t.time_entries and list every match. Confirm the list with me before editing.
+
+Startup migration — Update ensureTaskTimeEntriesTable in server/index.ts to: add the four new columns idempotently, run a final backfill from the legacy JSONB into the new normalized columns (including the auto-stop metadata) guarded by a check that the legacy column still exists, and then run ALTER TABLE tasks DROP COLUMN IF EXISTS time_entries.
+
+Frontend response shape — client/src/pages/reports.tsx and shared/utils/csvExport.ts currently depend on report endpoints returning a per-task timeEntries array and a timeEntriesByDate map. The rewritten endpoints must continue to emit the same response shape, sourced from the new table. Verify by reading those frontend files first, then matching the backend response shape exactly.
+
+Dead/stale code — Inspect server/isolated-mem-storage.ts, server/routes.ts.backup, and server/routes.ts.backup2. Confirm they are not loaded at runtime (grep for imports). If confirmed dead, delete them. Do not migrate dead files — delete them.
+
+Drizzle migration snapshots — After the schema change, regenerate the Drizzle migration snapshots so a fresh db:push doesn't recreate the dropped column.
+
+Activity log — routes.ts currently writes activity log entries with fieldName: 'timeEntries', and client/src/components/task-activities.tsx reads that literal. Decide whether to keep emitting the same literal from the new write sites or migrate both ends; explain your decision before changing it.
+
+Out of scope (do not touch)
+
+The enhanced_tasks.time_entries column on the separate enhanced_tasks table and server/weeklyHoursCheckService.ts. Different table, intentionally untouched.
+Any work belonging to Tasks #31 or #32. Just leave them dependent on this task.
+Verification before marking complete
+
+npx tsc --noEmit passes (ignoring known pre-existing -old.tsx / -broken.tsx files).
+Restart the app and confirm startup logs show the backfill running and the column being dropped.
+Repo-wide grep for tasks.time_entries, tasks.timeEntries, t.time_entries, and task.timeEntries returns zero runtime references (only comments in the migration are acceptable).
+Hit the time-tracking report endpoints and confirm timeEntries and timeEntriesByDate are still populated in the response.
+Working rules
+
+Read every file before editing it — do not edit from memory or assumption.
+Do not introduce any types as escape hatches; use the real TimeEntry type.
+Do not create new files, documentation, or markdown unless strictly required.
+Make all independent file reads and grep calls in parallel to stay efficient.
+If you hit a decision point that isn't covered above, stop and ask me. Do not guess.
+When done, give me a summary of: every file you changed, every file you deleted, the grep results proving zero remaining references, and the startup log lines confirming the column was dropped.
