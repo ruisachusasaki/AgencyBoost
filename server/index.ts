@@ -2327,6 +2327,19 @@ async function ensureFormsTablesExist() {
   }
 }
 
+async function ensureClientAssetFlagColumns() {
+  try {
+    await db.execute(sql`
+      ALTER TABLE client_assets
+        ADD COLUMN IF NOT EXISTS added_to_mb boolean NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS added_to_ai_tools boolean NOT NULL DEFAULT false
+    `);
+    log("Client asset flag columns (added_to_mb, added_to_ai_tools) ensured");
+  } catch (error: any) {
+    log(`Client asset flag columns migration error: ${error.message}`);
+  }
+}
+
 async function normalizeClientStatuses() {
   try {
     const result = await db.execute(sql`
@@ -2611,6 +2624,7 @@ async function runStartupMigrations() {
     await ensureStickyNotesTable();
     await ensureTaskTimeEntriesTable();
     await normalizeClientStatuses();
+    await ensureClientAssetFlagColumns();
     log("✅ All startup migrations completed successfully");
   } catch (error) {
     log(`⚠️ Startup migrations encountered an error: ${error}`);

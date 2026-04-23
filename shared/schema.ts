@@ -6074,6 +6074,8 @@ export const clientAssets = pgTable("client_assets", {
   assetStatusId: varchar("asset_status_id").references(() => assetStatuses.id, { onDelete: "set null" }),
   ownerStaffId: uuid("owner_staff_id").references(() => staff.id, { onDelete: "set null" }),
   portalVisible: boolean("portal_visible").notNull().default(false),
+  addedToMb: boolean("added_to_mb").notNull().default(false),
+  addedToAiTools: boolean("added_to_ai_tools").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

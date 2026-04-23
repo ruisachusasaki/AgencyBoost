@@ -7,7 +7,7 @@ import { formatDistanceToNow, format as formatDate } from "date-fns";
 import {
   Plus, Search, ExternalLink, Pencil, Trash2, Eye, EyeOff,
   MoreVertical, FileText, Loader2, ArrowUp, ArrowDown, ArrowUpDown, HelpCircle,
-  MessageSquare, Send, AtSign,
+  MessageSquare, Send, AtSign, CheckSquare, Square,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,8 @@ type ClientAssetRow = {
   assetStatusId: string | null;
   ownerStaffId: string | null;
   portalVisible: boolean;
+  addedToMb: boolean;
+  addedToAiTools: boolean;
   createdAt: string;
   updatedAt: string;
   type: AssetType | null;
@@ -191,6 +193,12 @@ export default function ClientAssetsTab({ clientId }: ClientAssetsTabProps) {
     },
     enabled: !!clientId,
   });
+
+  const { data: columnSettings } = useQuery<{ showAddedToMb: boolean; showAddedToAiTools: boolean }>({
+    queryKey: ["/api/settings/client-asset-columns"],
+  });
+  const showMb = columnSettings?.showAddedToMb !== false;
+  const showAiTools = columnSettings?.showAddedToAiTools !== false;
 
   const [commentsAsset, setCommentsAsset] = useState<ClientAssetRow | null>(null);
 
@@ -334,6 +342,26 @@ export default function ClientAssetsTab({ clientId }: ClientAssetsTabProps) {
     },
   });
 
+  const toggleMbMutation = useMutation({
+    mutationFn: async ({ id, addedToMb }: { id: string; addedToMb: boolean }) => {
+      return apiRequest("PUT", `/api/clients/${clientId}/assets/${id}`, { addedToMb });
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: assetsKey }); },
+    onError: (e: any) => {
+      toast({ title: "Could not update MB status", description: e?.message ?? "Unknown error", variant: "destructive" });
+    },
+  });
+
+  const toggleAiToolsMutation = useMutation({
+    mutationFn: async ({ id, addedToAiTools }: { id: string; addedToAiTools: boolean }) => {
+      return apiRequest("PUT", `/api/clients/${clientId}/assets/${id}`, { addedToAiTools });
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: assetsKey }); },
+    onError: (e: any) => {
+      toast({ title: "Could not update AI Tools status", description: e?.message ?? "Unknown error", variant: "destructive" });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       return apiRequest("DELETE", `/api/clients/${clientId}/assets/${id}`);
@@ -435,6 +463,8 @@ export default function ClientAssetsTab({ clientId }: ClientAssetsTabProps) {
                   <SortableHead k="status" className="whitespace-nowrap">Status</SortableHead>
                   <SortableHead k="owner" className="whitespace-nowrap">Owner</SortableHead>
                   <SortableHead k="portalVisible" className="whitespace-nowrap">Portal Visible</SortableHead>
+                  {showMb && <TableHead className="whitespace-nowrap text-center">Added to MB</TableHead>}
+                  {showAiTools && <TableHead className="whitespace-nowrap text-center">Added to AI Tools</TableHead>}
                   <SortableHead k="updatedAt" className="whitespace-nowrap">Last Updated</SortableHead>
                   <TableHead className="w-20 whitespace-nowrap text-center">Comments</TableHead>
                   <TableHead className="w-12"></TableHead>
@@ -528,6 +558,36 @@ export default function ClientAssetsTab({ clientId }: ClientAssetsTabProps) {
                           : <EyeOff className="h-4 w-4 text-gray-400" />
                       )}
                     </TableCell>
+                    {showMb && (
+                      <TableCell className="text-center">
+                        <button
+                          type="button"
+                          aria-label={a.addedToMb ? "Remove from MB" : "Add to MB"}
+                          className="disabled:opacity-50"
+                          disabled={toggleMbMutation.isPending}
+                          onClick={() => toggleMbMutation.mutate({ id: a.id, addedToMb: !a.addedToMb })}
+                        >
+                          {a.addedToMb
+                            ? <CheckSquare className="h-4 w-4 text-primary" />
+                            : <Square className="h-4 w-4 text-gray-400" />}
+                        </button>
+                      </TableCell>
+                    )}
+                    {showAiTools && (
+                      <TableCell className="text-center">
+                        <button
+                          type="button"
+                          aria-label={a.addedToAiTools ? "Remove from AI Tools" : "Add to AI Tools"}
+                          className="disabled:opacity-50"
+                          disabled={toggleAiToolsMutation.isPending}
+                          onClick={() => toggleAiToolsMutation.mutate({ id: a.id, addedToAiTools: !a.addedToAiTools })}
+                        >
+                          {a.addedToAiTools
+                            ? <CheckSquare className="h-4 w-4 text-primary" />
+                            : <Square className="h-4 w-4 text-gray-400" />}
+                        </button>
+                      </TableCell>
+                    )}
                     <TableCell>
                       <TooltipProvider>
                         <Tooltip>

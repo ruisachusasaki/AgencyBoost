@@ -637,6 +637,64 @@ function AssetStatusesPanel({ isAdmin }: { isAdmin: boolean }) {
 // ---------------------------------------------------------------------------
 // Combined section (renders both panels side-by-side on desktop)
 // ---------------------------------------------------------------------------
+function ColumnVisibilityPanel({ isAdmin }: { isAdmin: boolean }) {
+  const { toast } = useToast();
+
+  const { data: settings, isLoading } = useQuery<{ showAddedToMb: boolean; showAddedToAiTools: boolean }>({
+    queryKey: ["/api/settings/client-asset-columns"],
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async (value: { showAddedToMb: boolean; showAddedToAiTools: boolean }) =>
+      apiRequest("PUT", "/api/settings/client-asset-columns", value),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings/client-asset-columns"] });
+      toast({ title: "Column settings saved" });
+    },
+    onError: (e: any) => {
+      toast({ title: "Could not save column settings", description: e?.message ?? "Unknown error", variant: "destructive" });
+    },
+  });
+
+  const showMb = settings?.showAddedToMb !== false;
+  const showAiTools = settings?.showAddedToAiTools !== false;
+
+  return (
+    <Card>
+      <CardHeader className="pb-2 pt-4 px-4">
+        <CardTitle className="text-sm font-semibold">Column Visibility</CardTitle>
+        <p className="text-xs text-gray-500">Choose which extra columns appear in the Client Assets table.</p>
+      </CardHeader>
+      <CardContent className="px-4 pb-4 space-y-3">
+        {isLoading ? (
+          <p className="text-sm text-gray-400">Loading…</p>
+        ) : (
+          <>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="col-mb" className="text-sm">Added to MB</Label>
+              <Switch
+                id="col-mb"
+                disabled={!isAdmin || saveMutation.isPending}
+                checked={showMb}
+                onCheckedChange={(v) => saveMutation.mutate({ showAddedToMb: v, showAddedToAiTools: showAiTools })}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="col-ai" className="text-sm">Added to AI Tools</Label>
+              <Switch
+                id="col-ai"
+                disabled={!isAdmin || saveMutation.isPending}
+                checked={showAiTools}
+                onCheckedChange={(v) => saveMutation.mutate({ showAddedToMb: showMb, showAddedToAiTools: v })}
+              />
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function ClientAssetsSection() {
   const { isAdmin } = useCurrentUser();
   return (
@@ -654,6 +712,7 @@ export default function ClientAssetsSection() {
         <AssetTypesPanel isAdmin={!!isAdmin} />
         <AssetStatusesPanel isAdmin={!!isAdmin} />
       </div>
+      <ColumnVisibilityPanel isAdmin={!!isAdmin} />
     </div>
   );
 }

@@ -1120,6 +1120,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           assetStatusId: true,
           ownerStaffId: true,
           portalVisible: true,
+          addedToMb: true,
+          addedToAiTools: true,
         });
       const patch = updateSchema.parse(req.body);
 
@@ -1233,6 +1235,50 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     } catch (error: any) {
       console.error("[DELETE /api/clients/:clientId/assets/:assetId] error:", error);
       res.status(500).json({ error: "Failed to delete client asset", message: error?.message });
+    }
+  });
+
+  // GET /api/settings/client-asset-columns — column visibility settings for client assets table
+  app.get("/api/settings/client-asset-columns", requireAuth(), async (req, res) => {
+    try {
+      const rows = await db.select().from(taskSettings).where(eq(taskSettings.settingKey, "client_asset_columns"));
+      if (rows.length > 0) {
+        res.json(rows[0].settingValue);
+      } else {
+        res.json({ showAddedToMb: true, showAddedToAiTools: true });
+      }
+    } catch (error: any) {
+      console.error("[GET /api/settings/client-asset-columns] error:", error);
+      res.status(500).json({ error: "Failed to fetch column settings" });
+    }
+  });
+
+  // PUT /api/settings/client-asset-columns — update column visibility (admin only)
+  app.put("/api/settings/client-asset-columns", requireAuth(), requireRole(["admin"]), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      const { showAddedToMb, showAddedToAiTools } = req.body;
+      const value = {
+        showAddedToMb: showAddedToMb !== false,
+        showAddedToAiTools: showAddedToAiTools !== false,
+      };
+      const existing = await db.select().from(taskSettings).where(eq(taskSettings.settingKey, "client_asset_columns"));
+      if (existing.length > 0) {
+        const [updated] = await db.update(taskSettings)
+          .set({ settingValue: value, updatedBy: userId, updatedAt: new Date() })
+          .where(eq(taskSettings.settingKey, "client_asset_columns"))
+          .returning();
+        res.json(updated.settingValue);
+      } else {
+        const [created] = await db.insert(taskSettings)
+          .values({ settingKey: "client_asset_columns", settingValue: value, updatedBy: userId, description: "Client asset table column visibility" })
+          .returning();
+        res.json(created.settingValue);
+      }
+    } catch (error: any) {
+      console.error("[PUT /api/settings/client-asset-columns] error:", error);
+      res.status(500).json({ error: "Failed to update column settings" });
     }
   });
 
