@@ -5516,6 +5516,7 @@ var init_schema = __esm({
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
       agencyId: integer("agency_id").notNull().default(1),
       name: text("name").notNull(),
+      tooltip: text("tooltip"),
       sortOrder: integer("sort_order").notNull().default(0),
       active: boolean("active").notNull().default(true),
       createdAt: timestamp("created_at").defaultNow(),
@@ -25526,7 +25527,7 @@ AgencyBoost CRM`
       const { id } = req.params;
       const [existing] = await db.select().from(assetTypes).where(and18(eq21(assetTypes.id, id), eq21(assetTypes.agencyId, CURRENT_AGENCY_ID))).limit(1);
       if (!existing) return res.status(404).json({ error: "Asset type not found" });
-      const updateSchema = insertAssetTypeSchema.pick({ name: true, sortOrder: true, active: true }).partial();
+      const updateSchema = insertAssetTypeSchema.pick({ name: true, tooltip: true, sortOrder: true, active: true }).partial();
       const patch = updateSchema.parse(req.body);
       const [updated] = await db.update(assetTypes).set({ ...patch, updatedAt: /* @__PURE__ */ new Date() }).where(and18(eq21(assetTypes.id, id), eq21(assetTypes.agencyId, CURRENT_AGENCY_ID))).returning();
       res.json(updated);

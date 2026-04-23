@@ -6,7 +6,7 @@ import { z } from "zod";
 import { formatDistanceToNow, format as formatDate } from "date-fns";
 import {
   Plus, Search, ExternalLink, Pencil, Trash2, Eye, EyeOff,
-  MoreVertical, FileText, Loader2, ArrowUp, ArrowDown, ArrowUpDown,
+  MoreVertical, FileText, Loader2, ArrowUp, ArrowDown, ArrowUpDown, HelpCircle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -661,22 +661,42 @@ function AssetFormModal({
             <FormField
               control={form.control}
               name="assetTypeId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Asset Type *</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger><SelectValue placeholder="Select a type…" /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {types.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const selectedType = types.find((t) => t.id === field.value);
+                const selectedTooltip = (selectedType as any)?.tooltip as string | null | undefined;
+                return (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1.5">
+                      Asset Type *
+                      {selectedTooltip ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="text-gray-400 hover:text-primary" aria-label="Asset type help" data-testid="asset-type-tooltip">
+                                <HelpCircle className="h-3.5 w-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-xs">
+                              {selectedTooltip}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : null}
+                    </FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select a type…" /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {types.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
             <FormField
               control={form.control}

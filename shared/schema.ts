@@ -6019,6 +6019,7 @@ export const assetTypes = pgTable("asset_types", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   agencyId: integer("agency_id").notNull().default(1),
   name: text("name").notNull(),
+  tooltip: text("tooltip"),
   sortOrder: integer("sort_order").notNull().default(0),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),

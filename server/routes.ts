@@ -684,7 +684,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       if (!existing) return res.status(404).json({ error: "Asset type not found" });
 
       const updateSchema = insertAssetTypeSchema
-        .pick({ name: true, sortOrder: true, active: true })
+        .pick({ name: true, tooltip: true, sortOrder: true, active: true })
         .partial();
       const patch = updateSchema.parse(req.body);
 

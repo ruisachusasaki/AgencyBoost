@@ -69,20 +69,22 @@ function AssetTypesPanel({ isAdmin }: { isAdmin: boolean }) {
   const [editing, setEditing] = useState<AssetType | null>(null);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
+  const [tooltip, setTooltip] = useState("");
   const [archiveTarget, setArchiveTarget] = useState<AssetType | null>(null);
 
   const queryKey = ["/api/asset-types?includeInactive=true"] as const;
   const { data: types = [], isLoading } = useQuery<AssetType[]>({ queryKey });
 
   const createMut = useMutation({
-    mutationFn: async (n: string) => {
-      const res = await apiRequest("POST", "/api/asset-types", { name: n });
+    mutationFn: async (vars: { name: string; tooltip: string | null }) => {
+      const res = await apiRequest("POST", "/api/asset-types", vars);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       setCreating(false);
       setName("");
+      setTooltip("");
       toast({ title: "Asset type created" });
     },
     onError: (e: any) => toast({ variant: "destructive", title: "Create failed", description: e?.message }),
@@ -157,6 +159,7 @@ function AssetTypesPanel({ isAdmin }: { isAdmin: boolean }) {
             size="sm"
             onClick={() => {
               setName("");
+              setTooltip("");
               setCreating(true);
             }}
             data-testid="button-add-asset-type"
@@ -217,6 +220,7 @@ function AssetTypesPanel({ isAdmin }: { isAdmin: boolean }) {
                                 onClick={() => {
                                   setEditing(t);
                                   setName(t.name);
+                                  setTooltip(t.tooltip ?? "");
                                 }}
                                 data-testid={`button-edit-type-${t.id}`}
                               >
@@ -265,6 +269,7 @@ function AssetTypesPanel({ isAdmin }: { isAdmin: boolean }) {
             setCreating(false);
             setEditing(null);
             setName("");
+            setTooltip("");
           }
         }}
       >
@@ -272,24 +277,41 @@ function AssetTypesPanel({ isAdmin }: { isAdmin: boolean }) {
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Asset Type" : "Add Asset Type"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="asset-type-name">Name</Label>
-            <Input
-              id="asset-type-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              data-testid="input-asset-type-name"
-            />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="asset-type-name">Name</Label>
+              <Input
+                id="asset-type-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                data-testid="input-asset-type-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="asset-type-tooltip">Tooltip (optional)</Label>
+              <Textarea
+                id="asset-type-tooltip"
+                value={tooltip}
+                onChange={(e) => setTooltip(e.target.value)}
+                placeholder="e.g. Use this type for all branded creative assets like logos, style guides, etc."
+                rows={3}
+                data-testid="input-asset-type-tooltip"
+              />
+              <p className="text-xs text-gray-500">
+                Shown as a help tooltip next to the Asset Type field when adding a new client asset.
+              </p>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setCreating(false); setEditing(null); setName(""); }}>
+            <Button variant="outline" onClick={() => { setCreating(false); setEditing(null); setName(""); setTooltip(""); }}>
               Cancel
             </Button>
             <Button
               onClick={() => {
                 if (!name.trim()) return;
-                if (editing) updateMut.mutate({ id: editing.id, patch: { name: name.trim() } });
-                else createMut.mutate(name.trim());
+                const tooltipValue = tooltip.trim() ? tooltip.trim() : null;
+                if (editing) updateMut.mutate({ id: editing.id, patch: { name: name.trim(), tooltip: tooltipValue } });
+                else createMut.mutate({ name: name.trim(), tooltip: tooltipValue });
               }}
               disabled={createMut.isPending || updateMut.isPending}
               data-testid="button-save-asset-type"
