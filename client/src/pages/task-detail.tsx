@@ -201,6 +201,7 @@ export default function TaskDetail() {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState("");
   const [timeEstimateUnit, setTimeEstimateUnit] = useState<"minutes" | "hours">("minutes");
+  const [timeEstimateInputValue, setTimeEstimateInputValue] = useState<string>("");
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const { startTimer, stopTimer, isTimerRunning, currentTimer } = useTimer();
   const [highlightedCommentId, setHighlightedCommentId] = useState<string | null>(null);
@@ -617,40 +618,35 @@ export default function TaskDetail() {
     }
   };
 
-  // Helper functions for time estimate conversion
-  const getDisplayTimeValue = () => {
-    if (!task?.timeEstimate) return "";
-    if (timeEstimateUnit === "hours") {
-      return (task.timeEstimate / 60).toString();
-    }
-    return task.timeEstimate.toString();
-  };
-
   const convertToMinutes = (value: number, unit: "minutes" | "hours") => {
     return unit === "hours" ? value * 60 : value;
   };
 
-  const handleTimeEstimateChange = (value: string) => {
-    if (!value) {
+  const commitTimeEstimate = (value: string) => {
+    if (!value || value.trim() === "") {
       updateTaskMutation.mutate({ timeEstimate: null });
       return;
     }
     const numValue = parseFloat(value);
     if (isNaN(numValue) || numValue < 0) return;
-    
     const minutesValue = convertToMinutes(numValue, timeEstimateUnit);
     updateTaskMutation.mutate({ timeEstimate: Math.round(minutesValue) });
   };
 
-  // Update unit when task changes to show appropriate unit
+  // Update unit AND local input state when task changes
   useEffect(() => {
     if (task?.timeEstimate) {
-      // If the time is a multiple of 60 minutes and >= 60, default to hours
+      let unit: "minutes" | "hours" = "minutes";
       if (task.timeEstimate >= 60 && task.timeEstimate % 60 === 0) {
-        setTimeEstimateUnit("hours");
-      } else {
-        setTimeEstimateUnit("minutes");
+        unit = "hours";
       }
+      setTimeEstimateUnit(unit);
+      const display = unit === "hours"
+        ? (task.timeEstimate / 60).toString()
+        : task.timeEstimate.toString();
+      setTimeEstimateInputValue(display);
+    } else {
+      setTimeEstimateInputValue("");
     }
   }, [task?.timeEstimate]);
 
@@ -1073,8 +1069,14 @@ export default function TaskDetail() {
                       <Input
                         type="number"
                         placeholder="0"
-                        value={getDisplayTimeValue()}
-                        onChange={(e) => handleTimeEstimateChange(e.target.value)}
+                        value={timeEstimateInputValue}
+                        onChange={(e) => setTimeEstimateInputValue(e.target.value)}
+                        onBlur={(e) => commitTimeEstimate(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.currentTarget.blur();
+                          }
+                        }}
                         className="w-20 h-8 text-sm"
                         min="0"
                         step={timeEstimateUnit === "hours" ? "0.25" : "1"}
@@ -1083,14 +1085,13 @@ export default function TaskDetail() {
                         value={timeEstimateUnit}
                         onValueChange={(value: "minutes" | "hours") => {
                           setTimeEstimateUnit(value);
-                          // Convert existing value to new unit
+                          // Convert the displayed value to the new unit
                           if (task?.timeEstimate) {
-                            const displayValue = value === "hours" ? task.timeEstimate / 60 : task.timeEstimate;
-                            // Update the field with the same value but potentially different precision
-                            if (value === "hours" && task.timeEstimate % 60 !== 0) {
-                              // If switching to hours and not evenly divisible, keep as decimal
+                            if (value === "hours") {
                               const hourValue = Math.round((task.timeEstimate / 60) * 100) / 100;
-                              updateTaskMutation.mutate({ timeEstimate: Math.round(hourValue * 60) });
+                              setTimeEstimateInputValue(hourValue.toString());
+                            } else {
+                              setTimeEstimateInputValue(task.timeEstimate.toString());
                             }
                           }
                         }}
