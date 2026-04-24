@@ -1374,7 +1374,7 @@ function GmailConnectionCard() {
                       <span>
                         {status.initialSyncCompleted
                           ? "Currently syncing new mail…"
-                          : "Initial 90-day sync in progress…"}
+                          : "Initial sync in progress…"}
                         {" "}
                         {(status.currentRunScanned ?? 0).toLocaleString()} scanned
                         {" · "}
@@ -1395,7 +1395,7 @@ function GmailConnectionCard() {
                   // Idle / completed view: lifetime totals + last sync time
                   <>
                     <p className="text-sm text-muted-foreground">
-                      {status.initialSyncCompleted ? "Initial sync complete." : "Initial 90-day sync pending."}
+                      {status.initialSyncCompleted ? "Initial sync complete." : "Initial sync pending."}
                       {typeof status.emailsLogged === "number" && (
                         <> · {status.emailsLogged.toLocaleString()} logged / {(status.emailsScanned ?? 0).toLocaleString()} scanned</>
                       )}

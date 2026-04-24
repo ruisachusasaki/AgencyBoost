@@ -6226,7 +6226,7 @@ export const loggedEmailAttachments = pgTable("logged_email_attachments", {
 export const emailLoggingSettings = pgTable("email_logging_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   enabled: boolean("enabled").notNull().default(true),
-  initialLookbackDays: integer("initial_lookback_days").notNull().default(90),
+  initialLookbackDays: integer("initial_lookback_days").notNull().default(30),
   syncIntervalSeconds: integer("sync_interval_seconds").notNull().default(120),
   excludePromotions: boolean("exclude_promotions").notNull().default(true),
   excludeSocial: boolean("exclude_social").notNull().default(true),

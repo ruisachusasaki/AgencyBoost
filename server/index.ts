@@ -2435,7 +2435,7 @@ async function ensureGmailSyncTables() {
       CREATE TABLE IF NOT EXISTS email_logging_settings (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
         enabled boolean NOT NULL DEFAULT true,
-        initial_lookback_days integer NOT NULL DEFAULT 90,
+        initial_lookback_days integer NOT NULL DEFAULT 30,
         sync_interval_seconds integer NOT NULL DEFAULT 120,
         exclude_promotions boolean NOT NULL DEFAULT true,
         exclude_social boolean NOT NULL DEFAULT true,
