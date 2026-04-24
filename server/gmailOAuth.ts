@@ -201,6 +201,12 @@ router.get('/status', async (req: Request, res: Response) => {
       initialSyncCompleted: state?.initialSyncCompleted ?? false,
       emailsLogged: state?.emailsLogged ?? 0,
       emailsScanned: state?.emailsScanned ?? 0,
+      // Live counters for the in-flight run. Updated per Gmail page so the UI
+      // can show "Currently syncing — N scanned, M logged" without waiting
+      // for the whole sync cycle to complete.
+      currentRunScanned: state?.currentRunScanned ?? 0,
+      currentRunLogged: state?.currentRunLogged ?? 0,
+      lastSyncStarted: state?.lastSyncStarted ?? null,
     });
   } catch (error) {
     console.error('[Gmail OAuth] Status error:', error);

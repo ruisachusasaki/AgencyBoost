@@ -382,6 +382,9 @@ async function runInitialSync(
       `[GmailSync] ${ownerEmail} page ${pageNum}: scanned=${scanned}, logged=${logged}` +
       (pageToken ? ' (more pages)' : ' (final page)'),
     );
+    // Per-page progress write so the UI sees live counts during a long
+    // initial backfill instead of waiting for the whole run to finish.
+    await updateSyncStateProgress(conn.id, scanned, logged);
   } while (pageToken);
 
   // Always grab a current historyId to anchor incremental sync, even if we
@@ -445,6 +448,9 @@ async function runIncrementalSync(
 
       if (hist.data.historyId) latestHistoryId = hist.data.historyId;
       pageToken = hist.data.nextPageToken || undefined;
+      // Per-page progress write so an incremental run with many delta pages
+      // also surfaces live counters in the UI.
+      await updateSyncStateProgress(conn.id, scanned, logged);
     } while (pageToken);
   } catch (err: any) {
     // 404 from history API means startHistoryId is too old → fall back to initial sync.
@@ -745,16 +751,49 @@ async function upsertSyncStateStart(connectionId: string) {
   const existing = await db.query.gmailSyncState.findFirst({
     where: eq(gmailSyncState.connectionId, connectionId),
   });
+  // Reset the per-run progress counters at the start of every run so the UI
+  // shows a clean "0 scanned, 0 logged" tick-up rather than stale values from
+  // the previous run. Lifetime totals (emailsScanned/emailsLogged) are kept
+  // and incremented on success in upsertSyncStateSuccess.
   const patch = {
     lastSyncStarted: new Date(),
     lastSyncStatus: 'in_progress' as const,
     lastSyncError: null,
+    currentRunScanned: 0,
+    currentRunLogged: 0,
     updatedAt: new Date(),
   };
   if (existing) {
     await db.update(gmailSyncState).set(patch).where(eq(gmailSyncState.connectionId, connectionId));
   } else {
     await db.insert(gmailSyncState).values({ connectionId, ...patch });
+  }
+}
+
+/**
+ * Per-page progress write. Cheap UPDATE called after each Gmail page so the
+ * UI sees live counters instead of waiting for the whole sync to finish. The
+ * values written are the running cumulative for the CURRENT run (overwrite,
+ * not increment) — lifetime totals are still updated atomically at success.
+ *
+ * Errors are swallowed and logged at warn level: a transient progress write
+ * failure must never abort the sync itself.
+ */
+async function updateSyncStateProgress(
+  connectionId: string,
+  scanned: number,
+  logged: number,
+) {
+  try {
+    await db.update(gmailSyncState)
+      .set({
+        currentRunScanned: scanned,
+        currentRunLogged: logged,
+        updatedAt: new Date(),
+      })
+      .where(eq(gmailSyncState.connectionId, connectionId));
+  } catch (err) {
+    console.warn('[GmailSync] progress update failed (non-fatal):', err);
   }
 }
 

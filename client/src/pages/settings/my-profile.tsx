@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { User, Upload, Camera, Eye, EyeOff, ArrowLeft, Calendar, CalendarIcon, MapPin, Bell, Settings, UserCheck, Mail, Trash2 } from "lucide-react";
+import { User, Upload, Camera, Eye, EyeOff, ArrowLeft, Calendar, CalendarIcon, MapPin, Bell, Settings, UserCheck, Mail, Trash2, RefreshCcw } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
@@ -1271,14 +1271,20 @@ function GmailConnectionCard() {
     email?: string;
     syncEnabled?: boolean;
     lastSyncedAt?: string | null;
-    lastSyncStatus?: string | null;
+    syncStatus?: string | null;
     lastSyncError?: string | null;
     emailsLogged?: number;
     emailsScanned?: number;
     initialSyncCompleted?: boolean;
+    currentRunScanned?: number;
+    currentRunLogged?: number;
+    lastSyncStarted?: string | null;
   }>({
     queryKey: ["/api/gmail/status"],
-    refetchInterval: 30_000,
+    // Poll faster while a sync is actively running so users see live progress
+    // without manually refreshing. Falls back to 30s when idle to be polite.
+    refetchInterval: (q) =>
+      (q.state.data as any)?.syncStatus === "in_progress" ? 5_000 : 30_000,
   });
 
   // Surface ?gmail=connected and ?gmail=error from the OAuth callback
@@ -1353,23 +1359,73 @@ function GmailConnectionCard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Connected as {status.email}</p>
-                <p className="text-sm text-muted-foreground">
-                  {status.initialSyncCompleted ? "Initial sync complete." : "Initial 90-day sync in progress."}
-                  {typeof status.emailsLogged === "number" && (
-                    <> · {status.emailsLogged} logged / {status.emailsScanned} scanned</>
-                  )}
-                </p>
-                {status.lastSyncedAt && (
-                  <p className="text-xs text-muted-foreground">
-                    Last synced: {new Date(status.lastSyncedAt).toLocaleString()}
-                  </p>
+                {status.syncStatus === "in_progress" ? (
+                  // Live in-flight view: show what the sync is doing RIGHT NOW
+                  // (progress per page) instead of the misleading "last synced
+                  // X ago" timestamp from the previous completed run, which
+                  // can be hours stale during a long initial backfill.
+                  <>
+                    <p
+                      className="text-sm text-blue-600 dark:text-blue-400 flex items-center gap-2"
+                      data-testid="gmail-sync-in-progress"
+                    >
+                      <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
+                      <span>
+                        {status.initialSyncCompleted
+                          ? "Currently syncing new mail…"
+                          : "Initial 90-day sync in progress…"}
+                        {" "}
+                        {(status.currentRunScanned ?? 0).toLocaleString()} scanned
+                        {" · "}
+                        {(status.currentRunLogged ?? 0).toLocaleString()} logged
+                      </span>
+                    </p>
+                    {status.lastSyncedAt ? (
+                      <p className="text-xs text-muted-foreground">
+                        Last completed: {new Date(status.lastSyncedAt).toLocaleString()}
+                      </p>
+                    ) : status.lastSyncStarted ? (
+                      <p className="text-xs text-muted-foreground">
+                        Started: {new Date(status.lastSyncStarted).toLocaleString()}
+                      </p>
+                    ) : null}
+                  </>
+                ) : (
+                  // Idle / completed view: lifetime totals + last sync time
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      {status.initialSyncCompleted ? "Initial sync complete." : "Initial 90-day sync pending."}
+                      {typeof status.emailsLogged === "number" && (
+                        <> · {status.emailsLogged.toLocaleString()} logged / {(status.emailsScanned ?? 0).toLocaleString()} scanned</>
+                      )}
+                    </p>
+                    {status.lastSyncedAt && (
+                      <p className="text-xs text-muted-foreground">
+                        Last synced: {new Date(status.lastSyncedAt).toLocaleString()}
+                      </p>
+                    )}
+                  </>
                 )}
-                {status.lastSyncError && (
+                {status.lastSyncError && status.syncStatus !== "in_progress" && (
                   <p className="text-xs text-red-600">Last error: {status.lastSyncError}</p>
                 )}
               </div>
-              <Badge variant={status.lastSyncStatus === "failed" ? "destructive" : "default"}>
-                {status.lastSyncStatus || "idle"}
+              <Badge
+                variant={
+                  status.syncStatus === "failed"
+                    ? "destructive"
+                    : status.syncStatus === "in_progress"
+                      ? "secondary"
+                      : "default"
+                }
+              >
+                {status.syncStatus === "in_progress"
+                  ? "Syncing…"
+                  : status.syncStatus === "success"
+                    ? "Up to date"
+                    : status.syncStatus === "failed"
+                      ? "Failed"
+                      : "Idle"}
               </Badge>
             </div>
             <div className="flex gap-2">

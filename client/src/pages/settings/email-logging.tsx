@@ -51,6 +51,10 @@ interface ConnectionStatus {
   lastSyncError: string | null;
   emailsLogged: number;
   emailsScanned: number;
+  // Live progress for the in-flight run (reset to 0 each run; updated per page).
+  currentRunScanned: number;
+  currentRunLogged: number;
+  lastSyncStarted: string | null;
   initialSyncCompleted: boolean;
   firstName: string | null;
   lastName: string | null;
@@ -70,7 +74,12 @@ export default function EmailLoggingSettings() {
 
   const { data: connData } = useQuery<{ connections: ConnectionStatus[] }>({
     queryKey: ["/api/settings/email-logging/connections"],
-    refetchInterval: 30_000,
+    // Poll faster when at least one mailbox is mid-sync so admins see live
+    // progress tick up; slower otherwise to keep the page light.
+    refetchInterval: (q) => {
+      const conns = (q.state.data as any)?.connections as ConnectionStatus[] | undefined;
+      return conns?.some((c) => c.syncStatus === "in_progress") ? 5_000 : 30_000;
+    },
   });
 
   const [newDomain, setNewDomain] = useState("");
@@ -352,26 +361,54 @@ export default function EmailLoggingSettings() {
             <p className="text-sm text-gray-500">No mailboxes connected yet.</p>
           ) : (
             <div className="space-y-3">
-              {(connData?.connections || []).map((c) => (
-                <div key={c.id} className="flex items-center justify-between p-3 border rounded" data-testid={`connection-${c.id}`}>
-                  <div>
-                    <div className="font-medium flex items-center gap-2">
-                      {c.email}
-                      {c.syncStatus === "success" && <CheckCircle2 className="h-4 w-4 text-green-600" />}
-                      {c.syncStatus === "in_progress" && <RefreshCcw className="h-4 w-4 text-blue-600 animate-spin" />}
-                      {c.syncStatus === "failed" && <AlertCircle className="h-4 w-4 text-red-600" />}
-                      {!c.initialSyncCompleted && <Badge variant="outline"><Clock className="h-3 w-3 mr-1" /> Initial sync pending</Badge>}
+              {(connData?.connections || []).map((c) => {
+                const inProgress = c.syncStatus === "in_progress";
+                return (
+                  <div key={c.id} className="flex items-center justify-between p-3 border rounded" data-testid={`connection-${c.id}`}>
+                    <div>
+                      <div className="font-medium flex items-center gap-2">
+                        {c.email}
+                        {c.syncStatus === "success" && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                        {inProgress && <RefreshCcw className="h-4 w-4 text-blue-600 animate-spin" />}
+                        {c.syncStatus === "failed" && <AlertCircle className="h-4 w-4 text-red-600" />}
+                        {!c.initialSyncCompleted && <Badge variant="outline"><Clock className="h-3 w-3 mr-1" /> Initial sync pending</Badge>}
+                      </div>
+                      {inProgress ? (
+                        // Live progress: show what the in-flight run is doing
+                        // RIGHT NOW so admins don't see a misleading "last
+                        // synced 3h ago" while the sync is actively working.
+                        <>
+                          <div
+                            className="text-sm text-blue-600 dark:text-blue-400 mt-0.5"
+                            data-testid={`connection-${c.id}-in-progress`}
+                          >
+                            {c.firstName} {c.lastName} · Currently syncing —{" "}
+                            {(c.currentRunScanned ?? 0).toLocaleString()} scanned ·{" "}
+                            {(c.currentRunLogged ?? 0).toLocaleString()} logged
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Lifetime: {(c.emailsLogged ?? 0).toLocaleString()} logged /{" "}
+                            {(c.emailsScanned ?? 0).toLocaleString()} scanned
+                            {c.lastSyncedAt && (
+                              <> · last completed {formatDistanceToNow(new Date(c.lastSyncedAt))} ago</>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-sm text-gray-500">
+                          {c.firstName} {c.lastName} ·{" "}
+                          {(c.emailsLogged ?? 0).toLocaleString()} logged /{" "}
+                          {(c.emailsScanned ?? 0).toLocaleString()} scanned
+                          {c.lastSyncedAt && ` · last synced ${formatDistanceToNow(new Date(c.lastSyncedAt))} ago`}
+                        </div>
+                      )}
+                      {c.lastSyncError && !inProgress && (
+                        <div className="text-xs text-red-600 mt-1">Error: {c.lastSyncError}</div>
+                      )}
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {c.firstName} {c.lastName} · {c.emailsLogged} logged / {c.emailsScanned} scanned
-                      {c.lastSyncedAt && ` · last synced ${formatDistanceToNow(new Date(c.lastSyncedAt))} ago`}
-                    </div>
-                    {c.lastSyncError && (
-                      <div className="text-xs text-red-600 mt-1">Error: {c.lastSyncError}</div>
-                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

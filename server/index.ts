@@ -2382,6 +2382,10 @@ async function ensureGmailSyncTables() {
       );
       CREATE INDEX IF NOT EXISTS idx_gmail_sync_state_connection_id ON gmail_sync_state(connection_id);
 
+      -- Live progress columns added later for the in-flight run display.
+      ALTER TABLE gmail_sync_state ADD COLUMN IF NOT EXISTS current_run_scanned integer DEFAULT 0;
+      ALTER TABLE gmail_sync_state ADD COLUMN IF NOT EXISTS current_run_logged integer DEFAULT 0;
+
       CREATE TABLE IF NOT EXISTS logged_emails (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
         connection_id varchar NOT NULL REFERENCES gmail_connections(id) ON DELETE CASCADE,

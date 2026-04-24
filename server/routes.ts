@@ -18238,6 +18238,9 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
                  gc.last_synced_at AS "lastSyncedAt",
                  gss.last_sync_status AS "syncStatus", gss.last_sync_error AS "lastSyncError",
                  gss.emails_logged AS "emailsLogged", gss.emails_scanned AS "emailsScanned",
+                 gss.current_run_scanned AS "currentRunScanned",
+                 gss.current_run_logged AS "currentRunLogged",
+                 gss.last_sync_started AS "lastSyncStarted",
                  gss.initial_sync_completed AS "initialSyncCompleted",
                  s.first_name AS "firstName", s.last_name AS "lastName"
           FROM gmail_connections gc

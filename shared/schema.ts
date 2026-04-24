@@ -6156,6 +6156,12 @@ export const gmailSyncState = pgTable("gmail_sync_state", {
   lastSyncError: text("last_sync_error"),
   emailsScanned: integer("emails_scanned").default(0),
   emailsLogged: integer("emails_logged").default(0),
+  // Live progress for the in-flight run. Reset to 0 when a run starts and
+  // overwritten per page during the run; retains the final values of the
+  // most recent run when idle. Used by the UI to show "Currently syncing —
+  // X scanned, Y logged" without waiting for the whole cycle to complete.
+  currentRunScanned: integer("current_run_scanned").default(0),
+  currentRunLogged: integer("current_run_logged").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
