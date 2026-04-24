@@ -352,7 +352,6 @@ async function runInitialSync(
   let pageToken: string | undefined;
   let scanned = 0;
   let logged = 0;
-  let latestHistoryId: string | null = null;
   let pageNum = 0;
 
   do {
@@ -374,7 +373,13 @@ async function runInitialSync(
       scanned++;
       const r = await processMessage(gmail, id, conn, ownerEmail, settings, ctx);
       logged += r.logged;
-      if (r.historyId) latestHistoryId = r.historyId;
+      // Note: we deliberately do NOT track r.historyId here. Per-message
+      // historyIds reflect the message's age, so during a 90-day backfill
+      // the "latest" one we'd see is actually the oldest message in the
+      // window (~90 days old). Gmail only retains history for ~7 days, so
+      // anchoring incremental sync on it caused every subsequent cycle to
+      // 404 and fall back to a full re-backfill. The current account-level
+      // historyId is fetched once at the end via getProfile().
     }
 
     pageToken = list.data.nextPageToken || undefined;
@@ -387,20 +392,26 @@ async function runInitialSync(
     await updateSyncStateProgress(conn.id, scanned, logged);
   } while (pageToken);
 
-  // Always grab a current historyId to anchor incremental sync, even if we
-  // logged nothing during initial pass.
-  if (!latestHistoryId) {
-    try {
-      const profile = await gmail.users.getProfile({ userId: 'me' });
-      latestHistoryId = profile.data.historyId || null;
-    } catch (err) {
-      console.warn('[GmailSync] getProfile failed:', err);
-    }
+  // Always anchor the next incremental sync on the account's CURRENT
+  // historyId, fetched right now from getProfile. This is the only safe
+  // value — anything older risks immediate 404 from history.list because
+  // Gmail prunes history aggressively. If we can't get a current anchor,
+  // fail the run rather than persist a stale one (which would loop
+  // forever via the 404-fallback path in runIncrementalSync).
+  let currentHistoryId: string | null = null;
+  try {
+    const profile = await gmail.users.getProfile({ userId: 'me' });
+    currentHistoryId = profile.data.historyId || null;
+  } catch (err: any) {
+    throw new Error(`Failed to fetch current historyId after initial sync: ${err?.message || err}`);
+  }
+  if (!currentHistoryId) {
+    throw new Error('getProfile returned no historyId after initial sync');
   }
 
   await db.update(gmailSyncState)
     .set({
-      historyId: latestHistoryId,
+      historyId: currentHistoryId,
       initialSyncCompleted: true,
       updatedAt: new Date(),
     })
