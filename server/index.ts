@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./googleAuth";
 import { setupGoogleCalendar } from "./googleCalendarSetup";
+import { setupGmail } from "./gmailSetup";
 import { db } from "./db";
 import { sql, eq, and } from "drizzle-orm";
 import { clientBriefSections, automationTriggers, automationActions, calendars, staff, staffLinkedEmails, calendarAppointments, teamPositions, expenseReportFormConfig, users, dashboardWidgets, oneOnOneProgressionStatuses, timeOffPolicies, timeOffTypes, userRoles, tags, tasks } from "@shared/schema";
@@ -2340,6 +2341,146 @@ async function ensureClientAssetFlagColumns() {
   }
 }
 
+/**
+ * Gmail two-way sync: per-user OAuth tokens, sync state, logged emails (one row
+ * per matched client), email logging settings + domain/email exclusions.
+ * See docs/plans/gmail-sync.md.
+ */
+async function ensureGmailSyncTables() {
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS gmail_connections (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+        email text NOT NULL,
+        access_token text NOT NULL,
+        refresh_token text NOT NULL,
+        expires_at timestamp NOT NULL,
+        scope text NOT NULL,
+        sync_enabled boolean DEFAULT true,
+        last_synced_at timestamp,
+        created_at timestamp DEFAULT now(),
+        updated_at timestamp DEFAULT now(),
+        CONSTRAINT unique_user_gmail UNIQUE (user_id, email)
+      );
+      CREATE INDEX IF NOT EXISTS idx_gmail_connections_user_id ON gmail_connections(user_id);
+
+      CREATE TABLE IF NOT EXISTS gmail_sync_state (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        connection_id varchar NOT NULL REFERENCES gmail_connections(id) ON DELETE CASCADE,
+        history_id text,
+        initial_sync_completed boolean DEFAULT false,
+        last_sync_started timestamp,
+        last_sync_completed timestamp,
+        last_sync_status text,
+        last_sync_error text,
+        emails_scanned integer DEFAULT 0,
+        emails_logged integer DEFAULT 0,
+        created_at timestamp DEFAULT now(),
+        updated_at timestamp DEFAULT now(),
+        CONSTRAINT unique_gmail_sync_state_connection UNIQUE (connection_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_gmail_sync_state_connection_id ON gmail_sync_state(connection_id);
+
+      CREATE TABLE IF NOT EXISTS logged_emails (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        connection_id varchar NOT NULL REFERENCES gmail_connections(id) ON DELETE CASCADE,
+        user_id uuid NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+        client_id varchar NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+        contact_id varchar,
+        gmail_message_id text NOT NULL,
+        gmail_thread_id text NOT NULL,
+        from_email text NOT NULL,
+        from_name text,
+        to_emails text[],
+        cc_emails text[],
+        bcc_emails text[],
+        subject text,
+        snippet text,
+        body_text text,
+        body_html text,
+        direction text NOT NULL,
+        labels text[],
+        has_attachments boolean DEFAULT false,
+        matched_domain text,
+        matched_email text,
+        received_at timestamp NOT NULL,
+        synced_at timestamp DEFAULT now(),
+        created_at timestamp DEFAULT now(),
+        CONSTRAINT unique_message_per_client UNIQUE (gmail_message_id, client_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_logged_emails_client_id ON logged_emails(client_id);
+      CREATE INDEX IF NOT EXISTS idx_logged_emails_user_id ON logged_emails(user_id);
+      CREATE INDEX IF NOT EXISTS idx_logged_emails_thread_id ON logged_emails(gmail_thread_id);
+      CREATE INDEX IF NOT EXISTS idx_logged_emails_received_at ON logged_emails(received_at);
+      -- Used by the per-message dedup check in the background sync loop ("have we already logged this Gmail message?").
+      CREATE INDEX IF NOT EXISTS idx_logged_emails_message_id ON logged_emails(gmail_message_id);
+
+      CREATE TABLE IF NOT EXISTS logged_email_attachments (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        logged_email_id varchar NOT NULL REFERENCES logged_emails(id) ON DELETE CASCADE,
+        gmail_attachment_id text NOT NULL,
+        filename text NOT NULL,
+        mime_type text,
+        size_bytes integer,
+        part_id text,
+        created_at timestamp DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS idx_logged_email_attachments_email_id ON logged_email_attachments(logged_email_id);
+
+      CREATE TABLE IF NOT EXISTS email_logging_settings (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        enabled boolean NOT NULL DEFAULT true,
+        initial_lookback_days integer NOT NULL DEFAULT 90,
+        sync_interval_seconds integer NOT NULL DEFAULT 120,
+        exclude_promotions boolean NOT NULL DEFAULT true,
+        exclude_social boolean NOT NULL DEFAULT true,
+        exclude_updates boolean NOT NULL DEFAULT true,
+        exclude_spam boolean NOT NULL DEFAULT true,
+        exclude_trash boolean NOT NULL DEFAULT true,
+        store_body_html boolean NOT NULL DEFAULT true,
+        store_body_text boolean NOT NULL DEFAULT true,
+        attachments_metadata_only boolean NOT NULL DEFAULT true,
+        updated_by uuid REFERENCES staff(id),
+        created_at timestamp DEFAULT now(),
+        updated_at timestamp DEFAULT now()
+      );
+
+      CREATE TABLE IF NOT EXISTS email_logging_domain_rules (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        domain text NOT NULL,
+        rule_type text NOT NULL,
+        notes text,
+        created_by uuid REFERENCES staff(id),
+        created_at timestamp DEFAULT now(),
+        CONSTRAINT unique_email_logging_domain UNIQUE (domain)
+      );
+      CREATE INDEX IF NOT EXISTS idx_email_logging_domain_rules_domain ON email_logging_domain_rules(domain);
+
+      CREATE TABLE IF NOT EXISTS email_logging_exclusions (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        email text NOT NULL,
+        notes text,
+        created_by uuid REFERENCES staff(id),
+        created_at timestamp DEFAULT now(),
+        CONSTRAINT unique_email_logging_exclusion UNIQUE (email)
+      );
+      CREATE INDEX IF NOT EXISTS idx_email_logging_exclusions_email ON email_logging_exclusions(email);
+    `);
+
+    // Seed singleton settings row if missing
+    await db.execute(sql`
+      INSERT INTO email_logging_settings (enabled)
+      SELECT true
+      WHERE NOT EXISTS (SELECT 1 FROM email_logging_settings)
+    `);
+
+    log("Gmail sync tables (gmail_connections, gmail_sync_state, logged_emails, attachments, settings, domain_rules, exclusions) ensured");
+  } catch (error: any) {
+    log(`Gmail sync tables migration error: ${error.message}`);
+  }
+}
+
 async function normalizeClientStatuses() {
   try {
     const result = await db.execute(sql`
@@ -2625,6 +2766,7 @@ async function runStartupMigrations() {
     await ensureTaskTimeEntriesTable();
     await normalizeClientStatuses();
     await ensureClientAssetFlagColumns();
+    await ensureGmailSyncTables();
     log("✅ All startup migrations completed successfully");
   } catch (error) {
     log(`⚠️ Startup migrations encountered an error: ${error}`);
@@ -2639,6 +2781,9 @@ async function setupFullApp(server: any) {
     
     setupGoogleCalendar(app);
     log("✅ Google Calendar OAuth routes initialized");
+
+    setupGmail(app);
+    log("✅ Gmail OAuth routes initialized");
     
     await registerRoutes(app, server);
 
@@ -2669,6 +2814,13 @@ async function setupFullApp(server: any) {
         log("✅ Google Calendar background sync started");
       }).catch(err => {
         log(`⚠️ Failed to start background calendar sync: ${err.message}`);
+      });
+
+      import('./gmailBackgroundSync').then(({ startGmailBackgroundSync }) => {
+        startGmailBackgroundSync();
+        log("✅ Gmail background sync started");
+      }).catch(err => {
+        log(`⚠️ Failed to start Gmail background sync: ${err.message}`);
       });
 
       import('./weeklyHoursCheckService').then(({ startWeeklyHoursCheck }) => {

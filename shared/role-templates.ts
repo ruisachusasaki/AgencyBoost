@@ -234,6 +234,8 @@ export const MANAGER_PERMISSIONS: string[] = [
   'settings.workflows.manage',
   'settings.audit_logs.view',
   'settings.audit_logs.manage',
+  'settings.email_logging.view',
+  'settings.email_logging.manage',
 ];
 
 /**

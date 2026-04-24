@@ -109,3 +109,55 @@ AgencyBoost/
 14. **`replit.md` is the living long-form spec.** When features change in non-trivial ways, that file gets updated. It's often richer context than inline comments.
 
 15. **File-access policy in active Claude sessions:** by operator instruction, Claude may only write `CLAUDE.md`, `REPO_MAP.md`, and files under `docs/`. All source changes are described in words and handed to the Replit agent.
+
+## Gmail two-way sync (added 2026-04)
+
+Per-user Gmail OAuth + in-process background sync that auto-logs emails against
+the right client. Plan: `docs/plans/gmail-sync.md`. Implementation report:
+`docs/plans/gmail-sync-implementation-report.md`.
+
+Key files:
+
+- `shared/schema.ts` — 7 new tables (appended): `gmailConnections`,
+  `gmailSyncState`, `loggedEmails` (UNIQUE on `gmail_message_id + client_id`),
+  `loggedEmailAttachments`, `emailLoggingSettings` (singleton),
+  `emailLoggingDomainRules`, `emailLoggingExclusions`.
+- `server/gmailUtils.ts` — `createGmailOAuth2Client`, `getUserGmailClient`
+  (decrypts + auto-refreshes tokens via the existing `EncryptionService`).
+- `server/gmailOAuth.ts` — `/api/gmail/auth`, `/oauth/callback`, `/disconnect`,
+  `/status`, `/sync-now`. Mounted via `server/gmailSetup.ts` from `setupFullApp`.
+- `server/gmailMatcher.ts` — pure matcher: contact email → client email →
+  domain match (multi-client supported).
+- `server/gmailBackgroundSync.ts` — 2-min `setInterval` with `isRunning` guard.
+  Initial sync uses `messages.list?q=after:<cutoff>`; incremental uses
+  `history.list` with 404 → fall back to initial.
+- `server/routes.ts` — admin `GET/PUT /api/settings/email-logging` (+ domain
+  rules / exclusions sub-routes), `GET /api/clients/:id/emails`,
+  `GET /api/emails/:id`, `GET /api/emails/:id/attachments/:attachmentId`
+  (on-demand fetch from Gmail, never persisted).
+- `server/index.ts` — `ensureGmailSyncTables()` adds the 7 tables idempotently
+  on boot and `startGmailBackgroundSync()` launches the scheduler.
+
+Frontend:
+
+- `client/src/pages/settings/email-logging.tsx` — admin settings page +
+  connections overview (refetches every 30s).
+- `client/src/pages/settings/my-profile.tsx` — `<GmailConnectionCard />` at
+  the bottom of the Profile tab.
+- `client/src/components/client-emails-tab.tsx` — new "Emails" tab on the
+  client profile, threaded by `gmail_thread_id`.
+
+Permissions: `settings.email_logging.view` and `settings.email_logging.manage`
+(both in `shared/permission-templates.ts`; manager template grants both;
+admins always have all).
+
+Audit-log mirror: every new `loggedEmails` insert also writes a thin
+`auditLogs` row with `entityType='email'` and `newValues.clientId=<id>` so the
+existing Communications tab continues to surface the email without bespoke
+plumbing.
+
+Required env: `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `ENCRYPTION_KEY`
+(reuses existing AES-256-GCM service; tokens are stored encrypted at rest).
+The OAuth callback path is `/api/gmail/oauth/callback` and must be added to
+the Google Cloud OAuth client's authorized redirect URIs for both dev and
+prod hosts.

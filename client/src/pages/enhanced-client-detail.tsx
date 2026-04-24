@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo, useRef, useDeferredValue } f
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ClientEmailsTab } from "@/components/client-emails-tab";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -6031,7 +6032,7 @@ export default function EnhancedClientDetail() {
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="border-b border-gray-200">
-            <TabsList className="grid w-full grid-cols-9 bg-transparent border-0 rounded-none h-auto p-0">
+            <TabsList className="grid w-full grid-cols-10 bg-transparent border-0 rounded-none h-auto p-0">
               <TabsTrigger 
                 value="contact" 
                 className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 -mb-0.5"
@@ -6089,6 +6090,14 @@ export default function EnhancedClientDetail() {
               >
                 <MessageSquare className="h-4 w-4" />
                 Communication
+              </TabsTrigger>
+              <TabsTrigger 
+                value="emails" 
+                className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 -mb-0.5"
+                data-testid="tab-emails"
+              >
+                <Mail className="h-4 w-4" />
+                Emails
               </TabsTrigger>
               <TabsTrigger 
                 value="activity" 
@@ -8473,6 +8482,10 @@ export default function EnhancedClientDetail() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="emails" className="space-y-6 mt-6">
+            {clientId && <ClientEmailsTab clientId={clientId} />}
           </TabsContent>
 
           <TabsContent value="roadmap" className="space-y-6 mt-6">

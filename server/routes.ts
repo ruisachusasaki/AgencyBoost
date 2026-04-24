@@ -96,7 +96,10 @@ import {
   scheduledHiredEmails,
   assetTypes, insertAssetTypeSchema,
   assetStatuses, insertAssetStatusSchema,
-  clientAssets, insertClientAssetSchema, clientAssetComments
+  clientAssets, insertClientAssetSchema, clientAssetComments,
+  gmailConnections, gmailSyncState, loggedEmails, loggedEmailAttachments,
+  emailLoggingSettings, emailLoggingDomainRules, emailLoggingExclusions,
+  insertEmailLoggingSettingsSchema, insertEmailLoggingDomainRuleSchema, insertEmailLoggingExclusionSchema
 } from "@shared/schema";
 import { spawnOnboardingChecklist } from "./services/onboardingSpawnService";
 import { sendHiredNotifications, getWelcomeEmailPreview, startScheduledEmailProcessor } from "./services/hiredNotificationService";
@@ -18075,6 +18078,294 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       res.status(500).json({ message: "Failed to reorder templates" });
     }
   });
+
+  // ==========================================================================
+  // Email Logging (Gmail two-way sync) — admin settings + per-client email
+  // listing. See docs/plans/gmail-sync.md.
+  // ==========================================================================
+
+  // GET singleton settings + domain rules + per-email exclusions.
+  app.get(
+    "/api/settings/email-logging",
+    requireAuth(),
+    requireGranularPermission("settings.email_logging.view"),
+    async (_req, res) => {
+      try {
+        const [settingsRow] = await db.select().from(emailLoggingSettings).limit(1);
+        const settings = settingsRow || (await db.insert(emailLoggingSettings).values({ enabled: true }).returning())[0];
+        const [domainRules, exclusions] = await Promise.all([
+          db.select().from(emailLoggingDomainRules).orderBy(asc(emailLoggingDomainRules.domain)),
+          db.select().from(emailLoggingExclusions).orderBy(asc(emailLoggingExclusions.email)),
+        ]);
+        res.json({ settings, domainRules, exclusions });
+      } catch (error) {
+        console.error("Error fetching email logging settings:", error);
+        res.status(500).json({ message: "Failed to fetch email logging settings" });
+      }
+    }
+  );
+
+  const updateEmailLoggingSettingsSchema = insertEmailLoggingSettingsSchema.partial();
+
+  // PUT settings
+  app.put(
+    "/api/settings/email-logging",
+    requireAuth(),
+    requireGranularPermission("settings.email_logging.manage"),
+    async (req, res) => {
+      try {
+        const parsed = updateEmailLoggingSettingsSchema.parse(req.body);
+        const userId = (req as any).session?.userId;
+        const [existing] = await db.select().from(emailLoggingSettings).limit(1);
+        let row;
+        if (existing) {
+          [row] = await db.update(emailLoggingSettings)
+            .set({ ...parsed, updatedBy: userId, updatedAt: new Date() })
+            .where(eq(emailLoggingSettings.id, existing.id))
+            .returning();
+        } else {
+          [row] = await db.insert(emailLoggingSettings)
+            .values({ ...parsed, updatedBy: userId })
+            .returning();
+        }
+        res.json(row);
+      } catch (error: any) {
+        console.error("Error updating email logging settings:", error);
+        res.status(error?.name === "ZodError" ? 400 : 500).json({
+          message: error?.message || "Failed to update settings",
+        });
+      }
+    }
+  );
+
+  // POST domain rule
+  app.post(
+    "/api/settings/email-logging/domain-rules",
+    requireAuth(),
+    requireGranularPermission("settings.email_logging.manage"),
+    async (req, res) => {
+      try {
+        const parsed = insertEmailLoggingDomainRuleSchema.parse({
+          ...req.body,
+          createdBy: (req as any).session?.userId,
+        });
+        const [row] = await db.insert(emailLoggingDomainRules)
+          .values(parsed)
+          .onConflictDoUpdate({
+            target: emailLoggingDomainRules.domain,
+            set: { ruleType: parsed.ruleType, notes: parsed.notes },
+          })
+          .returning();
+        res.json(row);
+      } catch (error: any) {
+        console.error("Error creating domain rule:", error);
+        res.status(error?.name === "ZodError" ? 400 : 500).json({
+          message: error?.message || "Failed to save domain rule",
+        });
+      }
+    }
+  );
+
+  // DELETE domain rule
+  app.delete(
+    "/api/settings/email-logging/domain-rules/:id",
+    requireAuth(),
+    requireGranularPermission("settings.email_logging.manage"),
+    async (req, res) => {
+      try {
+        await db.delete(emailLoggingDomainRules).where(eq(emailLoggingDomainRules.id, req.params.id));
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error deleting domain rule:", error);
+        res.status(500).json({ message: "Failed to delete domain rule" });
+      }
+    }
+  );
+
+  // POST email exclusion
+  app.post(
+    "/api/settings/email-logging/exclusions",
+    requireAuth(),
+    requireGranularPermission("settings.email_logging.manage"),
+    async (req, res) => {
+      try {
+        const parsed = insertEmailLoggingExclusionSchema.parse({
+          ...req.body,
+          createdBy: (req as any).session?.userId,
+        });
+        const [row] = await db.insert(emailLoggingExclusions)
+          .values(parsed)
+          .onConflictDoUpdate({
+            target: emailLoggingExclusions.email,
+            set: { notes: parsed.notes },
+          })
+          .returning();
+        res.json(row);
+      } catch (error: any) {
+        console.error("Error creating exclusion:", error);
+        res.status(error?.name === "ZodError" ? 400 : 500).json({
+          message: error?.message || "Failed to save exclusion",
+        });
+      }
+    }
+  );
+
+  // DELETE email exclusion
+  app.delete(
+    "/api/settings/email-logging/exclusions/:id",
+    requireAuth(),
+    requireGranularPermission("settings.email_logging.manage"),
+    async (req, res) => {
+      try {
+        await db.delete(emailLoggingExclusions).where(eq(emailLoggingExclusions.id, req.params.id));
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error deleting exclusion:", error);
+        res.status(500).json({ message: "Failed to delete exclusion" });
+      }
+    }
+  );
+
+  // GET sync status across all connected mailboxes (admin overview)
+  app.get(
+    "/api/settings/email-logging/connections",
+    requireAuth(),
+    requireGranularPermission("settings.email_logging.view"),
+    async (_req, res) => {
+      try {
+        const rows = await db.execute(sql`
+          SELECT gc.id, gc.email, gc.user_id AS "userId", gc.sync_enabled AS "syncEnabled",
+                 gc.last_synced_at AS "lastSyncedAt",
+                 gss.last_sync_status AS "syncStatus", gss.last_sync_error AS "lastSyncError",
+                 gss.emails_logged AS "emailsLogged", gss.emails_scanned AS "emailsScanned",
+                 gss.initial_sync_completed AS "initialSyncCompleted",
+                 s.first_name AS "firstName", s.last_name AS "lastName"
+          FROM gmail_connections gc
+          LEFT JOIN gmail_sync_state gss ON gss.connection_id = gc.id
+          LEFT JOIN staff s ON s.id = gc.user_id
+          ORDER BY gc.created_at DESC
+        `);
+        res.json({ connections: (rows as any).rows ?? rows });
+      } catch (error) {
+        console.error("Error fetching gmail connections overview:", error);
+        res.status(500).json({ message: "Failed to fetch connections" });
+      }
+    }
+  );
+
+  // GET emails for a client (used by the new Emails tab on the client profile).
+  app.get(
+    "/api/clients/:clientId/emails",
+    requireAuth(),
+    requirePermission("clients", "canView"),
+    async (req, res) => {
+      try {
+        const { clientId } = req.params;
+        const limit = Math.min(parseInt((req.query.limit as string) || "100", 10), 500);
+        const offset = parseInt((req.query.offset as string) || "0", 10);
+        const direction = (req.query.direction as string) || "all"; // all|inbound|outbound
+        const search = ((req.query.search as string) || "").trim().toLowerCase();
+
+        const conds: any[] = [eq(loggedEmails.clientId, clientId)];
+        if (direction === "inbound" || direction === "outbound") {
+          conds.push(eq(loggedEmails.direction, direction));
+        }
+        if (search) {
+          conds.push(
+            or(
+              sql`lower(${loggedEmails.subject}) like ${'%' + search + '%'}`,
+              sql`lower(${loggedEmails.snippet}) like ${'%' + search + '%'}`,
+              sql`lower(${loggedEmails.fromEmail}) like ${'%' + search + '%'}`,
+            )
+          );
+        }
+
+        const rows = await db.select()
+          .from(loggedEmails)
+          .where(and(...conds))
+          .orderBy(desc(loggedEmails.receivedAt))
+          .limit(limit)
+          .offset(offset);
+
+        // Bulk-load attachment metadata for the page
+        const ids = rows.map(r => r.id);
+        const attachments = ids.length
+          ? await db.select().from(loggedEmailAttachments).where(inArray(loggedEmailAttachments.loggedEmailId, ids))
+          : [];
+        const attMap = new Map<string, typeof attachments>();
+        for (const a of attachments) {
+          const arr = attMap.get(a.loggedEmailId) || [];
+          arr.push(a);
+          attMap.set(a.loggedEmailId, arr);
+        }
+
+        res.json({
+          emails: rows.map(r => ({ ...r, attachments: attMap.get(r.id) || [] })),
+          limit,
+          offset,
+        });
+      } catch (error) {
+        console.error("Error fetching client emails:", error);
+        res.status(500).json({ message: "Failed to fetch client emails" });
+      }
+    }
+  );
+
+  // GET single email (full body + attachments)
+  app.get(
+    "/api/emails/:id",
+    requireAuth(),
+    requirePermission("clients", "canView"),
+    async (req, res) => {
+      try {
+        const [row] = await db.select().from(loggedEmails).where(eq(loggedEmails.id, req.params.id)).limit(1);
+        if (!row) return res.status(404).json({ message: "Email not found" });
+        const attachments = await db.select().from(loggedEmailAttachments).where(eq(loggedEmailAttachments.loggedEmailId, row.id));
+        res.json({ ...row, attachments });
+      } catch (error) {
+        console.error("Error fetching email:", error);
+        res.status(500).json({ message: "Failed to fetch email" });
+      }
+    }
+  );
+
+  // GET attachment binary on demand from Gmail
+  app.get(
+    "/api/emails/:id/attachments/:attachmentId",
+    requireAuth(),
+    requirePermission("clients", "canView"),
+    async (req, res) => {
+      try {
+        const [att] = await db.select().from(loggedEmailAttachments)
+          .where(and(
+            eq(loggedEmailAttachments.id, req.params.attachmentId),
+            eq(loggedEmailAttachments.loggedEmailId, req.params.id),
+          ))
+          .limit(1);
+        if (!att) return res.status(404).json({ message: "Attachment not found" });
+
+        const [email] = await db.select().from(loggedEmails).where(eq(loggedEmails.id, req.params.id)).limit(1);
+        if (!email) return res.status(404).json({ message: "Email not found" });
+
+        const { getUserGmailClient } = await import("./gmailUtils");
+        const { gmail } = await getUserGmailClient(email.userId);
+        const result = await gmail.users.messages.attachments.get({
+          userId: "me",
+          messageId: email.gmailMessageId,
+          id: att.gmailAttachmentId,
+        });
+
+        const data = result.data.data || "";
+        const buffer = Buffer.from(data.replace(/-/g, "+").replace(/_/g, "/"), "base64");
+        res.setHeader("Content-Type", att.mimeType || "application/octet-stream");
+        res.setHeader("Content-Disposition", `attachment; filename="${att.filename}"`);
+        res.send(buffer);
+      } catch (error: any) {
+        console.error("Error fetching attachment:", error);
+        res.status(500).json({ message: error?.message || "Failed to fetch attachment" });
+      }
+    }
+  );
 
   // Audit Logs routes - SECURED (Admin Only)
   app.get("/api/audit-logs", requireAuth(), requireAdmin(), async (req, res) => {

@@ -845,6 +845,9 @@ export default function MyProfile() {
                 </CardContent>
               </Card>
 
+              {/* Gmail Sync Connection */}
+              <GmailConnectionCard />
+
               <div className="flex justify-end">
                 <Button type="submit">
                   Save Profile Changes
@@ -1224,5 +1227,141 @@ export default function MyProfile() {
           </div>
         </Tabs>
       </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Gmail Sync — connect/disconnect/sync card. Renders inside the Profile tab.
+// ---------------------------------------------------------------------------
+function GmailConnectionCard() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: status, isLoading } = useQuery<{
+    connected: boolean;
+    email?: string;
+    syncEnabled?: boolean;
+    lastSyncedAt?: string | null;
+    lastSyncStatus?: string | null;
+    lastSyncError?: string | null;
+    emailsLogged?: number;
+    emailsScanned?: number;
+    initialSyncCompleted?: boolean;
+  }>({
+    queryKey: ["/api/gmail/status"],
+    refetchInterval: 30_000,
+  });
+
+  // Surface ?gmail=connected and ?gmail=error from the OAuth callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get("gmail");
+    if (result === "connected") {
+      toast({ title: "Gmail connected", description: "Background sync will begin within 2 minutes." });
+      queryClient.invalidateQueries({ queryKey: ["/api/gmail/status"] });
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (result === "error") {
+      toast({
+        title: "Gmail connection failed",
+        description: params.get("message") || "Please try again.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [toast, queryClient]);
+
+  const disconnect = useMutation({
+    mutationFn: async () => apiRequest("POST", "/api/gmail/disconnect"),
+    onSuccess: () => {
+      toast({ title: "Gmail disconnected" });
+      queryClient.invalidateQueries({ queryKey: ["/api/gmail/status"] });
+    },
+    onError: (e: any) => toast({ title: "Disconnect failed", description: e?.message, variant: "destructive" }),
+  });
+
+  const syncNow = useMutation({
+    mutationFn: async () => apiRequest("POST", "/api/gmail/sync-now"),
+    onSuccess: () => {
+      toast({ title: "Sync started", description: "We'll process new mail in the background." });
+      queryClient.invalidateQueries({ queryKey: ["/api/gmail/status"] });
+    },
+    onError: (e: any) => toast({ title: "Sync failed", description: e?.message, variant: "destructive" }),
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Mail className="w-5 h-5" />
+          Gmail Sync
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Authorize read-only access to your Gmail so AgencyBoost can automatically log emails against the right
+          client. Only messages matching a known client domain or contact are stored.
+        </p>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : status?.connected ? (
+          <div className="space-y-3" data-testid="gmail-connected-block">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Connected as {status.email}</p>
+                <p className="text-sm text-muted-foreground">
+                  {status.initialSyncCompleted ? "Initial sync complete." : "Initial 90-day sync in progress."}
+                  {typeof status.emailsLogged === "number" && (
+                    <> · {status.emailsLogged} logged / {status.emailsScanned} scanned</>
+                  )}
+                </p>
+                {status.lastSyncedAt && (
+                  <p className="text-xs text-muted-foreground">
+                    Last synced: {new Date(status.lastSyncedAt).toLocaleString()}
+                  </p>
+                )}
+                {status.lastSyncError && (
+                  <p className="text-xs text-red-600">Last error: {status.lastSyncError}</p>
+                )}
+              </div>
+              <Badge variant={status.lastSyncStatus === "failed" ? "destructive" : "default"}>
+                {status.lastSyncStatus || "idle"}
+              </Badge>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => syncNow.mutate()}
+                disabled={syncNow.isPending}
+                data-testid="button-gmail-sync-now"
+              >
+                Sync now
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (confirm("Disconnect Gmail? Existing logged emails will be retained, but new mail will not be synced.")) {
+                    disconnect.mutate();
+                  }
+                }}
+                disabled={disconnect.isPending}
+                data-testid="button-gmail-disconnect"
+              >
+                Disconnect
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button
+            type="button"
+            onClick={() => {
+              window.location.href = "/api/gmail/auth";
+            }}
+            data-testid="button-gmail-connect"
+          >
+            <Mail className="w-4 h-4 mr-2" /> Connect Gmail
+          </Button>
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -1004,6 +1004,15 @@ export const PERMISSION_TEMPLATES: PermissionModule[] = [
           { key: 'settings.tickets.manage', label: 'Manage Ticket Settings', description: 'Configure ticket settings and forms', action: 'manage' },
         ],
       },
+      {
+        tab: 'email_logging',
+        label: 'Email Logging',
+        description: 'Configure Gmail two-way sync and email logging defaults',
+        permissions: [
+          { key: 'settings.email_logging.view', label: 'View Email Logging', description: 'See Gmail sync configuration', action: 'view' },
+          { key: 'settings.email_logging.manage', label: 'Manage Email Logging', description: 'Configure sync defaults, exclusions, and domain rules', action: 'manage' },
+        ],
+      },
     ],
   },
   {

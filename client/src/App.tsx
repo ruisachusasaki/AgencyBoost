@@ -54,6 +54,7 @@ import SalesSettings from "@/pages/settings/sales";
 import AiAssistantSettings from "@/pages/settings/ai-assistant";
 import LeadsSettings from "@/pages/settings/leads";
 import TicketsSettings from "@/pages/settings/tickets";
+import EmailLoggingSettings from "@/pages/settings/email-logging";
 import MainLayout from "@/components/layout/main-layout";
 import FormBuilder from "@/pages/form-builder";
 import SurveyBuilder from "@/pages/survey-builder";
@@ -632,6 +633,18 @@ function Router() {
             <RequirePermission module="settings" permission="settings.business_profile.view">
               <MainLayout>
                 <BusinessProfile />
+              </MainLayout>
+            </RequirePermission>
+          </AuthGate>
+        )}
+      </Route>
+
+      <Route path="/settings/email-logging">
+        {() => (
+          <AuthGate>
+            <RequirePermission module="settings" permission="settings.email_logging.view">
+              <MainLayout>
+                <EmailLoggingSettings />
               </MainLayout>
             </RequirePermission>
           </AuthGate>

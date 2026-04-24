@@ -1,0 +1,142 @@
+# Feature: Gmail Sync for Automatic Email Logging
+
+## Required reading before coding
+
+Before writing any code, read these files in the repo in this order:
+
+1. `CLAUDE.md` — project conventions
+2. `REPO_MAP.md` — file layout
+3. `docs/PLANNING_CONTEXT.md` — especially the "Gmail Sync Pre-Build Briefing" section, which has evidence-based answers about the existing Calendar OAuth pattern, Communications tab, permissions system, and background worker pattern
+4. `docs/plans/gmail-sync.md` — the full plan for this feature, including the hybrid storage decision, matching rules, UI layout, and resolved open questions
+
+The plan and briefing together give you specific file-level references. Follow them.
+
+## Goal
+
+Replace the manual "copy-paste Gmail emails into client notes" workflow AMs use today. Build two-way Gmail sync so emails sent to and received from clients are automatically logged in AgencyBoost.
+
+## Architecture decisions already made (do not re-debate these)
+
+- **Model Gmail integration on the existing Google Calendar integration.** Mirror the file structure of `server/googleCalendarOAuth.ts`, `server/googleCalendarUtils.ts`, `server/googleCalendarSetup.ts`, and especially `server/googleCalendarBackgroundSync.ts`. Create separate Gmail files — do not overload Calendar files or tables.
+- **Scope:** `gmail.readonly` only. Read-only — AgencyBoost never sends or modifies emails.
+- **Google verification:** not being pursued now. The "unverified app" warning is expected and acceptable for internal use. Document in help text so users aren't alarmed.
+- **Background worker:** in-process `setInterval`. No Redis, no BullMQ. Register in `server/index.ts` inside the `runStartupMigrations().then(...)` block.
+- **Hybrid storage:** dedicated `logged_emails` table is the source of truth. ALSO write a thin `audit_logs` row per email (matching the existing SMS/call pattern with `entityType='email'`) so the existing Communications tab picks up emails automatically without any changes to that tab's code.
+- **Multi-client matches:** one email matching multiple clients → one `logged_emails` row per client (same Message-ID, different client_id). Unique constraint on `(message_id, client_id)`.
+- **Email address normalization before matching:** lowercase, strip `+tag` plus-addressing, trim whitespace.
+
+## Resolved open questions (do not ask these again)
+
+- Initial sync lookback on first connection: **90 days**
+- Attachment storage: **metadata only** (filename, size, mime_type, Gmail attachment ID). Fetch attachment bytes on-demand from Gmail API when user clicks download.
+- Multi-client matching: **log to all matched clients**
+- Gmail category exclusion default: **Promotions, Social, Updates excluded by default** (admin can toggle)
+
+## Feature scope
+
+### 1. Gmail connection per user
+
+- "Connect Gmail" button in User Settings — separate from the existing Calendar connection
+- OAuth flow mirroring `server/googleCalendarOAuth.ts` with `gmail.readonly` scope
+- Post-connection UI shows: status, connected email address, last sync timestamp, "Disconnect Gmail" button, "Sync now" manual trigger
+- Token refresh failures show a clear "Reconnect Gmail" prompt
+- Access gating: `requirePermission('integrations', 'canEdit')` server-side, `<RequirePermission module="integrations">` client-side
+
+### 2. Admin-only Email Logging Settings page
+
+- Route: `/settings/email-logging`
+- Add new granular permission key `settings.email_logging.manage` to `shared/permission-templates.ts`
+- Grant it to Admin role in `shared/role-templates.ts`
+- Gate the page with `<RequirePermission module="settings" permission="settings.email_logging.manage">`
+- Gate all admin write endpoints with `requireGranularPermission('settings.email_logging.manage')`
+- Add a tile to the Settings grid (`client/src/pages/settings.tsx`)
+- Add the route in `client/src/App.tsx`
+
+**Settings to expose:**
+
+Matching rules (checkboxes, combinable):
+- Match Client email addresses
+- Match Lead email addresses
+- Match Contact Persons (query `clientContacts` table, which already exists)
+- Match custom domains mapped to clients (admin-defined list mapping domain → client)
+
+Exclusions:
+- Internal domain(s) — admin-specified list, to exclude internal staff-to-staff emails
+- Specific email address blocklist — free-text list
+
+Direction:
+- Log outbound (on by default)
+- Log inbound (on by default)
+
+Gmail category exclusions:
+- Exclude Promotions (on by default)
+- Exclude Social (on by default)
+- Exclude Updates (on by default)
+
+Settings are global to the AgencyBoost account. No per-user overrides in v1.
+
+### 3. Background sync
+
+- New file `server/gmailBackgroundSync.ts` mirroring `server/googleCalendarBackgroundSync.ts`
+- Start in `server/index.ts:~2666` inside the `runStartupMigrations().then(...)` block
+- Double-start guard + overlap guard like the Calendar service
+- Per-user loop with 500ms spacing between users
+- Persist `history_id` per connection for incremental sync
+- Initial sync window: 90 days from connection timestamp
+- Dedup with unique constraint on `(message_id, client_id)` and `INSERT ... ON CONFLICT DO NOTHING`
+- Thread grouping: use Gmail's native `thread_id`
+- Attachments: store metadata only
+
+### 4. UI — where logged emails appear
+
+**A. Existing Communications tab on the client profile:** no changes needed. Emails flow in via the thin `audit_logs` row. They'll thread and filter automatically like SMS/calls do today.
+
+**B. New dedicated "Emails" tab on the client profile:**
+- Reads from `logged_emails` directly
+- Threads grouped by Gmail's `thread_id` (real threading, not the address-pair heuristic the Communications tab uses)
+- Collapsible threads with message count
+- Within a thread: chronological messages with sender, timestamp, subject, body (sanitized HTML), attachments
+- Filters: direction (inbound/outbound), connected user, date range
+- Full-text search over subject + body
+- Attachment chips with filename + size; click triggers on-demand fetch from Gmail API
+
+### 5. Edge cases to handle explicitly
+
+- Token refresh failure → clear "Reconnect Gmail" state + non-intrusive notification
+- Unmatched emails → silently ignored (expected majority)
+- Group emails matching multiple clients → one row per matched client
+- Gmail API rate limits → back off gracefully, do not crash the sync
+- User disconnects Gmail → previously logged emails remain; new syncs stop; no historical data deletion
+- Plus-addressing and case differences → normalize before matching
+- "Unverified app" warning → acknowledged in help text
+
+## Data model (you decide exact shape, but cover these concerns)
+
+You need tables for:
+- Gmail connections (per user, with encrypted tokens using existing `server/encryption.ts`)
+- Gmail sync state (watermark per connection — likely the `history_id`)
+- Logged emails (source of truth; see required fields in the plan)
+- Logged email attachments (metadata only)
+- Email logging settings (global account config)
+- Email logging domain rules (custom domain → client mapping)
+- Email logging exclusions (internal domains and blocklist)
+
+Follow the existing schema conventions in `shared/schema.ts`. If the repo prefers fewer tables with JSON columns for config, do that. If it prefers normalized tables, do that. Your call — consistency with the existing codebase matters more than my suggestion.
+
+## Deliverables
+
+1. **The feature itself** — working end to end as described above.
+
+2. **Implementation report** saved to `docs/plans/gmail-sync-implementation-report.md` containing:
+   - **What was built** — every new file, component, endpoint, migration, or config change, with brief purpose
+   - **What was NOT built** — anything skipped or deferred, with reason
+   - **Assumptions made** — every decision made without asking the user
+   - **Deviations from the plan** — anywhere implementation differed from `docs/plans/gmail-sync.md`, with reasoning
+   - **Known limitations** — performance concerns, edge cases not yet handled, things that work but are fragile
+   - **How to test** — step-by-step manual QA instructions a non-technical user could follow
+   - **Follow-up tasks** — prioritized list of what should come next (e.g., pursue CASA verification, add per-user overrides, attachment file storage, etc.)
+   - **Rollback notes** — what would need to be reverted or feature-flagged off if this needs to be disabled
+
+3. **`CLAUDE.md` update** — brief section on this feature so future AI sessions have context
+
+Do not mark the feature complete until the report is written. The report is as important as the code itself — it's how the rest of the AI team (Claude.ai, Claude Code) stays in sync with what got built.

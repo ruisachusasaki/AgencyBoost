@@ -21,7 +21,8 @@ import {
   Banknote,
   Target,
   Bot,
-  Ticket
+  Ticket,
+  Mail
 } from "lucide-react";
 
 interface SettingsNavItem {
@@ -51,6 +52,7 @@ const allSettingsNavigation: SettingsNavItem[] = [
   { name: "Workflows", href: "/settings/automation-triggers", icon: Zap, permission: "settings.workflows.view" },
   { name: "Audit Logs", href: "/settings/audit-logs", icon: ScrollText, permission: "settings.audit_logs.view" },
   { name: "Tickets", href: "/settings/tickets", icon: Ticket, permission: "settings.tickets.view" },
+  { name: "Email Logging", href: "/settings/email-logging", icon: Mail, permission: "settings.email_logging.view" },
 ];
 
 export default function Settings() {
@@ -127,6 +129,7 @@ function getSettingDescription(name: string): string {
     "Workflows": "Manage automation trigger definitions and workflows",
     "Audit Logs": "View system activity and audit trail",
     "Tickets": "Configure ticket routing and management rules",
+    "Email Logging": "Configure Gmail two-way sync, exclusions and connected mailboxes",
   };
   return descriptions[name] || "";
 }

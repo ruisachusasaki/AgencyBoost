@@ -6119,3 +6119,194 @@ export type AssetStatus = typeof assetStatuses.$inferSelect;
 export type InsertAssetStatus = z.infer<typeof insertAssetStatusSchema>;
 export type ClientAsset = typeof clientAssets.$inferSelect;
 export type InsertClientAsset = z.infer<typeof insertClientAssetSchema>;
+
+// ==========================================================================
+// Gmail Two-Way Sync — per-user OAuth, in-process background sync, hybrid
+// storage with logged_emails as source-of-truth + thin audit_logs row for
+// the existing Communications tab. See docs/plans/gmail-sync.md.
+// ==========================================================================
+
+// Gmail Connections - per-user OAuth tokens (gmail.readonly scope)
+export const gmailConnections = pgTable("gmail_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  accessToken: text("access_token").notNull(), // Encrypted (AES-256-GCM)
+  refreshToken: text("refresh_token").notNull(), // Encrypted
+  expiresAt: timestamp("expires_at").notNull(),
+  scope: text("scope").notNull(),
+  syncEnabled: boolean("sync_enabled").default(true),
+  lastSyncedAt: timestamp("last_synced_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_gmail_connections_user_id").on(table.userId),
+  unique("unique_user_gmail").on(table.userId, table.email),
+]);
+
+// Gmail Sync State - history_id + per-run stats for incremental sync
+export const gmailSyncState = pgTable("gmail_sync_state", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  connectionId: varchar("connection_id").notNull().references(() => gmailConnections.id, { onDelete: "cascade" }),
+  historyId: text("history_id"), // Last seen Gmail historyId for delta sync
+  initialSyncCompleted: boolean("initial_sync_completed").default(false),
+  lastSyncStarted: timestamp("last_sync_started"),
+  lastSyncCompleted: timestamp("last_sync_completed"),
+  lastSyncStatus: text("last_sync_status"), // success, failed, in_progress
+  lastSyncError: text("last_sync_error"),
+  emailsScanned: integer("emails_scanned").default(0),
+  emailsLogged: integer("emails_logged").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_gmail_sync_state_connection_id").on(table.connectionId),
+  unique("unique_gmail_sync_state_connection").on(table.connectionId),
+]);
+
+// Logged Emails - source-of-truth row for each (message, matched-client) pair
+// One Gmail message can match multiple clients => one row per match (clientId).
+export const loggedEmails = pgTable("logged_emails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  connectionId: varchar("connection_id").notNull().references(() => gmailConnections.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }), // Owner of the mailbox
+  clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }), // Matched client
+  contactId: varchar("contact_id"), // Optional matched contact id (clients table uses this name in newValues)
+  // Gmail identifiers
+  gmailMessageId: text("gmail_message_id").notNull(),
+  gmailThreadId: text("gmail_thread_id").notNull(),
+  // Headers
+  fromEmail: text("from_email").notNull(),
+  fromName: text("from_name"),
+  toEmails: text("to_emails").array(), // List of recipient emails
+  ccEmails: text("cc_emails").array(),
+  bccEmails: text("bcc_emails").array(),
+  subject: text("subject"),
+  snippet: text("snippet"), // Gmail snippet
+  bodyText: text("body_text"), // Plain text body (stripped)
+  bodyHtml: text("body_html"), // Full HTML body (sanitised on render)
+  // Metadata
+  direction: text("direction").notNull(), // 'inbound' | 'outbound'
+  labels: text("labels").array(), // Gmail labels (INBOX, SENT, IMPORTANT, etc.)
+  hasAttachments: boolean("has_attachments").default(false),
+  matchedDomain: text("matched_domain"), // Which contact domain matched
+  matchedEmail: text("matched_email"), // Which contact email matched
+  receivedAt: timestamp("received_at").notNull(), // When Gmail received it
+  syncedAt: timestamp("synced_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_logged_emails_client_id").on(table.clientId),
+  index("idx_logged_emails_user_id").on(table.userId),
+  index("idx_logged_emails_thread_id").on(table.gmailThreadId),
+  index("idx_logged_emails_received_at").on(table.receivedAt),
+  unique("unique_message_per_client").on(table.gmailMessageId, table.clientId),
+]);
+
+// Logged Email Attachments - metadata only (filename, mime, size, attachmentId)
+// Body of the attachment is fetched on-demand via Gmail API.
+export const loggedEmailAttachments = pgTable("logged_email_attachments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  loggedEmailId: varchar("logged_email_id").notNull().references(() => loggedEmails.id, { onDelete: "cascade" }),
+  gmailAttachmentId: text("gmail_attachment_id").notNull(), // Gmail's attachment id, used to fetch on demand
+  filename: text("filename").notNull(),
+  mimeType: text("mime_type"),
+  sizeBytes: integer("size_bytes"),
+  partId: text("part_id"), // Gmail message part id
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_logged_email_attachments_email_id").on(table.loggedEmailId),
+]);
+
+// Email Logging Settings - singleton row controlling system-wide sync defaults
+export const emailLoggingSettings = pgTable("email_logging_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  enabled: boolean("enabled").notNull().default(true),
+  initialLookbackDays: integer("initial_lookback_days").notNull().default(90),
+  syncIntervalSeconds: integer("sync_interval_seconds").notNull().default(120),
+  excludePromotions: boolean("exclude_promotions").notNull().default(true),
+  excludeSocial: boolean("exclude_social").notNull().default(true),
+  excludeUpdates: boolean("exclude_updates").notNull().default(true),
+  excludeSpam: boolean("exclude_spam").notNull().default(true),
+  excludeTrash: boolean("exclude_trash").notNull().default(true),
+  storeBodyHtml: boolean("store_body_html").notNull().default(true),
+  storeBodyText: boolean("store_body_text").notNull().default(true),
+  attachmentsMetadataOnly: boolean("attachments_metadata_only").notNull().default(true),
+  updatedBy: uuid("updated_by").references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Email Logging Domain Rules - per-domain inclusion/exclusion overrides
+// type='exclude' => never log emails to/from this domain
+// type='include' => always log even if exclusion rules would skip
+export const emailLoggingDomainRules = pgTable("email_logging_domain_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  domain: text("domain").notNull(), // e.g. "noreply.example.com"
+  ruleType: text("rule_type").notNull(), // 'exclude' | 'include'
+  notes: text("notes"),
+  createdBy: uuid("created_by").references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_email_logging_domain_rules_domain").on(table.domain),
+  unique("unique_email_logging_domain").on(table.domain),
+]);
+
+// Email Logging Exclusions - per-email-address exclusions
+export const emailLoggingExclusions = pgTable("email_logging_exclusions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull(),
+  notes: text("notes"),
+  createdBy: uuid("created_by").references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_email_logging_exclusions_email").on(table.email),
+  unique("unique_email_logging_exclusion").on(table.email),
+]);
+
+// Insert schemas
+export const insertGmailConnectionSchema = createInsertSchema(gmailConnections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const insertGmailSyncStateSchema = createInsertSchema(gmailSyncState).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const insertLoggedEmailSchema = createInsertSchema(loggedEmails).omit({
+  id: true,
+  createdAt: true,
+  syncedAt: true,
+});
+export const insertLoggedEmailAttachmentSchema = createInsertSchema(loggedEmailAttachments).omit({
+  id: true,
+  createdAt: true,
+});
+export const insertEmailLoggingSettingsSchema = createInsertSchema(emailLoggingSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const insertEmailLoggingDomainRuleSchema = createInsertSchema(emailLoggingDomainRules).omit({
+  id: true,
+  createdAt: true,
+});
+export const insertEmailLoggingExclusionSchema = createInsertSchema(emailLoggingExclusions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type GmailConnection = typeof gmailConnections.$inferSelect;
+export type InsertGmailConnection = z.infer<typeof insertGmailConnectionSchema>;
+export type GmailSyncStateRow = typeof gmailSyncState.$inferSelect;
+export type InsertGmailSyncState = z.infer<typeof insertGmailSyncStateSchema>;
+export type LoggedEmail = typeof loggedEmails.$inferSelect;
+export type InsertLoggedEmail = z.infer<typeof insertLoggedEmailSchema>;
+export type LoggedEmailAttachment = typeof loggedEmailAttachments.$inferSelect;
+export type InsertLoggedEmailAttachment = z.infer<typeof insertLoggedEmailAttachmentSchema>;
+export type EmailLoggingSettings = typeof emailLoggingSettings.$inferSelect;
+export type InsertEmailLoggingSettings = z.infer<typeof insertEmailLoggingSettingsSchema>;
+export type EmailLoggingDomainRule = typeof emailLoggingDomainRules.$inferSelect;
+export type InsertEmailLoggingDomainRule = z.infer<typeof insertEmailLoggingDomainRuleSchema>;
+export type EmailLoggingExclusion = typeof emailLoggingExclusions.$inferSelect;
+export type InsertEmailLoggingExclusion = z.infer<typeof insertEmailLoggingExclusionSchema>;
