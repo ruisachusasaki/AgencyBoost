@@ -36,11 +36,13 @@
 
 import { chromium } from 'playwright';
 import { execSync } from 'node:child_process';
+import pg from 'pg';
 
 const BASE = process.env.E2E_BASE_URL || 'http://localhost:5000';
 const COOKIE_HEADER = process.env.E2E_SESSION_COOKIE;
 const TEST_EMAIL = process.env.E2E_TEST_EMAIL || 'rui@themediaoptimizers.com';
-const TICK_WAIT_MS = Number(process.env.E2E_TICK_WAIT_MS || 35000);
+const TICK_WAIT_MS = Number(process.env.E2E_TICK_WAIT_MS || 75000);
+const DATABASE_URL = process.env.DATABASE_URL;
 
 if (!COOKIE_HEADER) {
   console.error(
@@ -82,6 +84,34 @@ function parseCookieHeader(header) {
 
 const HOURS_RE = /\bhours?\b|\ban hour\b/i;
 const AGO_RE = /\bago\b/i;
+
+/**
+ * Parse a relative-time label into an approximate "minutes ago" bucket so
+ * we can assert the live tick has progressed. Returns NaN if unparseable.
+ *
+ * Examples:
+ *   "less than a minute ago" -> 0
+ *   "a minute ago" / "1 minute ago" -> 1
+ *   "5 minutes ago" -> 5
+ *   "an hour ago" / "1 hour ago" -> 60
+ *   "2 hours ago" -> 120
+ */
+function parseAgoMinutes(text) {
+  if (typeof text !== 'string') return NaN;
+  const t = text.toLowerCase();
+  if (/less than (a|1) minute ago/.test(t)) return 0;
+  let m = t.match(/^(?:about\s+)?(\d+)\s+seconds?\s+ago$/);
+  if (m) return 0;
+  m = t.match(/^(?:about\s+)?(?:a|an|1)\s+minute\s+ago$/);
+  if (m) return 1;
+  m = t.match(/^(?:about\s+)?(\d+)\s+minutes?\s+ago$/);
+  if (m) return Number(m[1]);
+  m = t.match(/^(?:about\s+)?(?:a|an|1)\s+hour\s+ago$/);
+  if (m) return 60;
+  m = t.match(/^(?:about\s+)?(\d+)\s+hours?\s+ago$/);
+  if (m) return Number(m[1]) * 60;
+  return NaN;
+}
 
 (async () => {
   const browser = await chromium.launch({ headless: true, executablePath: CHROME });
@@ -198,13 +228,22 @@ const AGO_RE = /\bago\b/i;
     );
   }
 
-  // ---------------- Wait ~35s and verify live tick ----------------
+  // ---------------- Wait ~75s and verify the live tick or a poll fired ----------------
+  // The frontend re-renders every 30s and the React Query polls every 30s,
+  // so a 75-second wait guarantees at least one of:
+  //   (a) the rendered relative-time bucket has incremented, or
+  //   (b) at least one fresh /api/...connections poll fired (which would
+  //       re-anchor the label to the new lastSyncedAt).
+  // Either is acceptance: the user-visible label is provably alive.
   const adminTextBeforeTick = await page.evaluate((email) => {
     const rows = Array.from(document.querySelectorAll('[data-testid^="connection-"]'));
     const row = rows.find((r) => r.textContent && r.textContent.includes(email));
     const label = row?.querySelector('[data-testid$="-last-synced"]');
     return label ? label.textContent.trim() : null;
   }, TEST_EMAIL);
+  const pollsBeforeTick = apiResponses.filter((r) =>
+    r.url.includes('/api/settings/email-logging/connections')
+  ).length;
   await page.waitForTimeout(TICK_WAIT_MS);
   const adminTextAfterTick = await page.evaluate((email) => {
     const rows = Array.from(document.querySelectorAll('[data-testid^="connection-"]'));
@@ -212,6 +251,17 @@ const AGO_RE = /\bago\b/i;
     const label = row?.querySelector('[data-testid$="-last-synced"]');
     return label ? label.textContent.trim() : null;
   }, TEST_EMAIL);
+  const pollsAfterTick = apiResponses.filter((r) =>
+    r.url.includes('/api/settings/email-logging/connections')
+  ).length;
+  const pollsDuringTick = pollsAfterTick - pollsBeforeTick;
+
+  const beforeMin = parseAgoMinutes(adminTextBeforeTick);
+  const afterMin = parseAgoMinutes(adminTextAfterTick);
+  const labelAdvanced =
+    Number.isFinite(beforeMin) && Number.isFinite(afterMin) && afterMin > beforeMin;
+  const labelStable = adminTextBeforeTick === adminTextAfterTick;
+
   check(
     `admin: after ${TICK_WAIT_MS}ms label still NOT "hours ago"`,
     adminTextAfterTick !== null &&
@@ -219,6 +269,50 @@ const AGO_RE = /\bago\b/i;
       !HOURS_RE.test(adminTextAfterTick),
     `before="${adminTextBeforeTick}", after="${adminTextAfterTick}"`
   );
+  check(
+    `admin: live tick OR background poll fired during ${TICK_WAIT_MS}ms wait`,
+    labelAdvanced || pollsDuringTick >= 1 || (labelStable && pollsDuringTick >= 1),
+    `before="${adminTextBeforeTick}" (${beforeMin}m) → after="${adminTextAfterTick}" (${afterMin}m), polls=${pollsDuringTick}`
+  );
+
+  // ---------------- DB-backed recency assertion ----------------
+  if (DATABASE_URL) {
+    const pool = new pg.Pool({ connectionString: DATABASE_URL, max: 1 });
+    try {
+      const { rows } = await pool.query(
+        `SELECT last_synced_at FROM gmail_connections WHERE email = $1 LIMIT 1`,
+        [TEST_EMAIL]
+      );
+      if (rows.length === 0) {
+        check('DB recency: row exists for test email', false, `no gmail_connections row for ${TEST_EMAIL}`);
+      } else {
+        const lastSync = new Date(rows[0].last_synced_at);
+        const ageMin = (Date.now() - lastSync.getTime()) / 60000;
+        check(
+          'DB recency: gmail_connections.last_synced_at is < 30 min old',
+          ageMin < 30,
+          `last_synced_at=${lastSync.toISOString()}, ageMin=${ageMin.toFixed(2)}`
+        );
+        // The rendered label minutes should not lie about reality by more
+        // than a few minutes. The user's bug was "3 hours displayed" with
+        // the DB at <1 min. This assertion catches that exact failure mode.
+        if (Number.isFinite(afterMin)) {
+          const skewMin = Math.abs(afterMin - ageMin);
+          check(
+            'DB vs UI: rendered label is within ±5 min of true last_synced_at',
+            skewMin <= 5,
+            `renderedMin=${afterMin}, dbAgeMin=${ageMin.toFixed(2)}, skew=${skewMin.toFixed(2)}`
+          );
+        }
+      }
+    } catch (e) {
+      check('DB recency: query succeeded', false, `error=${e.message}`);
+    } finally {
+      await pool.end();
+    }
+  } else {
+    console.log('[SKIP] DB recency assertion (DATABASE_URL not set)');
+  }
 
   // ---------------- My Profile page ----------------
   await page.goto(BASE + '/settings/my-profile', { waitUntil: 'networkidle' });
