@@ -127,6 +127,7 @@ import { calculateHealthMetrics, analyzeHealthStatus, getDefaultHealthSettings, 
 import { emitTrigger } from "./workflow-engine";
 import { generateDescription, mapPriority } from "./description-template-engine";
 import { evaluateAssignmentRules, generateConditionSummary } from "./assignment-rule-engine";
+import { noStore } from "./middleware/noStore";
 import { 
   requireAuth, 
   requirePermission,
@@ -18230,17 +18231,17 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   //
   // This endpoint powers a *live status* card. It must never be served from a
   // browser/proxy cache, otherwise the user can see "last synced 3 hours ago"
-  // long after the underlying data has updated. We:
-  //   1. Set Cache-Control: no-store so the browser never stores the response
-  //      (which also prevents If-None-Match from being sent on the next poll,
-  //      so the server can never return a stale 304 body for this endpoint).
-  //   2. Include `serverNow` in the response so the frontend can render the
-  //      relative-time label against the *server's* clock rather than the
-  //      browser's, eliminating client-clock-skew as a source of wrong "X ago".
+  // long after the underlying data has updated. The `noStore` middleware
+  // sets `Cache-Control: no-store` AND strips the auto-generated ETag so a
+  // conditional 304-with-stale-body cannot occur. We also return `serverNow`
+  // so the frontend can render the relative-time label against the server's
+  // clock rather than the browser's, eliminating client-clock-skew as a
+  // source of wrong "X ago" values.
   app.get(
     "/api/settings/email-logging/connections",
     requireAuth(),
     requireGranularPermission("settings.email_logging.view"),
+    noStore,
     async (_req, res) => {
       try {
         const rows = await db.execute(sql`
@@ -18258,7 +18259,6 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           LEFT JOIN staff s ON s.id = gc.user_id
           ORDER BY gc.created_at DESC
         `);
-        res.set("Cache-Control", "no-store, no-cache, must-revalidate");
         res.json({
           connections: (rows as any).rows ?? rows,
           serverNow: new Date().toISOString(),

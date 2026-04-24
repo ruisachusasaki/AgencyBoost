@@ -10,6 +10,7 @@ import { gmailConnections, gmailSyncState } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { EncryptionService } from './encryption';
 import { createGmailOAuth2Client, GMAIL_SCOPES } from './gmailUtils';
+import { noStore } from './middleware/noStore';
 
 const router = Router();
 
@@ -174,7 +175,14 @@ router.post('/disconnect', async (req: Request, res: Response) => {
 });
 
 // 4. Per-user connection status (used by frontend integration card).
-router.get('/status', async (req: Request, res: Response) => {
+//
+// This is a *live status* endpoint: the frontend renders "last synced X ago"
+// from the response body, so a stale cached response would silently lie to
+// the user. The `noStore` middleware sets `Cache-Control: no-store` AND
+// strips the auto-generated ETag so neither the browser nor any intermediary
+// cache can return a stale body (with `no-store`, the browser will not even
+// send `If-None-Match` on the next poll).
+router.get('/status', noStore, async (req: Request, res: Response) => {
   const userId = getUserId(req);
   if (!userId) return res.status(401).json({ error: 'Not authenticated' });
 
@@ -184,9 +192,8 @@ router.get('/status', async (req: Request, res: Response) => {
     });
 
     if (!connection) {
-      // Apply the same no-store + serverNow contract on the disconnected
-      // branch so the frontend gets a consistent shape regardless of state.
-      res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      // Include serverNow on the disconnected branch too so the frontend
+      // gets a consistent response shape regardless of state.
       return res.json({ connected: false, serverNow: new Date().toISOString() });
     }
 
@@ -194,12 +201,6 @@ router.get('/status', async (req: Request, res: Response) => {
       where: eq(gmailSyncState.connectionId, connection.id),
     });
 
-    // Live status endpoint: never let a browser/proxy serve a stale cached
-    // body, otherwise the My Profile card can display "last synced 3 hours
-    // ago" long after the underlying sync state has changed. `no-store`
-    // prevents the browser from even storing the response, which means no
-    // If-None-Match round-trip and no risk of a stale 304.
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.json({
       connected: true,
       email: connection.email,
