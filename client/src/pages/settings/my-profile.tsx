@@ -1292,7 +1292,7 @@ function GmailConnectionCard() {
     // stale for hours when the tab sits idle or in the background. Override
     // per-query so the card always reflects reality on view.
     refetchIntervalInBackground: true,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: "always",
     refetchOnMount: "always",
   });
 

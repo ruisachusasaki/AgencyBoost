@@ -86,7 +86,7 @@ export default function EmailLoggingSettings() {
     // the user keeps the tab open in the background or returns to a long-idle
     // tab. Override per-query so this card always reflects reality on view.
     refetchIntervalInBackground: true,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: "always",
     refetchOnMount: "always",
   });
 
