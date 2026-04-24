@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -80,7 +80,25 @@ export default function EmailLoggingSettings() {
       q.state.data?.connections?.some((c) => c.syncStatus === "in_progress")
         ? 5_000
         : 30_000,
+    // This card is a live status indicator: the global queryClient defaults
+    // (staleTime: Infinity, refetchOnWindowFocus: false, polling paused in
+    // background tabs) would let "last synced X ago" go stale for hours when
+    // the user keeps the tab open in the background or returns to a long-idle
+    // tab. Override per-query so this card always reflects reality on view.
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
   });
+
+  // The "last synced X ago" strings below are computed inline from the cached
+  // lastSyncedAt timestamp, so without a periodic re-render they would freeze
+  // between react-query refetches (or when refetches return identical JSON).
+  // A 30-second tick keeps the relative-time labels honest in real time.
+  const [, setNowTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setNowTick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   const [newDomain, setNewDomain] = useState("");
   const [newDomainRuleType, setNewDomainRuleType] = useState<"include" | "exclude">("exclude");
@@ -390,7 +408,7 @@ export default function EmailLoggingSettings() {
                             Lifetime: {(c.emailsLogged ?? 0).toLocaleString()} logged /{" "}
                             {(c.emailsScanned ?? 0).toLocaleString()} scanned
                             {c.lastSyncedAt && (
-                              <> · last completed {formatDistanceToNow(new Date(c.lastSyncedAt))} ago</>
+                              <> · last completed {formatDistanceToNow(new Date(c.lastSyncedAt), { addSuffix: true })}</>
                             )}
                           </div>
                         </>
@@ -399,7 +417,7 @@ export default function EmailLoggingSettings() {
                           {c.firstName} {c.lastName} ·{" "}
                           {(c.emailsLogged ?? 0).toLocaleString()} logged /{" "}
                           {(c.emailsScanned ?? 0).toLocaleString()} scanned
-                          {c.lastSyncedAt && ` · last synced ${formatDistanceToNow(new Date(c.lastSyncedAt))} ago`}
+                          {c.lastSyncedAt && ` · last synced ${formatDistanceToNow(new Date(c.lastSyncedAt), { addSuffix: true })}`}
                         </div>
                       )}
                       {c.lastSyncError && !inProgress && (

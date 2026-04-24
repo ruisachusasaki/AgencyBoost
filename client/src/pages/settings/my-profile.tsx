@@ -1286,6 +1286,14 @@ function GmailConnectionCard() {
     // without manually refreshing. Falls back to 30s when idle to be polite.
     refetchInterval: (q) =>
       q.state.data?.syncStatus === "in_progress" ? 5_000 : 30_000,
+    // This card is a live status indicator: the global queryClient defaults
+    // (staleTime: Infinity, refetchOnWindowFocus: false, polling paused in
+    // background tabs) would let the displayed "last synced" timestamp go
+    // stale for hours when the tab sits idle or in the background. Override
+    // per-query so the card always reflects reality on view.
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
   });
 
   // Surface ?gmail=connected and ?gmail=error from the OAuth callback
