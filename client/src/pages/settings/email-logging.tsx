@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -11,8 +11,8 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useHasPermission } from "@/hooks/use-has-permission";
-import { Mail, Plus, Trash2, RefreshCcw, AlertCircle, CheckCircle2, Clock } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Mail, Plus, Trash2, RefreshCcw, AlertCircle, CheckCircle2, Clock, RotateCw } from "lucide-react";
+import { formatDistance } from "date-fns";
 
 interface EmailLoggingSettings {
   id: string;
@@ -72,7 +72,14 @@ export default function EmailLoggingSettings() {
     queryKey: ["/api/settings/email-logging"],
   });
 
-  const { data: connData } = useQuery<{ connections: ConnectionStatus[] }>({
+  const { data: connData, isFetching: isConnFetching } = useQuery<{
+    connections: ConnectionStatus[];
+    // Server's wall-clock at the moment this response was generated. Used as
+    // the reference time for the "last synced X ago" label so the displayed
+    // value is correct even if the user's machine clock is wrong (or running
+    // in a different timezone than the server).
+    serverNow: string;
+  }>({
     queryKey: ["/api/settings/email-logging/connections"],
     // Poll faster when at least one mailbox is mid-sync so admins see live
     // progress tick up; slower otherwise to keep the page light.
@@ -94,11 +101,38 @@ export default function EmailLoggingSettings() {
   // lastSyncedAt timestamp, so without a periodic re-render they would freeze
   // between react-query refetches (or when refetches return identical JSON).
   // A 30-second tick keeps the relative-time labels honest in real time.
-  const [, setNowTick] = useState(0);
+  const [nowTick, setNowTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setNowTick((n) => n + 1), 30_000);
     return () => clearInterval(id);
   }, []);
+
+  // Reference time for "last synced X ago": prefer the server's clock from
+  // the latest API response, then advance it forward by the milliseconds
+  // elapsed since we received it. We use `performance.now()` for the elapsed
+  // *delta* because it is monotonic — unlike Date.now(), it cannot jump
+  // forward or backward if the OS clock is corrected by NTP or changed by
+  // the user. This makes the displayed value insensitive to both initial
+  // clock skew (handled by the server anchor) and runtime clock tampering.
+  const serverNowAnchor = useMemo(() => {
+    if (!connData?.serverNow) return null;
+    return {
+      server: new Date(connData.serverNow).getTime(),
+      perf: performance.now(),
+    };
+    // Re-anchor whenever the server clock value changes (i.e. a new fetch).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connData?.serverNow]);
+  const referenceNow = useMemo(() => {
+    // nowTick is included so this recomputes every 30s tick.
+    void nowTick;
+    if (!serverNowAnchor) return new Date();
+    return new Date(serverNowAnchor.server + (performance.now() - serverNowAnchor.perf));
+  }, [serverNowAnchor, nowTick]);
+
+  const handleRefreshConnections = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/settings/email-logging/connections"] });
+  };
 
   const [newDomain, setNewDomain] = useState("");
   const [newDomainRuleType, setNewDomainRuleType] = useState<"include" | "exclude">("exclude");
@@ -369,10 +403,29 @@ export default function EmailLoggingSettings() {
       {/* Connections overview */}
       <Card>
         <CardHeader>
-          <CardTitle>Connected mailboxes</CardTitle>
-          <CardDescription>
-            Each staff member can connect their own Gmail from My Profile. Sync runs every 2 minutes in the background.
-          </CardDescription>
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <CardTitle>Connected mailboxes</CardTitle>
+              <CardDescription>
+                Each staff member can connect their own Gmail from My Profile. Sync runs every 2 minutes in the background.
+              </CardDescription>
+            </div>
+            {/* Self-service escape hatch: if the displayed timestamps ever
+                look stale (e.g. user just returned from a long-idle tab and
+                doesn't want to wait for the next 30s poll), they can force an
+                immediate refetch without reloading the whole page. */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRefreshConnections}
+              disabled={isConnFetching}
+              data-testid="refresh-connections"
+              title="Refresh connection status now"
+            >
+              <RotateCw className={`h-4 w-4 ${isConnFetching ? "animate-spin" : ""}`} />
+              <span className="ml-1.5 hidden sm:inline">Refresh</span>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {(connData?.connections || []).length === 0 ? (
@@ -381,6 +434,11 @@ export default function EmailLoggingSettings() {
             <div className="space-y-3">
               {(connData?.connections || []).map((c) => {
                 const inProgress = c.syncStatus === "in_progress";
+                // Render the relative-time label against `referenceNow`
+                // (server-anchored), not against the raw browser clock.
+                const lastSyncedRelative = c.lastSyncedAt
+                  ? formatDistance(new Date(c.lastSyncedAt), referenceNow, { addSuffix: true })
+                  : null;
                 return (
                   <div key={c.id} className="flex items-center justify-between p-3 border rounded" data-testid={`connection-${c.id}`}>
                     <div>
@@ -407,8 +465,11 @@ export default function EmailLoggingSettings() {
                           <div className="text-xs text-gray-500">
                             Lifetime: {(c.emailsLogged ?? 0).toLocaleString()} logged /{" "}
                             {(c.emailsScanned ?? 0).toLocaleString()} scanned
-                            {c.lastSyncedAt && (
-                              <> · last completed {formatDistanceToNow(new Date(c.lastSyncedAt), { addSuffix: true })}</>
+                            {lastSyncedRelative && (
+                              <>
+                                {" · last completed "}
+                                <span data-testid={`connection-${c.id}-last-synced`}>{lastSyncedRelative}</span>
+                              </>
                             )}
                           </div>
                         </>
@@ -417,7 +478,12 @@ export default function EmailLoggingSettings() {
                           {c.firstName} {c.lastName} ·{" "}
                           {(c.emailsLogged ?? 0).toLocaleString()} logged /{" "}
                           {(c.emailsScanned ?? 0).toLocaleString()} scanned
-                          {c.lastSyncedAt && ` · last synced ${formatDistanceToNow(new Date(c.lastSyncedAt), { addSuffix: true })}`}
+                          {lastSyncedRelative && (
+                            <>
+                              {" · last synced "}
+                              <span data-testid={`connection-${c.id}-last-synced`}>{lastSyncedRelative}</span>
+                            </>
+                          )}
                         </div>
                       )}
                       {c.lastSyncError && !inProgress && (

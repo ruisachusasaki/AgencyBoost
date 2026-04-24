@@ -184,13 +184,22 @@ router.get('/status', async (req: Request, res: Response) => {
     });
 
     if (!connection) {
-      return res.json({ connected: false });
+      // Apply the same no-store + serverNow contract on the disconnected
+      // branch so the frontend gets a consistent shape regardless of state.
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      return res.json({ connected: false, serverNow: new Date().toISOString() });
     }
 
     const state = await db.query.gmailSyncState.findFirst({
       where: eq(gmailSyncState.connectionId, connection.id),
     });
 
+    // Live status endpoint: never let a browser/proxy serve a stale cached
+    // body, otherwise the My Profile card can display "last synced 3 hours
+    // ago" long after the underlying sync state has changed. `no-store`
+    // prevents the browser from even storing the response, which means no
+    // If-None-Match round-trip and no risk of a stale 304.
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.json({
       connected: true,
       email: connection.email,
@@ -207,6 +216,10 @@ router.get('/status', async (req: Request, res: Response) => {
       currentRunScanned: state?.currentRunScanned ?? 0,
       currentRunLogged: state?.currentRunLogged ?? 0,
       lastSyncStarted: state?.lastSyncStarted ?? null,
+      // Server's current clock so the frontend can render the "last synced X
+      // ago" label against trusted server time, not the user's possibly-skewed
+      // browser clock.
+      serverNow: new Date().toISOString(),
     });
   } catch (error) {
     console.error('[Gmail OAuth] Status error:', error);

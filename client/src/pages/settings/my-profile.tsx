@@ -1,14 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { User, Upload, Camera, Eye, EyeOff, ArrowLeft, Calendar, CalendarIcon, MapPin, Bell, Settings, UserCheck, Mail, Trash2, RefreshCcw } from "lucide-react";
+import { User, Upload, Camera, Eye, EyeOff, ArrowLeft, Calendar, CalendarIcon, MapPin, Bell, Settings, UserCheck, Mail, Trash2, RefreshCcw, RotateCw } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format, formatDistanceToNow, parseISO } from "date-fns";
+import { format, formatDistance, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 import { ObjectUploader } from "@/components/ObjectUploader";
@@ -1279,8 +1279,13 @@ function GmailConnectionCard() {
     currentRunScanned?: number;
     currentRunLogged?: number;
     lastSyncStarted?: string | null;
+    // Server's wall-clock at the moment this response was generated. Used as
+    // the reference time for the "last synced X ago" label so the displayed
+    // value is correct even if the user's machine clock is wrong (or running
+    // in a different timezone than the server).
+    serverNow?: string;
   };
-  const { data: status, isLoading } = useQuery<GmailStatus>({
+  const { data: status, isLoading, isFetching: isStatusFetching } = useQuery<GmailStatus>({
     queryKey: ["/api/gmail/status"],
     // Poll faster while a sync is actively running so users see live progress
     // without manually refreshing. Falls back to 30s when idle to be polite.
@@ -1300,11 +1305,38 @@ function GmailConnectionCard() {
   // lastSyncedAt timestamp, so without a periodic re-render it would freeze
   // between react-query refetches (or when refetches return identical JSON).
   // A 30-second tick keeps the relative-time label honest in real time.
-  const [, setNowTick] = useState(0);
+  const [nowTick, setNowTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setNowTick((n) => n + 1), 30_000);
     return () => clearInterval(id);
   }, []);
+
+  // Reference time for "last synced X ago": prefer the server's clock from
+  // the latest API response, then advance it forward by the milliseconds
+  // elapsed since we received it. We use `performance.now()` for the elapsed
+  // *delta* because it is monotonic — unlike Date.now(), it cannot jump
+  // forward or backward if the OS clock is corrected by NTP or changed by
+  // the user. This makes the displayed value insensitive to both initial
+  // clock skew (handled by the server anchor) and runtime clock tampering.
+  const serverNowAnchor = useMemo(() => {
+    if (!status?.serverNow) return null;
+    return {
+      server: new Date(status.serverNow).getTime(),
+      perf: performance.now(),
+    };
+    // Re-anchor whenever the server clock value changes (i.e. a new fetch).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status?.serverNow]);
+  const referenceNow = useMemo(() => {
+    // nowTick is included so this recomputes every 30s tick.
+    void nowTick;
+    if (!serverNowAnchor) return new Date();
+    return new Date(serverNowAnchor.server + (performance.now() - serverNowAnchor.perf));
+  }, [serverNowAnchor, nowTick]);
+
+  const handleRefreshGmailStatus = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/gmail/status"] });
+  };
 
   // Surface ?gmail=connected and ?gmail=error from the OAuth callback
   useEffect(() => {
@@ -1420,7 +1452,10 @@ function GmailConnectionCard() {
                     </p>
                     {status.lastSyncedAt && (
                       <p className="text-xs text-muted-foreground">
-                        Last synced {formatDistanceToNow(new Date(status.lastSyncedAt), { addSuffix: true })}
+                        Last synced{" "}
+                        <span data-testid="gmail-last-synced">
+                          {formatDistance(new Date(status.lastSyncedAt), referenceNow, { addSuffix: true })}
+                        </span>
                       </p>
                     )}
                   </>
@@ -1455,6 +1490,20 @@ function GmailConnectionCard() {
                 data-testid="button-gmail-sync-now"
               >
                 Sync now
+              </Button>
+              {/* Self-service escape hatch: if "Last synced" looks stale, the
+                  user can force an immediate refetch of the status without
+                  triggering a full Gmail sync (which is heavier and may be
+                  rate-limited). */}
+              <Button
+                variant="ghost"
+                onClick={handleRefreshGmailStatus}
+                disabled={isStatusFetching}
+                data-testid="button-gmail-refresh-status"
+                title="Refresh status now"
+              >
+                <RotateCw className={`w-4 h-4 ${isStatusFetching ? "animate-spin" : ""}`} />
+                <span className="ml-1.5">Refresh</span>
               </Button>
               <Button
                 variant="destructive"

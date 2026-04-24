@@ -18226,7 +18226,17 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   );
 
-  // GET sync status across all connected mailboxes (admin overview)
+  // GET sync status across all connected mailboxes (admin overview).
+  //
+  // This endpoint powers a *live status* card. It must never be served from a
+  // browser/proxy cache, otherwise the user can see "last synced 3 hours ago"
+  // long after the underlying data has updated. We:
+  //   1. Set Cache-Control: no-store so the browser never stores the response
+  //      (which also prevents If-None-Match from being sent on the next poll,
+  //      so the server can never return a stale 304 body for this endpoint).
+  //   2. Include `serverNow` in the response so the frontend can render the
+  //      relative-time label against the *server's* clock rather than the
+  //      browser's, eliminating client-clock-skew as a source of wrong "X ago".
   app.get(
     "/api/settings/email-logging/connections",
     requireAuth(),
@@ -18248,7 +18258,11 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           LEFT JOIN staff s ON s.id = gc.user_id
           ORDER BY gc.created_at DESC
         `);
-        res.json({ connections: (rows as any).rows ?? rows });
+        res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+        res.json({
+          connections: (rows as any).rows ?? rows,
+          serverNow: new Date().toISOString(),
+        });
       } catch (error) {
         console.error("Error fetching gmail connections overview:", error);
         res.status(500).json({ message: "Failed to fetch connections" });
