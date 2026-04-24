@@ -1246,8 +1246,8 @@ function GmailConnectionCard() {
         const text = await res.text().catch(() => "");
         throw new Error(text || `Server returned ${res.status}`);
       }
-      const data = await res.json();
-      if (!data?.authUrl) {
+      const data = (await res.json()) as { authUrl?: string };
+      if (!data.authUrl) {
         throw new Error("Server did not return an authorization URL.");
       }
       // Redirect the browser to Google's consent screen. We do this *after*
@@ -1255,11 +1255,12 @@ function GmailConnectionCard() {
       // the request (the /auth endpoint stores it in req.session before
       // returning the URL).
       window.location.href = data.authUrl;
-    } catch (e: any) {
+    } catch (e: unknown) {
       setIsConnecting(false);
+      const description = e instanceof Error ? e.message : "Please try again.";
       toast({
         title: "Couldn't start Gmail connection",
-        description: e?.message || "Please try again.",
+        description,
         variant: "destructive",
       });
     }
