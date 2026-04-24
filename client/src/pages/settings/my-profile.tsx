@@ -1266,7 +1266,7 @@ function GmailConnectionCard() {
     }
   };
 
-  const { data: status, isLoading } = useQuery<{
+  type GmailStatus = {
     connected: boolean;
     email?: string;
     syncEnabled?: boolean;
@@ -1279,12 +1279,13 @@ function GmailConnectionCard() {
     currentRunScanned?: number;
     currentRunLogged?: number;
     lastSyncStarted?: string | null;
-  }>({
+  };
+  const { data: status, isLoading } = useQuery<GmailStatus>({
     queryKey: ["/api/gmail/status"],
     // Poll faster while a sync is actively running so users see live progress
     // without manually refreshing. Falls back to 30s when idle to be polite.
     refetchInterval: (q) =>
-      (q.state.data as any)?.syncStatus === "in_progress" ? 5_000 : 30_000,
+      q.state.data?.syncStatus === "in_progress" ? 5_000 : 30_000,
   });
 
   // Surface ?gmail=connected and ?gmail=error from the OAuth callback

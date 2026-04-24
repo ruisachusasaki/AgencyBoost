@@ -76,10 +76,10 @@ export default function EmailLoggingSettings() {
     queryKey: ["/api/settings/email-logging/connections"],
     // Poll faster when at least one mailbox is mid-sync so admins see live
     // progress tick up; slower otherwise to keep the page light.
-    refetchInterval: (q) => {
-      const conns = (q.state.data as any)?.connections as ConnectionStatus[] | undefined;
-      return conns?.some((c) => c.syncStatus === "in_progress") ? 5_000 : 30_000;
-    },
+    refetchInterval: (q) =>
+      q.state.data?.connections?.some((c) => c.syncStatus === "in_progress")
+        ? 5_000
+        : 30_000,
   });
 
   const [newDomain, setNewDomain] = useState("");
