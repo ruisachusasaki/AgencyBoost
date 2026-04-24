@@ -34,22 +34,49 @@ import { classifyAndMatch, type ClientLite, type ContactLite } from './gmailMatc
 
 const SYNC_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 const STARTUP_DELAY_MS = 15_000; // 15s to let server warm up
-// Wall-clock safety net per connection. Long enough that a healthy initial
-// 90-day backfill of a large mailbox (10k+ messages at ~10-15s/page of 100)
-// will finish well before the timer fires, but short enough that a truly hung
-// Gmail API call cannot trap the cycle forever — the next 2-minute tick will
-// recover and try again.
-const PER_CONNECTION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Wall-clock safety net per connection. Long enough that a healthy initial
+ * 90-day backfill of a large mailbox (10k+ messages at ~10-15s/page of 100)
+ * will finish well before the timer fires, but short enough that a truly hung
+ * Gmail API call cannot trap a mailbox forever — once this elapses the
+ * per-connection lock is treated as stale and a new attempt is allowed in.
+ *
+ * Configurable via env (GMAIL_SYNC_PER_CONNECTION_TIMEOUT_MS, in ms). Default
+ * 30 minutes. The default is intentionally higher than the original 5-minute
+ * proposal because empirical observation showed real backfills run at
+ * ~10-15s/page-of-100 — a 5-minute cap would routinely kill in-flight healthy
+ * syncs of mid-size mailboxes (>2-3k messages) and force them to start over.
+ */
+const PER_CONNECTION_TIMEOUT_MS = (() => {
+  const raw = process.env.GMAIL_SYNC_PER_CONNECTION_TIMEOUT_MS;
+  const parsed = raw ? Number.parseInt(raw, 10) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 30 * 60 * 1000;
+})();
 
 let syncIntervalId: NodeJS.Timeout | null = null;
 let isRunning = false;
 
-// Per-connection lock: prevents the manual `/sync-now` route and the automatic
-// cycle (or two manual clicks) from spawning concurrent initial syncs against
-// the same Gmail mailbox. The previous behaviour allowed Gmail's API to be
-// hammered by 2-3 parallel passes, which routinely caused one of them to hang
-// and trapped the cycle's `isRunning` flag forever.
-const runningConnections = new Set<string>();
+/**
+ * Per-connection lock with stale-recovery semantics.
+ *
+ * Each in-flight syncUserGmail call stores `{ token, acquiredAt }`. New
+ * attempts:
+ *   - reject with GmailSyncAlreadyRunningError when a fresh holder exists
+ *     (`Date.now() - acquiredAt < PER_CONNECTION_TIMEOUT_MS`), AND
+ *   - force-reclaim the slot when the holder is older than the timeout — at
+ *     that point the previous promise is treated as a zombie (the wrapping
+ *     `withTimeout` in runSyncCycle has already given up on it).
+ *
+ * Each attempt's `finally` clears the entry only if it still owns it (token
+ * comparison), so a zombie that finally resolves after a new attempt has taken
+ * over does NOT clobber the new attempt's lock.
+ *
+ * This is the recovery mechanism that lets a mailbox self-heal on the very
+ * next 2-minute cycle even if a Gmail API call hangs without ever settling.
+ */
+type LockEntry = { token: symbol; acquiredAt: number };
+const runningConnections = new Map<string, LockEntry>();
 
 export class GmailSyncAlreadyRunningError extends Error {
   constructor(connectionId: string) {
@@ -59,7 +86,11 @@ export class GmailSyncAlreadyRunningError extends Error {
 }
 
 export function isConnectionSyncing(connectionId: string): boolean {
-  return runningConnections.has(connectionId);
+  const entry = runningConnections.get(connectionId);
+  if (!entry) return false;
+  // Treat stale entries as not-syncing so /sync-now can try again instead of
+  // rejecting with a misleading 409 against a zombie holder.
+  return Date.now() - entry.acquiredAt < PER_CONNECTION_TIMEOUT_MS;
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
@@ -161,10 +192,21 @@ export async function syncUserGmail(connectionId: string): Promise<{
 }> {
   // Per-connection lock acquisition. Runs synchronously inside this async
   // function before any await, so two simultaneous calls cannot both pass.
-  if (runningConnections.has(connectionId)) {
+  // A stale entry (older than the per-connection timeout) is treated as a
+  // zombie and force-reclaimed — that is what lets a hung Gmail call's
+  // mailbox self-heal on the next cycle without a process restart.
+  const existing = runningConnections.get(connectionId);
+  if (existing && Date.now() - existing.acquiredAt < PER_CONNECTION_TIMEOUT_MS) {
     throw new GmailSyncAlreadyRunningError(connectionId);
   }
-  runningConnections.add(connectionId);
+  if (existing) {
+    console.warn(
+      `[GmailSync] Reclaiming stale lock for connection ${connectionId} ` +
+        `(held for ${Math.round((Date.now() - existing.acquiredAt) / 1000)}s)`,
+    );
+  }
+  const myToken: symbol = Symbol(`gmail-sync-${connectionId}`);
+  runningConnections.set(connectionId, { token: myToken, acquiredAt: Date.now() });
 
   try {
     const conn = await db.query.gmailConnections.findFirst({
@@ -212,7 +254,13 @@ export async function syncUserGmail(connectionId: string): Promise<{
       throw err;
     }
   } finally {
-    runningConnections.delete(connectionId);
+    // Token-verified release: only clear the entry if it still belongs to us.
+    // If a stale-lock reclaim happened while we were running, a newer attempt
+    // now owns the slot and must not be evicted by our late-arriving cleanup.
+    const current = runningConnections.get(connectionId);
+    if (current && current.token === myToken) {
+      runningConnections.delete(connectionId);
+    }
   }
 }
 
