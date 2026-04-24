@@ -222,20 +222,23 @@ router.post('/sync-now', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'No Gmail connection found' });
     }
 
-    const { syncUserGmail, isConnectionSyncing, GmailSyncAlreadyRunningError } = await import('./gmailBackgroundSync');
+    const { tryStartGmailSync } = await import('./gmailBackgroundSync');
 
-    if (isConnectionSyncing(connection.id)) {
+    // Atomic acquire-or-409. tryStartGmailSync's lock check + acquire run
+    // synchronously before any await, so two simultaneous requests cannot
+    // both receive a non-null promise — the second one is guaranteed to
+    // get the 409 response below.
+    const syncPromise = tryStartGmailSync(connection.id);
+    if (!syncPromise) {
       return res.status(409).json({
         ok: false,
         message: 'Sync already in progress. Please wait for it to finish.',
       });
     }
 
-    syncUserGmail(connection.id).catch(err => {
-      // The pre-check above narrows the race window, but two simultaneous
-      // requests can still both pass it. Swallow the AlreadyRunningError that
-      // the lock raises in that case so we don't pollute the error log.
-      if (err instanceof GmailSyncAlreadyRunningError) return;
+    // Fire-and-forget the actual work; the lock is already held by us at
+    // this point, so any rejection here is a real sync error worth logging.
+    syncPromise.catch(err => {
       console.error('[Gmail OAuth] Manual sync error:', err);
     });
 

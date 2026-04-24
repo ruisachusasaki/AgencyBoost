@@ -1316,10 +1316,10 @@ function GmailConnectionCard() {
     },
     onError: (e: unknown) => {
       const msg = e instanceof Error ? e.message : "Please try again.";
-      // The backend returns HTTP 409 when a sync is already mid-flight. Prefer
-      // matching on the status (attached by apiRequest) so this stays correct
-      // even if the message copy changes; fall back to a regex on the message
-      // for older error shapes.
+      // The backend returns HTTP 409 deterministically when a sync is already
+      // mid-flight (atomic lock-or-409 in /api/gmail/sync-now). Prefer the
+      // status check (attached by apiRequest) so wording changes don't break
+      // this; the regex is a defensive fallback only.
       const status = (e as { status?: number } | null)?.status;
       const isAlreadyRunning = status === 409 || /already in progress/i.test(msg);
       if (isAlreadyRunning) {

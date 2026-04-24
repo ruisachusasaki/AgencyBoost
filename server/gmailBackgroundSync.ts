@@ -93,6 +93,32 @@ export function isConnectionSyncing(connectionId: string): boolean {
   return Date.now() - entry.acquiredAt < PER_CONNECTION_TIMEOUT_MS;
 }
 
+/**
+ * Atomic "lock-or-409" entry point for the manual /sync-now route.
+ *
+ * Returns the in-flight sync promise if the lock was acquired; returns
+ * null if a fresh holder already owns it (i.e. caller should respond 409).
+ *
+ * Acquisition is synchronous (runs before any await), so two simultaneous
+ * callers cannot both receive a non-null result — closing the race that the
+ * old "isConnectionSyncing then fire-and-forget syncUserGmail" pattern had
+ * (where both callers could pass the pre-check and one would later be
+ * silently rejected with AlreadyRunningError).
+ */
+export function tryStartGmailSync(
+  connectionId: string,
+): Promise<{ scanned: number; logged: number }> | null {
+  const existing = runningConnections.get(connectionId);
+  if (existing && Date.now() - existing.acquiredAt < PER_CONNECTION_TIMEOUT_MS) {
+    return null;
+  }
+  // syncUserGmail performs its own atomic acquire (handling stale-reclaim
+  // and token-verified release), so we just delegate. Because no await runs
+  // between our check above and syncUserGmail's check below, this remains
+  // race-free in Node's single-threaded model.
+  return syncUserGmail(connectionId);
+}
+
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
   const timeout = new Promise<never>((_, reject) => {
