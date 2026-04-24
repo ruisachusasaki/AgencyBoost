@@ -1236,6 +1236,34 @@ export default function MyProfile() {
 function GmailConnectionCard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  const startGmailConnect = async () => {
+    setIsConnecting(true);
+    try {
+      const res = await fetch("/api/gmail/auth", { credentials: "include" });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `Server returned ${res.status}`);
+      }
+      const data = await res.json();
+      if (!data?.authUrl) {
+        throw new Error("Server did not return an authorization URL.");
+      }
+      // Redirect the browser to Google's consent screen. We do this *after*
+      // the fetch so the OAuth nonce stays in the same session that initiated
+      // the request (the /auth endpoint stores it in req.session before
+      // returning the URL).
+      window.location.href = data.authUrl;
+    } catch (e: any) {
+      setIsConnecting(false);
+      toast({
+        title: "Couldn't start Gmail connection",
+        description: e?.message || "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const { data: status, isLoading } = useQuery<{
     connected: boolean;
@@ -1353,12 +1381,12 @@ function GmailConnectionCard() {
         ) : (
           <Button
             type="button"
-            onClick={() => {
-              window.location.href = "/api/gmail/auth";
-            }}
+            onClick={startGmailConnect}
+            disabled={isConnecting}
             data-testid="button-gmail-connect"
           >
-            <Mail className="w-4 h-4 mr-2" /> Connect Gmail
+            <Mail className="w-4 h-4 mr-2" />
+            {isConnecting ? "Redirecting to Google…" : "Connect Gmail"}
           </Button>
         )}
       </CardContent>
