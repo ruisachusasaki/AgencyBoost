@@ -2,154 +2,203 @@
 
 ## Goal
 
-Automatically log emails sent to and received from clients inside AgencyBoost, eliminating the manual copy-paste workflow Account Managers use today to record client email history in the Communications / notes area.
+Automatically log emails sent to and received from clients inside AgencyBoost, eliminating the manual copy-paste workflow Account Managers use today to record client email history.
 
-This is the same pattern used by Salesforce Inbox, HubSpot Sales Hub, Close, and Front. Treat those as design references for user experience.
+Design references: Salesforce Inbox, HubSpot Sales Hub, Close, Front.
 
 ## Context
 
-**Origin of this work.** Joe Hupp asked about the best approach for logging client emails sent from Gmail. Replit's agent suggested three established patterns:
+**Origin.** Joe Hupp asked about the best approach for logging client emails sent from Gmail. Three options were evaluated: BCC-to-CRM, two-way Gmail sync, and Chrome extension. We chose two-way Gmail sync (option 2) directly rather than shipping BCC first, because option 1 only captures outbound emails and Joe confirmed inbound client replies are just as important — AMs are manually logging both sides into client notes today.
 
-1. **BCC-to-CRM** — unique secret BCC address per user. Cheap, fast, but only captures outbound and relies on users remembering to BCC.
-2. **Two-way Google Workspace sync** — OAuth connection, background sync of inbound and outbound. Complete solution. What premium CRMs do.
-3. **Gmail Chrome extension / add-on** — per-thread button. Requires extension maintenance and user discipline.
+**Priority.** Highest — replaces an active manual workflow that's consuming AM time and producing incomplete client history.
 
-**Decision.** After discussion, we decided to go directly with option 2 (Gmail sync) rather than ship option 1 first. Reasoning:
+**Not in scope (yet).** Google CASA Tier 2 verification. Users will see the "unverified app" warning; acceptable for internal MediaOptimizers use. Pursue CASA later if we open Gmail connection to external agency clients.
 
-- Joe confirmed priority is **internal use** — AMs are currently manually logging emails into client notes, which is tedious and unreliable.
-- Option 1 (BCC) only captures outbound emails. In typical CRM usage, inbound client replies usually outnumber outbound, so Phase 1 would only solve a fraction of the real pain.
-- We have time and are not in a rush, so going straight to the real solution avoids double work.
-- Google OAuth is already wired up in AgencyBoost for Google Calendar, so the auth foundation partially exists.
-
-**Priority level.** Highest priority, per Joe's confirmation that AMs are actively manually logging emails today.
-
-**Not yet in scope.** Google restricted-scope verification (CASA Tier 2) is not being pursued in this iteration. Users will see the "unverified app" warning when connecting Gmail. This is acceptable for internal MediaOptimizers use.
+**Pre-build briefing completed.** Claude Code performed a read-only briefing of the repo on 2026-04-24, documented in `docs/PLANNING_CONTEXT.md` under "Gmail Sync Pre-Build Briefing." Findings integrated below.
 
 ## Affected Files
 
-**To be filled in after Claude Code briefing.** The following questions need answers from Claude Code (which has full repo read access) before we can list specific files:
+### Files to model Gmail integration on (do NOT modify these — they are the templates)
 
-1. Where is the existing Google Calendar OAuth flow implemented?
-2. What is the current shape of the Communications tab on the client profile, and how do SMS and call logs get into it today?
-3. Does the data model support multiple contact persons per client? If yes, how is it structured?
-4. How does the existing role-based access rules system work, and where would a new admin settings page hook into it?
-5. Is there an existing background job / worker system, or would this be the first one?
+- `server/googleCalendarOAuth.ts` — OAuth router pattern (endpoints: `/auth`, `/oauth/callback`, `/disconnect`, `/status`)
+- `server/googleCalendarUtils.ts` — `createOAuth2Client()`, per-user client helpers, token refresh
+- `server/googleCalendarSetup.ts` — router mounting in `server/index.ts`
+- `server/googleCalendarBackgroundSync.ts` — canonical `setInterval` background worker pattern (double-start guard + overlap guard)
 
-Once the briefing is returned, update this section with the concrete file list.
+### New files to create
+
+- `server/gmailOAuth.ts` — mirrors `googleCalendarOAuth.ts` with `gmail.readonly` scope
+- `server/gmailUtils.ts` — mirrors `googleCalendarUtils.ts` for Gmail client construction
+- `server/gmailSetup.ts` — mirrors `googleCalendarSetup.ts`, mounts router at `/api/gmail`
+- `server/gmailBackgroundSync.ts` — mirrors `googleCalendarBackgroundSync.ts`, polls connected Gmail accounts and logs matching emails
+- `server/gmailMatcher.ts` (or equivalent helper) — pure function that takes an email's participants + the configured matching rules and returns matched client IDs
+- `client/src/pages/settings/email-logging.tsx` — admin-only Email Logging Settings page
+- New Connect Gmail section — location to be chosen by Replit (existing integrations page, or new dedicated page)
+- New Emails tab component for the client profile — filename following the existing pattern in `enhanced-client-detail.tsx`
+
+### Files to modify
+
+- `server/index.ts` (around L2666) — register `startGmailBackgroundSync()` in the startup block alongside existing services
+- `server/encryption.ts` — reuse as-is for Gmail token encryption
+- `server/routes.ts` — add Gmail admin settings endpoints gated by the new granular permission
+- `shared/schema.ts` — add tables for Gmail connections, sync state, logged emails, attachment metadata, email logging settings, domain rules, and exclusions. Exact table split to follow existing schema conventions (Replit's call).
+- `shared/permission-templates.ts` — add new granular key `settings.email_logging.manage`
+- `shared/role-templates.ts` — grant the new key to Admin role
+- `client/src/pages/settings.tsx` — add settings grid tile for Email Logging
+- `client/src/App.tsx` — add route for `/settings/email-logging`
+- `client/src/pages/enhanced-client-detail.tsx` — add new Emails tab; existing Communications tab continues to render emails via `audit_logs` entries with no changes needed
+- `client/src/pages/settings/my-profile.tsx` or `integrations.tsx` — add "Connect Gmail" section
+
+### Unchanged but relevant
+
+- `shared/schema.ts:156` — `clientContacts` table (already supports multiple contacts per client — no change needed, just query it for matching)
+- `client/src/components/RequirePermission.tsx` — reuse as-is for access gating
+- `client/src/hooks/use-has-permission.ts` — reuse as-is
 
 ## Proposed Approach
 
+### Data model: hybrid storage
+
+**`logged_emails` table** is the source of truth. Holds full email data: `message_id` (unique), `thread_id`, `from_address`, `to_addresses[]`, `cc_addresses[]`, `subject`, `body_plain`, `body_html`, `direction` (inbound/outbound), `gmail_internal_date`, `gmail_history_id`, `gmail_user_id` (the connected AgencyBoost user whose Gmail this came from), `client_id` (matched client), `created_at`. Attachments metadata in a child table `logged_email_attachments` (filename, size, mime_type, Gmail attachment ID for on-demand fetch).
+
+**Also** write a thin `audit_logs` row per email (matching how SMS/calls do it today) so the existing Communications tab picks up emails automatically with **zero changes** to that tab's code. The `audit_logs` row's `newValues` contains a minimal subset (from, to, subject snippet, direction, link back to the `logged_emails` row).
+
+This hybrid means:
+- Existing Communications tab keeps working exactly as is.
+- The new dedicated Emails tab reads from `logged_emails` for rich data (full body, attachments, thread grouping by Gmail's real `thread_id`).
+- Both views stay in sync by construction since both writes happen during the same sync transaction.
+
+**If an email matches multiple clients:** write one `logged_emails` row per matched client (same Message-ID, different client_id). Unique constraint on `(message_id, client_id)` prevents duplicates.
+
 ### 1. Gmail Connection (per user)
 
-- **Separate "Connect Gmail" button** in User Settings. Not tied to the existing Calendar OAuth connection — deliberately its own flow and its own connection state.
-- Google OAuth requesting `gmail.readonly` scope only (read-only — AgencyBoost never sends or modifies emails).
+- **Separate "Connect Gmail" button** in User Settings (not bundled with Calendar OAuth).
+- Google OAuth requesting only `gmail.readonly` scope.
+- Any user with an AgencyBoost account can connect.
 - Post-connection settings UI shows:
   - Connection status (Connected / Not connected / Error)
   - Connected Gmail address
   - Last sync timestamp
   - "Disconnect Gmail" button
   - "Sync now" manual trigger button
-- Any user with an AgencyBoost account can connect their own Gmail.
-- On token refresh failure or disconnect, user sees a clear "Reconnect Gmail" prompt.
+- Token refresh failures → clear "Reconnect Gmail" prompt + non-intrusive notification.
+- Access gating: server-side `requirePermission('integrations', 'canEdit')`, client-side `<RequirePermission module="integrations">`.
 
 ### 2. Admin-Only Email Logging Settings Page
 
-A new page under the admin area called **"Email Logging Settings"**. Access controlled via the existing access rules framework — do NOT build parallel permission logic.
+- Route: `/settings/email-logging`
+- New granular permission key: `settings.email_logging.manage`
+- Added to `shared/permission-templates.ts` and granted to Admin in `shared/role-templates.ts`
+- Page gated with `<RequirePermission module="settings" permission="settings.email_logging.manage">`
+- All admin write endpoints gated with `requireGranularPermission('settings.email_logging.manage')`
 
-**Matching rules** (checkboxes, can combine):
+**Matching rules** (checkboxes, combinable):
 - Match Client email addresses
 - Match Lead email addresses
-- Match Contact Persons under a client (if data model supports this — to be confirmed via Claude Code briefing)
-- Match custom domains mapped to clients (e.g., map `@acme.com` → Acme Corp, so any email to/from that domain logs under Acme without needing a specific contact record)
+- Match Contact Persons (via `clientContacts` table)
+- Match custom domains mapped to clients (e.g., `@acme.com` → Acme Corp)
 
 **Exclusions:**
-- Exclude internal domain(s) — admin specifies (e.g., don't log emails between MediaOptimizers staff)
-- Exclude specific email addresses — manual blocklist, free-text list (newsletters, vendors, etc.)
+- Internal domain(s) — admin-specified, excludes internal staff-to-staff emails
+- Specific email address blocklist — free-text list
 
 **Direction:**
-- Log outbound emails (sent by connected user)
-- Log inbound emails (received by connected user from a matched contact)
+- Log outbound
+- Log inbound
 
-**Scope of settings:** Global to the AgencyBoost account (not per-user). Per-user overrides are out of scope for v1.
+**Gmail category exclusions:**
+- Exclude Promotions: ON by default
+- Exclude Social: ON by default
+- Exclude Updates: ON by default
+- (Admin can disable any of these)
+
+**Scope:** Global to the AgencyBoost account. No per-user overrides in v1.
 
 **Defaults on first launch:**
 - Match Client + Lead + Contact Persons: ON
 - Custom domains: empty
-- Exclusions: empty (with clear UI copy prompting admins to add their internal domain)
+- Internal domain exclusion: empty (with prominent UI copy prompting admin to fill this in)
+- Address blocklist: empty
 - Both directions: ON
+- Gmail categories Promotions/Social/Updates: excluded
 
 ### 3. Background Sync
 
-- On first connection, pull recent email history (lookback window to be decided — one of the open questions).
-- Match each email's participants (From, To, Cc) against the configured Email Logging Settings.
-- For every matching email, log it against the correct client record.
-- Sync continues automatically in the background — users should not need to manually refresh.
-- **Threading:** Gmail threads must group together in AgencyBoost. Replies belong under their parent thread, not as disconnected entries.
-- **Attachments:** At minimum, show that an attachment exists and its filename. Whether to store the actual file is an open question (storage cost).
-- **Deduplication:** Use Gmail's `Message-ID` header as the unique key. Same email never logs twice, even across multiple syncs.
+- Model directly on `server/googleCalendarBackgroundSync.ts`.
+- Register in `server/index.ts` inside the `runStartupMigrations().then(...)` block alongside existing services.
+- In-process `setInterval`. No Redis, no BullMQ.
+- Per-user loop with 500ms spacing (match Calendar pattern, respect Gmail API rate limits).
+- Persist `history_id` per connection to Gmail sync state for incremental sync.
+- **Initial sync lookback: 90 days** (from first connection timestamp).
+- **Deduplication:** unique constraint on `(message_id, client_id)` in `logged_emails`. Use `INSERT ... ON CONFLICT DO NOTHING`.
+- **Threading:** group by Gmail's native `thread_id` (not the client-side address-pair heuristic the current Communications tab uses).
+- **Attachment storage: metadata only** for v1 (filename, size, mime_type, Gmail attachment ID). Actual file bytes fetched on-demand from Gmail API when the user clicks "download" in the UI.
+- **Email address normalization before matching:**
+  - Lowercase all addresses
+  - Strip `+tag` plus-addressing
+  - Trim whitespace
 
 ### 4. UI — Where Logged Emails Appear
 
-Logged emails must appear in **both** locations on a client profile:
+**A. Existing Communications tab** (no changes needed — emails flow in via the thin `audit_logs` row)
 
-**A. Inside the existing Communications tab** (unified timeline alongside SMS and call logs)
-- Each email shown as an entry with sender/recipient, subject, short body snippet, timestamp, email icon.
-- Clicking expands or opens a side panel with the full body, attachments, and thread context.
-
-**B. A new dedicated "Emails" tab on the client profile**
-- Email history only, grouped by thread.
-- Threads are collapsible with message count.
-- Inside a thread: messages chronological, showing sender, timestamp, subject, body, attachments.
-- Filters: direction (inbound/outbound), connected user, date range.
-- Full-text search over subject and body.
-
-Both views pull from the same underlying data and stay in sync.
+**B. New dedicated "Emails" tab on the client profile**
+- Reads from `logged_emails` table directly
+- Grouped by Gmail `thread_id` (real threading, not address-pair heuristic)
+- Collapsible threads with message count
+- Within thread: chronological, showing sender, timestamp, subject, body (sanitized HTML), attachments
+- Filters: direction (inbound/outbound), connected user who logged it, date range
+- Full-text search over subject + body
+- Attachments show as chips with filename + size; click triggers on-demand fetch from Gmail API
 
 ## Risks & Edge Cases
 
 **Risks:**
-- Google "unverified app" warning is expected (not pursuing CASA verification yet). Document this in help text so users click "Advanced → continue to AgencyBoost" without being alarmed.
-- Gmail sync is a feature where "80% working" means 20% of messages are silently missing or duplicated. Data quality bugs surface weeks after launch. Worth slowing down at the sync worker stage.
-- `gmail.readonly` is a Google restricted scope. Broader rollout (external agency clients) would eventually require CASA Tier 2 assessment (~$10k–$20k, 4–12 weeks). Noted for future.
+- Google "unverified app" warning is expected. Document in help text.
+- Gmail sync is a "80% working = 20% silently missing" feature. Build carefully, test thoroughly.
+- Email address case sensitivity and plus-addressing can cause silent match misses. Normalize consistently.
+- Large initial sync (90 days) for heavy Gmail users could be slow. Consider showing progress UI.
 
 **Edge cases:**
-- **Token refresh failures** → clear "Reconnect Gmail" prompt in settings plus non-intrusive notification.
-- **Unmatched emails** → silently ignored (expected majority of inbox).
-- **Email matching multiple clients** (group email across client companies) → log against ALL matched clients. Flagged as an open question for confirmation.
-- **Gmail API rate limits** → back off gracefully, never crash the sync.
-- **User disconnects Gmail** → previously logged emails remain. New syncs stop. Historical data is never deleted.
-- **User emails that touch internal-only recipients** → excluded by internal-domain rule.
-- **Large threads / very old threads** → bounded by initial sync lookback window.
+- Token refresh failure → "Reconnect Gmail" state.
+- Unmatched emails → silently ignored (expected majority).
+- Email matches multiple clients → log one `logged_emails` row per client (same Message-ID, different client_id).
+- Gmail API rate limits → back off gracefully using the per-user spacing already in the Calendar pattern.
+- User disconnects Gmail → previously logged emails remain. New syncs stop. No historical data deletion.
+- Gmail Promotions/Social/Updates labels → excluded by default via category check.
+- Internal staff-to-staff emails → excluded via internal-domain rule.
+- Plus-addressing (`user+tag@domain.com`) → normalized to `user@domain.com` before matching.
+- Case differences in email addresses → lowercased before matching.
 
 ## Open Questions
 
-These must be answered — either by us or by Replit asking during build — before implementation is final:
+**All resolved during planning:**
 
-1. **Initial sync lookback window** on first connection — 30 days, 90 days, or all time? Affects cost and initial sync duration.
-2. **Attachment storage** — store the actual files, or just metadata (filename + size)? Storage cost implications.
-3. **Multiple-client matches** — when a single email matches multiple clients, log to all? (Our current default: yes, log to all.)
-4. **Default label exclusions** — should Gmail's Promotions, Social, Updates categories be excluded by default?
-5. **Data model** — does AgencyBoost currently support multiple contact persons per client? Depends on Claude Code briefing.
-6. **Background worker infrastructure** — does one already exist in the repo? Depends on Claude Code briefing.
+1. ✅ **Initial sync lookback window:** 90 days.
+2. ✅ **Attachment storage:** metadata only; fetch on-demand from Gmail API.
+3. ✅ **Multi-client match behavior:** log to all matched clients (one row per client, same Message-ID).
+4. ✅ **Default label exclusions:** exclude Promotions/Social/Updates by default; admin can toggle.
+5. ✅ **Multiple contact persons per client:** yes, supported via `clientContacts` table (resolved by Claude Code briefing).
+6. ✅ **Background worker infrastructure:** yes, in-process `setInterval` pattern exists; model on `googleCalendarBackgroundSync.ts` (resolved by Claude Code briefing).
+7. ✅ **Storage table strategy:** dedicated `logged_emails` table as source of truth + thin `audit_logs` row for Communications tab compatibility.
 
 ## Implementation Steps
 
-1. **Bootstrap brain files.** Confirm `CLAUDE.md`, `REPO_MAP.md`, `docs/PLANNING_CONTEXT.md` exist in the repo. If not, have Claude Code generate them.
-2. **Claude Code briefing.** Run the pre-build briefing prompt in terminal Claude Code. Save the briefing output to `docs/PLANNING_CONTEXT.md` under a "Gmail Sync Pre-Build Briefing" section.
-3. **Update this plan.** Fill in the "Affected Files" section and resolve open questions 5 and 6 with the briefing results.
-4. **Finalize Replit prompt.** Adjust the generic Replit prompt based on repo-specific realities from the briefing.
-5. **Hand to Replit.** Paste the finalized prompt into Replit. Replit should ask clarifying questions before coding.
-6. **Answer Replit's clarifying questions.** Resolve any remaining open questions (1–4).
-7. **Replit builds the feature.**
-8. **Replit writes implementation report** to `docs/plans/gmail-sync-implementation-report.md`.
-9. **Replit updates `CLAUDE.md`** with a brief section on this feature.
-10. **QA pass.** Use Replit's report to manually test the feature end-to-end.
-11. **Update "What Actually Happened" section** below with the real outcome.
+1. ✅ Bootstrap brain files (`CLAUDE.md`, `REPO_MAP.md`, `docs/PLANNING_CONTEXT.md`) — done.
+2. ✅ Claude Code pre-build briefing — done.
+3. ✅ Update this plan with briefing findings — done.
+4. ✅ Resolve open questions — done.
+5. **Hand finalized prompt to Replit.** (Next step.)
+6. Replit builds the feature following the references and patterns in this plan.
+7. Replit writes implementation report to `docs/plans/gmail-sync-implementation-report.md`.
+8. Replit updates `CLAUDE.md` with a brief section on this feature.
+9. Manual QA pass using Replit's report as the test script.
+10. Update "What Actually Happened" section below with the real outcome, deviations, and follow-up tasks.
 
 ## Status
 
-**Planning — not yet handed to Replit.** Next immediate step: Claude Code briefing (step 2).
+**Ready for Replit.** All open questions resolved, affected files identified, architecture decisions made.
 
 ## What Actually Happened
 
-*(To be filled in after Replit completes implementation. Record what was built vs. planned, surprises, assumptions made, deviations from the plan, and follow-up tasks.)*
+*(To be filled in after Replit completes implementation.)*
