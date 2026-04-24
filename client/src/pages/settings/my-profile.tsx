@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { User, Upload, Camera, Eye, EyeOff, ArrowLeft, Calendar, CalendarIcon, MapPin, Bell, Settings, UserCheck, Mail, Trash2, RefreshCcw } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format, parseISO } from "date-fns";
+import { format, formatDistanceToNow, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 import { ObjectUploader } from "@/components/ObjectUploader";
@@ -1296,6 +1296,16 @@ function GmailConnectionCard() {
     refetchOnMount: "always",
   });
 
+  // The "last synced X ago" string below is computed inline from the cached
+  // lastSyncedAt timestamp, so without a periodic re-render it would freeze
+  // between react-query refetches (or when refetches return identical JSON).
+  // A 30-second tick keeps the relative-time label honest in real time.
+  const [, setNowTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setNowTick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   // Surface ?gmail=connected and ?gmail=error from the OAuth callback
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1410,7 +1420,7 @@ function GmailConnectionCard() {
                     </p>
                     {status.lastSyncedAt && (
                       <p className="text-xs text-muted-foreground">
-                        Last synced: {new Date(status.lastSyncedAt).toLocaleString()}
+                        Last synced {formatDistanceToNow(new Date(status.lastSyncedAt), { addSuffix: true })}
                       </p>
                     )}
                   </>
