@@ -34,9 +34,46 @@ import { classifyAndMatch, type ClientLite, type ContactLite } from './gmailMatc
 
 const SYNC_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 const STARTUP_DELAY_MS = 15_000; // 15s to let server warm up
+// Wall-clock safety net per connection. Long enough that a healthy initial
+// 90-day backfill of a large mailbox (10k+ messages at ~10-15s/page of 100)
+// will finish well before the timer fires, but short enough that a truly hung
+// Gmail API call cannot trap the cycle forever — the next 2-minute tick will
+// recover and try again.
+const PER_CONNECTION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
 let syncIntervalId: NodeJS.Timeout | null = null;
 let isRunning = false;
+
+// Per-connection lock: prevents the manual `/sync-now` route and the automatic
+// cycle (or two manual clicks) from spawning concurrent initial syncs against
+// the same Gmail mailbox. The previous behaviour allowed Gmail's API to be
+// hammered by 2-3 parallel passes, which routinely caused one of them to hang
+// and trapped the cycle's `isRunning` flag forever.
+const runningConnections = new Set<string>();
+
+export class GmailSyncAlreadyRunningError extends Error {
+  constructor(connectionId: string) {
+    super(`Gmail sync already in progress for connection ${connectionId}`);
+    this.name = 'GmailSyncAlreadyRunningError';
+  }
+}
+
+export function isConnectionSyncing(connectionId: string): boolean {
+  return runningConnections.has(connectionId);
+}
+
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${Math.round(ms / 1000)}s`)),
+      ms,
+    );
+  });
+  return Promise.race([p, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  }) as Promise<T>;
+}
 
 export function startGmailBackgroundSync() {
   if (syncIntervalId) {
@@ -82,10 +119,32 @@ async function runSyncCycle() {
 
     for (const conn of conns) {
       try {
-        await syncUserGmail(conn.id);
+        // Wall-clock timeout per connection. If a Gmail API call hangs we
+        // surface a timeout error here instead of leaking the cycle's
+        // `isRunning` lock indefinitely. The underlying syncUserGmail promise
+        // may still be alive in the background; its own per-connection lock
+        // (runningConnections) keeps a duplicate from being launched, and it
+        // will eventually settle and release the lock.
+        await withTimeout(
+          syncUserGmail(conn.id),
+          PER_CONNECTION_TIMEOUT_MS,
+          `[GmailSync] connection ${conn.id}`,
+        );
         await new Promise(r => setTimeout(r, 500)); // gentle spacing
       } catch (err) {
+        if (err instanceof GmailSyncAlreadyRunningError) {
+          console.log(`[GmailSync] Connection ${conn.id} already syncing (manual run), skipping in cycle`);
+          continue;
+        }
         console.error(`[GmailSync] Error syncing connection ${conn.id}:`, err);
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes('timed out')) {
+          try {
+            await upsertSyncStateFailure(conn.id, `timeout: ${msg}`);
+          } catch (stateErr) {
+            console.warn('[GmailSync] Failed to record timeout state:', stateErr);
+          }
+        }
       }
     }
   } finally {
@@ -100,49 +159,60 @@ export async function syncUserGmail(connectionId: string): Promise<{
   scanned: number;
   logged: number;
 }> {
-  const conn = await db.query.gmailConnections.findFirst({
-    where: eq(gmailConnections.id, connectionId),
-  });
-  if (!conn) throw new Error(`Gmail connection ${connectionId} not found`);
-
-  // Mark in_progress
-  await upsertSyncStateStart(connectionId);
+  // Per-connection lock acquisition. Runs synchronously inside this async
+  // function before any await, so two simultaneous calls cannot both pass.
+  if (runningConnections.has(connectionId)) {
+    throw new GmailSyncAlreadyRunningError(connectionId);
+  }
+  runningConnections.add(connectionId);
 
   try {
-    const settings = await getSettingsRow();
-    const { gmail, email: ownerEmail } = await getUserGmailClient(conn.userId);
-
-    // Load matching context: clients + contacts + exclusions.
-    const ctx = await loadMatchingContext();
-
-    const state = await db.query.gmailSyncState.findFirst({
-      where: eq(gmailSyncState.connectionId, connectionId),
+    const conn = await db.query.gmailConnections.findFirst({
+      where: eq(gmailConnections.id, connectionId),
     });
+    if (!conn) throw new Error(`Gmail connection ${connectionId} not found`);
 
-    let scanned = 0;
-    let logged = 0;
+    // Mark in_progress
+    await upsertSyncStateStart(connectionId);
 
-    if (!state?.initialSyncCompleted || !state?.historyId) {
-      const r = await runInitialSync(gmail, conn, ownerEmail, settings, ctx);
-      scanned += r.scanned;
-      logged += r.logged;
-    } else {
-      const r = await runIncrementalSync(gmail, conn, ownerEmail, state.historyId, settings, ctx);
-      scanned += r.scanned;
-      logged += r.logged;
+    try {
+      const settings = await getSettingsRow();
+      const { gmail, email: ownerEmail } = await getUserGmailClient(conn.userId);
+
+      // Load matching context: clients + contacts + exclusions.
+      const ctx = await loadMatchingContext();
+
+      const state = await db.query.gmailSyncState.findFirst({
+        where: eq(gmailSyncState.connectionId, connectionId),
+      });
+
+      let scanned = 0;
+      let logged = 0;
+
+      if (!state?.initialSyncCompleted || !state?.historyId) {
+        const r = await runInitialSync(gmail, conn, ownerEmail, settings, ctx);
+        scanned += r.scanned;
+        logged += r.logged;
+      } else {
+        const r = await runIncrementalSync(gmail, conn, ownerEmail, state.historyId, settings, ctx);
+        scanned += r.scanned;
+        logged += r.logged;
+      }
+
+      await upsertSyncStateSuccess(connectionId, scanned, logged);
+      await db.update(gmailConnections)
+        .set({ lastSyncedAt: new Date(), updatedAt: new Date() })
+        .where(eq(gmailConnections.id, connectionId));
+
+      console.log(`[GmailSync] ${ownerEmail} synced: scanned=${scanned}, logged=${logged}`);
+      return { scanned, logged };
+    } catch (err: any) {
+      console.error(`[GmailSync] Failed connection ${connectionId}:`, err?.message || err);
+      await upsertSyncStateFailure(connectionId, err?.message || String(err));
+      throw err;
     }
-
-    await upsertSyncStateSuccess(connectionId, scanned, logged);
-    await db.update(gmailConnections)
-      .set({ lastSyncedAt: new Date(), updatedAt: new Date() })
-      .where(eq(gmailConnections.id, connectionId));
-
-    console.log(`[GmailSync] ${ownerEmail} synced: scanned=${scanned}, logged=${logged}`);
-    return { scanned, logged };
-  } catch (err: any) {
-    console.error(`[GmailSync] Failed connection ${connectionId}:`, err?.message || err);
-    await upsertSyncStateFailure(connectionId, err?.message || String(err));
-    throw err;
+  } finally {
+    runningConnections.delete(connectionId);
   }
 }
 
@@ -203,14 +273,16 @@ async function runInitialSync(
   settings: SettingsRow,
   ctx: MatchingContext,
 ): Promise<{ scanned: number; logged: number }> {
-  console.log(`[GmailSync] Initial sync for ${ownerEmail} (lookback=${settings.initialLookbackDays}d)`);
   const q = buildGmailQuery(settings);
+  console.log(`[GmailSync] Initial sync for ${ownerEmail} (lookback=${settings.initialLookbackDays}d) query="${q}"`);
   let pageToken: string | undefined;
   let scanned = 0;
   let logged = 0;
   let latestHistoryId: string | null = null;
+  let pageNum = 0;
 
   do {
+    pageNum++;
     const list = await gmail.users.messages.list({
       userId: 'me',
       q,
@@ -219,7 +291,10 @@ async function runInitialSync(
     });
 
     const ids = (list.data.messages || []).map(m => m.id!).filter(Boolean);
-    if (ids.length === 0) break;
+    if (ids.length === 0) {
+      console.log(`[GmailSync] ${ownerEmail} page ${pageNum}: empty page, ending initial sync`);
+      break;
+    }
 
     for (const id of ids) {
       scanned++;
@@ -229,6 +304,10 @@ async function runInitialSync(
     }
 
     pageToken = list.data.nextPageToken || undefined;
+    console.log(
+      `[GmailSync] ${ownerEmail} page ${pageNum}: scanned=${scanned}, logged=${logged}` +
+      (pageToken ? ' (more pages)' : ' (final page)'),
+    );
   } while (pageToken);
 
   // Always grab a current historyId to anchor incremental sync, even if we

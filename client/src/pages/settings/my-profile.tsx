@@ -1314,7 +1314,23 @@ function GmailConnectionCard() {
       toast({ title: "Sync started", description: "We'll process new mail in the background." });
       queryClient.invalidateQueries({ queryKey: ["/api/gmail/status"] });
     },
-    onError: (e: any) => toast({ title: "Sync failed", description: e?.message, variant: "destructive" }),
+    onError: (e: unknown) => {
+      const msg = e instanceof Error ? e.message : "Please try again.";
+      // The backend returns HTTP 409 when a sync is already mid-flight. Prefer
+      // matching on the status (attached by apiRequest) so this stays correct
+      // even if the message copy changes; fall back to a regex on the message
+      // for older error shapes.
+      const status = (e as { status?: number } | null)?.status;
+      const isAlreadyRunning = status === 409 || /already in progress/i.test(msg);
+      if (isAlreadyRunning) {
+        toast({
+          title: "Sync already running",
+          description: "A sync is already in progress. Please wait for it to finish.",
+        });
+        return;
+      }
+      toast({ title: "Sync failed", description: msg, variant: "destructive" });
+    },
   });
 
   return (

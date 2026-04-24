@@ -222,8 +222,20 @@ router.post('/sync-now', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'No Gmail connection found' });
     }
 
-    const { syncUserGmail } = await import('./gmailBackgroundSync');
+    const { syncUserGmail, isConnectionSyncing, GmailSyncAlreadyRunningError } = await import('./gmailBackgroundSync');
+
+    if (isConnectionSyncing(connection.id)) {
+      return res.status(409).json({
+        ok: false,
+        message: 'Sync already in progress. Please wait for it to finish.',
+      });
+    }
+
     syncUserGmail(connection.id).catch(err => {
+      // The pre-check above narrows the race window, but two simultaneous
+      // requests can still both pass it. Swallow the AlreadyRunningError that
+      // the lock raises in that case so we don't pollute the error log.
+      if (err instanceof GmailSyncAlreadyRunningError) return;
       console.error('[Gmail OAuth] Manual sync error:', err);
     });
 
