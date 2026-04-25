@@ -18259,8 +18259,30 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           LEFT JOIN staff s ON s.id = gc.user_id
           ORDER BY gc.created_at DESC
         `);
+        // Normalize timestamp columns to ISO 8601 with Z suffix.
+        //
+        // The raw SQL above returns Postgres `timestamp without time zone`
+        // values as plain strings like "2026-04-24 21:48:22.812" (no `T`,
+        // no `Z`). When the frontend does `new Date(<that string>)` the
+        // browser parses it as **local time**, so a user in UTC-3 sees
+        // "3 hours ago" even though the value is fresh. The Drizzle-typed
+        // /api/gmail/status endpoint avoids this because it returns a
+        // proper Date object that JSON-stringifies to "...Z". Force the
+        // same shape here so both endpoints feed the frontend identically.
+        const rawRows: any[] = (rows as any).rows ?? rows;
+        const TS_FIELDS = ["lastSyncedAt", "lastSyncStarted"] as const;
+        const connections = rawRows.map((r) => {
+          const out = { ...r };
+          for (const f of TS_FIELDS) {
+            const v = out[f];
+            if (v == null) continue;
+            const d = v instanceof Date ? v : new Date(typeof v === "string" && !v.endsWith("Z") && !v.includes("T") ? v.replace(" ", "T") + "Z" : v);
+            out[f] = isNaN(d.getTime()) ? null : d.toISOString();
+          }
+          return out;
+        });
         res.json({
-          connections: (rows as any).rows ?? rows,
+          connections,
           serverNow: new Date().toISOString(),
         });
       } catch (error) {
