@@ -18406,6 +18406,365 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   );
 
+  // ============================================================
+  // Unified per-client communications feed (SMS + email + call)
+  // ============================================================
+  // Powers the Communication History tab on the client profile.
+  // Joins audit_logs with logged_emails so email rows return a real
+  // body, the Gmail thread id (used for grouping), and attachment
+  // metadata. Threading, search, type/direction filtering, and
+  // pagination are all server-side so the tab is independent of the
+  // Activity tab's state and works for clients with thousands of
+  // messages.
+  //
+  // Permission: clients.canView — same as the rest of per-client data.
+  app.get(
+    "/api/clients/:clientId/communications",
+    requireAuth(),
+    requirePermission("clients", "canView"),
+    async (req, res) => {
+      try {
+        const { clientId } = req.params;
+        const type = ((req.query.type as string) || "all").toLowerCase(); // all|sms|email
+        const direction = ((req.query.direction as string) || "all").toLowerCase(); // all|inbound|outbound
+        const search = ((req.query.search as string) || "").trim();
+        const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
+        const requestedLimit = parseInt((req.query.limit as string) || "50", 10);
+        const limit = Math.min(Math.max(1, requestedLimit), 200);
+        // Hard cap on raw audit-log rows pulled per request. Threads are
+        // built from these rows; clients with more than this need a
+        // narrower search/filter. Cap exposed in the response so the UI
+        // can warn.
+        const RAW_FETCH_CAP = 5000;
+
+        // ---- 1. Build the audit_logs WHERE for this client + type ----
+        const smsCond = and(
+          eq(auditLogs.entityType, "sms"),
+          sql`(${auditLogs.newValues}->>'clientId') = ${clientId}`,
+        );
+        const emailCond = and(
+          eq(auditLogs.entityType, "email"),
+          sql`(${auditLogs.newValues}->>'clientId') = ${clientId}`,
+        );
+        const callCond = and(
+          eq(auditLogs.entityType, "contact"),
+          eq(auditLogs.entityId, clientId),
+          eq(auditLogs.action, "call"),
+        );
+
+        let typeCond;
+        if (type === "sms") {
+          typeCond = smsCond;
+        } else if (type === "email") {
+          typeCond = emailCond;
+        } else {
+          // 'all' — sms + email + call
+          typeCond = or(smsCond, emailCond, callCond);
+        }
+
+        // Direction filter applied in SQL where it can be expressed simply.
+        // Preserves the existing UI quirk: 'inbound' excludes calls (no
+        // direction), 'outbound' keeps calls (treated as outbound).
+        const conds: any[] = [typeCond];
+        if (direction === "inbound") {
+          conds.push(sql`(${auditLogs.newValues}->>'direction') = 'inbound'`);
+        } else if (direction === "outbound") {
+          conds.push(
+            or(
+              sql`(${auditLogs.newValues}->>'direction') IS DISTINCT FROM 'inbound'`,
+              eq(auditLogs.action, "call"),
+            ),
+          );
+        }
+
+        // ---- 2. Push search into SQL so it applies BEFORE the raw cap and
+        //         reaches both bodyText AND bodyHtml of joined emails.
+        //         Without this, large clients (>5k messages) couldn't search
+        //         older history, and HTML-only emails (no plaintext part)
+        //         wouldn't match on body text. ----
+        if (search) {
+          const like = `%${search}%`;
+          conds.push(
+            or(
+              sql`${auditLogs.details} ILIKE ${like}`,
+              sql`(${auditLogs.newValues}->>'message') ILIKE ${like}`,
+              sql`(${auditLogs.newValues}->>'to') ILIKE ${like}`,
+              sql`(${auditLogs.newValues}->>'from') ILIKE ${like}`,
+              sql`(${auditLogs.newValues}->>'subject') ILIKE ${like}`,
+              sql`(${auditLogs.newValues}->>'snippet') ILIKE ${like}`,
+              sql`(${auditLogs.newValues}->>'phoneNumber') ILIKE ${like}`,
+              // Email-only fields (NULL for non-email rows because of the LEFT JOIN)
+              sql`${loggedEmails.subject} ILIKE ${like}`,
+              sql`${loggedEmails.snippet} ILIKE ${like}`,
+              sql`${loggedEmails.bodyText} ILIKE ${like}`,
+              sql`${loggedEmails.bodyHtml} ILIKE ${like}`,
+              sql`${loggedEmails.fromEmail} ILIKE ${like}`,
+              sql`${loggedEmails.fromName} ILIKE ${like}`,
+              sql`array_to_string(${loggedEmails.toEmails}, ',') ILIKE ${like}`,
+              sql`array_to_string(${loggedEmails.ccEmails}, ',') ILIKE ${like}`,
+            ),
+          );
+        }
+
+        // ---- 3. Pull raw rows (newest first, capped) with email join ----
+        // LEFT JOIN logged_emails so we get the real subject/body/attachments
+        // metadata in one query. The join condition includes
+        // entityType='email' so non-email rows get NULL email columns
+        // without producing extra rows. Each audit_logs.entityId is
+        // unique per row so the JOIN cardinality stays 1:1.
+        const rawRows = await db
+          .select({
+            id: auditLogs.id,
+            action: auditLogs.action,
+            entityType: auditLogs.entityType,
+            entityId: auditLogs.entityId,
+            entityName: auditLogs.entityName,
+            userId: auditLogs.userId,
+            userName: sql<string>`COALESCE(NULLIF(CONCAT(${staff.firstName}, ' ', ${staff.lastName}), ' '), 'Unknown User')`,
+            details: auditLogs.details,
+            newValues: auditLogs.newValues,
+            timestamp: auditLogs.timestamp,
+            // joined email columns (NULL for non-email rows)
+            emailId: loggedEmails.id,
+            emailGmailMessageId: loggedEmails.gmailMessageId,
+            emailGmailThreadId: loggedEmails.gmailThreadId,
+            emailSubject: loggedEmails.subject,
+            emailSnippet: loggedEmails.snippet,
+            emailBodyText: loggedEmails.bodyText,
+            emailBodyHtml: loggedEmails.bodyHtml,
+            emailFromEmail: loggedEmails.fromEmail,
+            emailFromName: loggedEmails.fromName,
+            emailToEmails: loggedEmails.toEmails,
+            emailCcEmails: loggedEmails.ccEmails,
+            emailDirection: loggedEmails.direction,
+            emailHasAttachments: loggedEmails.hasAttachments,
+            emailReceivedAt: loggedEmails.receivedAt,
+          })
+          .from(auditLogs)
+          .leftJoin(staff, eq(auditLogs.userId, staff.id))
+          .leftJoin(
+            loggedEmails,
+            and(
+              eq(auditLogs.entityType, "email"),
+              eq(auditLogs.entityId, loggedEmails.id),
+            ),
+          )
+          .where(and(...conds))
+          .orderBy(desc(auditLogs.timestamp))
+          .limit(RAW_FETCH_CAP);
+
+        // ---- 4. Batch-load attachments only for the email rows we kept ----
+        const emailIdsForAttachments = rawRows
+          .filter((r) => r.emailId && r.emailHasAttachments)
+          .map((r) => r.emailId as string);
+        const attachmentsByEmailId = new Map<
+          string,
+          Array<{ id: string; filename: string; mimeType: string | null; sizeBytes: number | null }>
+        >();
+        if (emailIdsForAttachments.length > 0) {
+          const attRows = await db
+            .select()
+            .from(loggedEmailAttachments)
+            .where(inArray(loggedEmailAttachments.loggedEmailId, emailIdsForAttachments));
+          for (const a of attRows) {
+            const list = attachmentsByEmailId.get(a.loggedEmailId) || [];
+            list.push({
+              id: a.id,
+              filename: a.filename,
+              mimeType: a.mimeType,
+              sizeBytes: a.sizeBytes,
+            });
+            attachmentsByEmailId.set(a.loggedEmailId, list);
+          }
+        }
+
+        // ---- 5. Reshape rows into the hydrated format ----
+        type Hydrated = {
+          id: string;
+          action: string;
+          entityType: string;
+          entityId: string | null;
+          entityName: string | null;
+          userId: string | null;
+          userName: string;
+          details: string | null;
+          newValues: any;
+          timestamp: Date | string | null;
+          email: {
+            id: string;
+            gmailMessageId: string;
+            gmailThreadId: string;
+            subject: string | null;
+            snippet: string | null;
+            bodyText: string | null;
+            bodyHtml: string | null;
+            fromEmail: string;
+            fromName: string | null;
+            toEmails: string[];
+            ccEmails: string[];
+            direction: string;
+            hasAttachments: boolean;
+            receivedAt: Date | string;
+            attachments: Array<{
+              id: string;
+              filename: string;
+              mimeType: string | null;
+              sizeBytes: number | null;
+            }>;
+          } | null;
+        };
+
+        const filtered: Hydrated[] = rawRows.map((r) => ({
+          id: r.id,
+          action: r.action,
+          entityType: r.entityType,
+          entityId: r.entityId,
+          entityName: r.entityName,
+          userId: r.userId,
+          userName: r.userName,
+          details: r.details,
+          newValues: r.newValues,
+          timestamp: r.timestamp,
+          email: r.emailId
+            ? {
+                id: r.emailId,
+                gmailMessageId: r.emailGmailMessageId as string,
+                gmailThreadId: r.emailGmailThreadId as string,
+                subject: r.emailSubject,
+                snippet: r.emailSnippet,
+                bodyText: r.emailBodyText,
+                bodyHtml: r.emailBodyHtml,
+                fromEmail: r.emailFromEmail as string,
+                fromName: r.emailFromName,
+                toEmails: r.emailToEmails || [],
+                ccEmails: r.emailCcEmails || [],
+                direction: r.emailDirection as string,
+                hasAttachments: !!r.emailHasAttachments,
+                receivedAt: r.emailReceivedAt as Date | string,
+                attachments: attachmentsByEmailId.get(r.emailId) || [],
+              }
+            : null,
+        }));
+
+        // ---- 6. Group into threads ----
+        // Email: by gmailThreadId. SMS: by sorted [from,to] phone pair.
+        // Call: each call is its own thread.
+        type ThreadAcc = {
+          threadKey: string;
+          type: "sms" | "email" | "call";
+          participants: string[];
+          messages: Hydrated[];
+          latestTimestamp: number;
+          hasAttachments: boolean;
+        };
+        const threadMap = new Map<string, ThreadAcc>();
+
+        for (const row of filtered) {
+          const ts = row.timestamp ? new Date(row.timestamp as any).getTime() : 0;
+          let threadKey: string;
+          let threadType: "sms" | "email" | "call";
+          let participants: string[];
+          let hasAttachments = false;
+
+          if (row.entityType === "email") {
+            threadType = "email";
+            if (row.email?.gmailThreadId) {
+              threadKey = `email:${row.email.gmailThreadId}`;
+            } else {
+              // Pre-sync emails: fall back to the audit-log row id so each
+              // is its own thread (no Gmail thread id available).
+              threadKey = `email-orphan:${row.id}`;
+            }
+            const from = (
+              row.email?.fromEmail ||
+              ((row.newValues as any)?.from ?? "") ||
+              ""
+            )
+              .toString()
+              .toLowerCase();
+            const to = row.email?.toEmails?.length
+              ? row.email.toEmails.join(", ").toLowerCase()
+              : (((row.newValues as any)?.to ?? "") + "").toLowerCase();
+            participants = [from, to].filter(Boolean);
+            hasAttachments = !!row.email?.hasAttachments;
+          } else if (row.entityType === "sms") {
+            threadType = "sms";
+            const nv = (row.newValues as any) || {};
+            const to = (nv.to || "").toString().trim();
+            const from = (nv.from || "").toString().trim();
+            const nums = [to, from].filter(Boolean).sort();
+            if (nums.length === 0) {
+              threadKey = `sms-orphan:${row.id}`;
+              participants = ["Unknown"];
+            } else {
+              threadKey = `sms:${JSON.stringify(nums)}`;
+              participants = nums;
+            }
+          } else {
+            // call
+            threadType = "call";
+            threadKey = `call:${row.id}`;
+            const nv = (row.newValues as any) || {};
+            participants = [nv.phoneNumber || "Unknown"];
+          }
+
+          const existing = threadMap.get(threadKey);
+          if (existing) {
+            existing.messages.push(row);
+            if (ts > existing.latestTimestamp) existing.latestTimestamp = ts;
+            existing.hasAttachments = existing.hasAttachments || hasAttachments;
+          } else {
+            threadMap.set(threadKey, {
+              threadKey,
+              type: threadType,
+              participants,
+              messages: [row],
+              latestTimestamp: ts,
+              hasAttachments,
+            });
+          }
+        }
+
+        // Sort messages within each thread (oldest first reads naturally
+        // for emails; the UI flips order for SMS bubbles itself).
+        const threads = Array.from(threadMap.values()).map((t) => ({
+          ...t,
+          messages: t.messages.sort(
+            (a, b) =>
+              new Date(a.timestamp as any).getTime() -
+              new Date(b.timestamp as any).getTime(),
+          ),
+          messageCount: t.messages.length,
+        }));
+
+        // Sort threads by latest activity desc.
+        threads.sort((a, b) => b.latestTimestamp - a.latestTimestamp);
+
+        // ---- 7. Paginate threads ----
+        const totalThreads = threads.length;
+        const totalMessages = filtered.length;
+        const totalPages = Math.max(1, Math.ceil(totalThreads / limit));
+        const safePage = Math.min(page, totalPages);
+        const start = (safePage - 1) * limit;
+        const paged = threads.slice(start, start + limit);
+
+        res.json({
+          threads: paged,
+          totalThreads,
+          totalMessages,
+          page: safePage,
+          pageSize: limit,
+          totalPages,
+          rawFetchCap: RAW_FETCH_CAP,
+          rawFetchCapHit: rawRows.length >= RAW_FETCH_CAP,
+        });
+      } catch (error) {
+        console.error("Error fetching client communications:", error);
+        res.status(500).json({ message: "Failed to fetch communications" });
+      }
+    },
+  );
+
   // Audit Logs routes - SECURED (Admin Only)
   app.get("/api/audit-logs", requireAuth(), requireAdmin(), async (req, res) => {
     try {
@@ -18431,7 +18790,26 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  app.get("/api/audit-logs/entity/:entityType/:entityId", requireAuth(), requireAdmin(), async (req, res) => {
+  // NOTE: gate changed from requireAdmin() in Phase 2 of the Gmail UI work
+  // so non-admin AMs can see Communication History + the Activity tab on a
+  // client profile. Joe approved exposing the per-client surfaces
+  // (contact / sms / email entityTypes) to anyone with clients.canView.
+  // Other entityTypes stay admin-only — this route accepts any
+  // user-supplied entityType, so without this scoping a user with
+  // clients.canView could read audit logs for tasks, quotes, leads, etc.
+  // See docs/plans/gmail-sync-implementation-report.md "Phase 2 — UI Fixes".
+  const auditLogsEntityClientScopedTypes = new Set(["contact", "sms", "email"]);
+  app.get(
+    "/api/audit-logs/entity/:entityType/:entityId",
+    requireAuth(),
+    (req: any, res, next) => {
+      const { entityType } = req.params;
+      if (auditLogsEntityClientScopedTypes.has(entityType)) {
+        return requirePermission("clients", "canView")(req, res, next);
+      }
+      return requireAdmin()(req, res, next);
+    },
+    async (req, res) => {
     try {
       const { entityType, entityId } = req.params;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;

@@ -156,6 +156,29 @@ Audit-log mirror: every new `loggedEmails` insert also writes a thin
 existing Communications tab continues to surface the email without bespoke
 plumbing.
 
+**Phase 2 (2026-04-27):** the per-client **Communication History** card on
+`enhanced-client-detail.tsx` is now the unified email + SMS + call surface
+and is fed by a dedicated server endpoint, not by the Activity-tab
+`audit_logs` query. The standalone "Emails" tab is hidden (trigger +
+content removed) but `client/src/components/client-emails-tab.tsx` is
+preserved on disk. See `docs/plans/gmail-sync-implementation-report.md`
+"Phase 2 — UI Fixes" for issue-by-issue resolution and the new endpoint.
+
+- Endpoint: `GET /api/clients/:clientId/communications`
+  (`requirePermission("clients","canView")`). Joins `logged_emails` so
+  email rows return real `bodyHtml`/`bodyText`/`subject`/`gmailThreadId`
+  + attachment metadata. Threads emails by `gmailThreadId`, SMS by
+  sorted phone pair, calls each on their own thread. Server-side
+  search reaches subject/snippet/body/from/to. Pagination by thread,
+  default 50 per page, raw fetch capped at 5,000 messages with the
+  cap surfaced to the UI.
+- Permission gate on `GET /api/audit-logs/entity/:entityType/:entityId`
+  was changed from `requireAdmin()` to
+  `requirePermission("clients","canView")` so non-admin AMs can render
+  Communication History and the Activity tab on a client profile.
+- Phase 3 (reply-from-AgencyBoost) is stubbed at
+  `docs/plans/gmail-reply-from-agencyboost.md` — not started.
+
 Required env: `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `ENCRYPTION_KEY`
 (reuses existing AES-256-GCM service; tokens are stored encrypted at rest).
 The OAuth callback path is `/api/gmail/oauth/callback` and must be added to

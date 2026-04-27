@@ -1,0 +1,114 @@
+# Feature: Make Communication History the unified email + SMS + call surface
+
+## Required reading before any code
+
+1. `docs/plans/gmail-sync.md` — original feature plan
+2. `docs/plans/gmail-sync-implementation-report.md` — what Phase 1 (backend) built
+3. `docs/plans/gmail-ui-diagnostic.md` — recent read-only diagnostic; the issue list below comes directly from it
+4. `docs/PLANNING_CONTEXT.md` — Gmail Sync Pre-Build Briefing section
+5. `client/src/pages/enhanced-client-detail.tsx` — Communications tab, especially `threadedCommunications` (~L4840) and the tab body (~L8253+)
+6. `client/src/components/clients/client-emails-tab.tsx` — the dedicated Emails tab. **This file is the reference implementation. Its threading, body rendering, search, and attachment handling already work correctly. Port that logic into Communication History.**
+
+## Decision context (do not re-debate)
+
+Joe (stakeholder) reviewed the original plan and decided:
+
+- **Email history lives inside the existing Communication History tab on the client profile.** That tab becomes the single unified feed for SMS, calls, and emails — matching how SMS and calls already work today.
+- **The dedicated standalone Emails tab is going away** (hidden, not deleted — see step 7). Its logic gets ported into Communication History.
+- **Permissions: open Communication History to everyone who can view the client.** Change the server gate from `requireAdmin()` to the same gate the rest of client-data uses (`requirePermission("clients", "canView")` based on the Emails tab pattern).
+- **Reply-from-AgencyBoost is OUT OF SCOPE.** Joe asked for it "if possible," but it requires the `gmail.send` scope (different from the current `gmail.readonly`), per-user re-authentication, and a compose UI. That's Phase 3 — leave a stub, don't build it.
+
+## What's broken today (from the diagnostic)
+
+Six concrete issues to fix in this phase. Each one has a clear fix path because the Emails tab solves it correctly already.
+
+### Issue 1: Email body shown is fake
+The expand view shows the audit-log details string ("Sent email to alice@acme.com") instead of the real email body. The real body lives in `logged_emails.body_html` and `logged_emails.body_text` but Communication History never queries that table.
+
+**Fix:** when an email row is expanded, render the real body from `logged_emails`. Match the Emails tab's pattern in `client-emails-tab.tsx:236-241` — same DOMPurify config (explicit `FORBID_TAGS` for `script, style, iframe, object, embed, form` and `FORBID_ATTR` for `on*` event handlers). Do not use the default DOMPurify config.
+
+### Issue 2: Threading is wrong
+Today emails are grouped by sorted `[from, to]` pair. That breaks the moment a Gmail thread changes participants (forward, reply-all, BCC, adding someone). Same Gmail conversation scatters into multiple threads.
+
+**Fix:** for email entries, group by `gmailThreadId` from `logged_emails`, joined via the link `audit_logs.entityId → logged_emails.id` (entityId is set during sync — see `server/gmailBackgroundSync.ts:585-613`). For SMS entries, **keep the existing phone-pair grouping** — do not change SMS threading. The change applies only to email rows. Emails tab already does this correctly at `client-emails-tab.tsx:89-103`.
+
+### Issue 3: Search misses subject and body
+Today search only hits `audit_logs.newValues.message` (which is empty for emails) and `audit_logs.details` (which is just the summary line "Sent email to..."). It cannot find anything by subject, snippet, or body content.
+
+**Fix:** when the user searches, results must match against email subject, snippet, and body content (plain text). Body search must reach into `logged_emails.body_text`. Subject and snippet are also in `logged_emails`. Continue searching SMS content the way it works today — do not regress SMS search. Decide server-side vs client-side based on what fits the existing search pattern in this tab; if you change the search to server-side, paginate results properly (see issue 4).
+
+### Issue 4: Pagination is fundamentally broken
+The Communication History tab paginates client-side over a server-paginated 20-row window from the Activity tab. Switching the type/direction filter doesn't refetch — it just filters the in-memory 20 rows. With real volume (hundreds of emails per client after sync deploys), AMs will only ever see the most recent ~20 communications of any kind.
+
+**Fix:** decouple Communication History from the Activity tab's pagination. Communication History should fetch its own data with its own pagination, scoped to the client. Filter chips (All/SMS/Email, All/Sent/Received) should refetch from the server, not filter in memory. Page size for the dedicated Communications query is your call — recommend 50 threads per page minimum, paginate by thread, not by raw message. Make sure the "X messages in Y threads" counter reflects the full scoped result, not just the current page.
+
+### Issue 5: No attachment indicator on email rows
+The Communication History row shows nothing for attachments. `audit_logs.newValues.hasAttachments` is set during sync but never displayed.
+
+**Fix:** when an email row has `hasAttachments=true`, show a paperclip icon (or equivalent affordance) on the collapsed row, matching whatever convention the Emails tab uses. When the row is expanded, show the actual attachment list (filename + size as chips) and wire each chip to the existing on-demand download endpoint at `GET /api/emails/:id/attachments/:attachmentId` (see `server/routes.ts:18372-18407` and how `client-emails-tab.tsx:253-271` calls it).
+
+### Issue 6: Tab is admin-only
+The endpoint `GET /api/audit-logs/entity/:entityType/:entityId` is gated `requireAdmin()` (`server/routes.ts:18434`). Non-admin users see "No Communication Yet" even when there's history.
+
+**Fix:** change the gate from `requireAdmin()` to `requirePermission("clients", "canView")` — same gate the Emails tab uses. This applies to the whole Communication History tab. Joe is aware that this exposes SMS and call history to non-admin AMs, not just emails — that is the intended behavior.
+
+## Hard constraints (do not violate)
+
+- **Do not break SMS or call rows.** SMS phone-pair threading must keep working. Call entries must keep displaying. The diagnostic noted that the type filter currently lets `action='call'` rows through regardless of filter selection — that's a pre-existing quirk, leave it alone unless fixing it is trivial.
+- **Do not regress search for SMS.** Whatever search worked for SMS before must keep working.
+- **Do not delete the standalone Emails tab — only hide it** (see step 7).
+- **Do not change anything in Phase 1 backend code** (`server/gmailBackgroundSync.ts`, the `logged_emails` schema, the OAuth flow). Phase 2 is UI-only plus the permission change on the audit-logs endpoint.
+- **Match the existing UI/UX of the Communication History tab.** No new design language, no new components if existing ones can be reused. Joe's directive: "match the current UI/UX."
+
+## Step 7: hide the standalone Emails tab
+
+Once the Communication History tab is fixed and renders emails correctly:
+
+- Remove the Emails tab from the client profile's tab navigation
+- **Do not delete the file `client-emails-tab.tsx` or its endpoints** — leave them in place, just disconnected from the UI. This is in case Joe wants to bring it back later or in case we need to reuse its patterns.
+- Add a comment at the top of `client-emails-tab.tsx` explaining that it's currently disabled and why.
+
+## Out of scope explicitly
+
+- Reply-from-AgencyBoost (Phase 3 — see step 9 below)
+- Any new filters beyond what already exists (All/SMS/Email + All/Sent/Received). Joe explicitly said current filters are fine.
+- Any redesign of the Communication History tab visual style. Match what's there.
+
+## Deliverables
+
+### 1. The fix
+All 6 issues addressed. Standalone Emails tab hidden. SMS and calls untouched.
+
+### 2. Implementation report
+Update `docs/plans/gmail-sync-implementation-report.md` with a new section "Phase 2 — UI Fixes" containing:
+
+- **Issue-by-issue resolution:** for each of the 6 issues, what you did, which files changed, and how you verified the fix
+- **What you ported from the Emails tab vs. what you wrote fresh**
+- **Anything you decided differently from this prompt and why** (architectural surprises, constraints I didn't know about — be honest)
+- **How to manually QA each issue** — step-by-step instructions a non-technical user could follow. At minimum:
+  - How to verify a real email body now renders correctly
+  - How to verify a multi-message Gmail thread groups into one entry, not several
+  - How to verify search finds an email by subject, by body keyword, by sender
+  - How to verify pagination works past the first 20 messages
+  - How to verify the attachment paperclip appears and downloads work
+  - How to verify a non-admin AM can now see Communication History
+- **Known limitations / fragile areas** that didn't get addressed
+- **Performance notes** — anything that might struggle with 1,000+ emails per client
+
+### 3. Phase 3 stub
+Create `docs/plans/gmail-reply-from-agencyboost.md` with a short plan stub:
+- Goal: let users reply to client emails from inside AgencyBoost without leaving the Communication History tab
+- Why deferred: requires `gmail.send` scope (different from current `gmail.readonly`), per-user re-authentication of all currently-connected Gmail users, and a compose UI with rich text + attachments + draft management
+- Open questions: do we want full compose, or just quick replies? Drafts saved server-side or client-side? Send from connected user's Gmail (their address shown as sender) or from a shared agency address?
+- Status: Not started — awaiting prioritization decision from Joe after Phase 2 ships
+
+A few paragraphs is fine. This is a placeholder for a future planning session, not the actual plan.
+
+### 4. CLAUDE.md update
+Brief note that Communication History is now the unified email + SMS + call surface, and that the standalone Emails tab is hidden but preserved.
+
+## Final notes
+
+- Do not mark this work complete until the implementation report and Phase 3 stub are written.
+- If you discover during implementation that one of the 6 fixes is materially harder than this prompt suggests, **stop and ask before making structural changes** — don't silently scope down. The diagnostic was thorough but reality always has surprises.
+- The Phase 1 backend is working. Sync is producing real audit_logs and logged_emails rows. Trust that data — your job is making it visible and useful, not re-validating the sync.

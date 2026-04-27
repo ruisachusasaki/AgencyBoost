@@ -4808,80 +4808,107 @@ export default function EnhancedClientDetail() {
     });
   };
 
-  // Memoized communications filtering to prevent re-render loops
-  const communications = useMemo(() => {
-    return auditLogs
-      .filter(log => log.entityType === 'sms' || log.entityType === 'email' || log.entity_type === 'sms' || log.entity_type === 'email' || log.action === 'call')
-      .filter(log => {
-        if (commTypeFilter !== 'all') {
-          const logType = log.entityType || log.entity_type;
-          if (commTypeFilter === 'sms' && logType !== 'sms') return false;
-          if (commTypeFilter === 'email' && logType !== 'email') return false;
-        }
-        if (commDirectionFilter !== 'all') {
-          const isInbound = log.newValues?.direction === 'inbound';
-          if (commDirectionFilter === 'inbound' && !isInbound) return false;
-          if (commDirectionFilter === 'outbound' && isInbound) return false;
-        }
-        return true;
-      })
-      .filter(log => {
-        if (!deferredCommunicationSearch.trim()) return true;
-        const searchLower = deferredCommunicationSearch.toLowerCase();
-        const messageContent = log.newValues?.message || log.details || '';
-        const phoneNumber = log.newValues?.to || log.newValues?.from || '';
-        const details = log.details || '';
-        return messageContent.toLowerCase().includes(searchLower) || 
-               phoneNumber.includes(searchLower) ||
-               details.toLowerCase().includes(searchLower);
-      })
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [auditLogs, deferredCommunicationSearch, commTypeFilter, commDirectionFilter]);
+  // ──────────────────────────────────────────────────────────────────
+  // Communication History — fetched from the unified per-client
+  // communications endpoint (Phase 2 of Gmail UI work). All filtering,
+  // search, threading, and pagination happen server-side now so this
+  // tab is independent of the Activity tab's pagination state and
+  // returns real Gmail bodies + attachments for email rows.
+  // See server/routes.ts → GET /api/clients/:clientId/communications.
+  // ──────────────────────────────────────────────────────────────────
+  type CommAttachment = { id: string; filename: string; mimeType: string | null; sizeBytes: number | null };
+  type CommEmailPayload = {
+    id: string;
+    gmailMessageId: string;
+    gmailThreadId: string;
+    subject: string | null;
+    snippet: string | null;
+    bodyText: string | null;
+    bodyHtml: string | null;
+    fromEmail: string;
+    fromName: string | null;
+    toEmails: string[];
+    ccEmails: string[];
+    direction: string;
+    hasAttachments: boolean;
+    attachments: CommAttachment[];
+  };
+  type CommMessage = {
+    id: string;
+    action: string;
+    entityType: string;
+    entityId: string | null;
+    entityName: string | null;
+    userId: string | null;
+    userName: string;
+    details: string | null;
+    newValues: any;
+    timestamp: string;
+    email: CommEmailPayload | null;
+  };
+  type CommThread = {
+    threadKey: string;
+    type: 'sms' | 'email' | 'call';
+    participants: string[];
+    messages: CommMessage[];
+    messageCount: number;
+    latestTimestamp: number;
+    hasAttachments: boolean;
+  };
+  type CommResponse = {
+    threads: CommThread[];
+    totalThreads: number;
+    totalMessages: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    rawFetchCap: number;
+    rawFetchCapHit: boolean;
+  };
 
-  const threadedCommunications = useMemo(() => {
-    const threads: Record<string, typeof communications> = {};
-    const threadMeta: Record<string, { type: 'sms' | 'email'; participants: string[] }> = {};
-    for (const msg of communications) {
-      const logType = msg.entityType || msg.entity_type;
-      let threadKey: string;
-      let participants: string[];
-      if (logType === 'sms' || msg.action === 'call') {
-        const to = (msg.newValues?.to || '').trim();
-        const from = (msg.newValues?.from || '').trim();
-        const nums = [to, from].filter(Boolean).sort();
-        if (nums.length === 0) {
-          threadKey = `sms:__orphan__${msg.id}`;
-          participants = ['Unknown'];
-        } else {
-          threadKey = `sms:${JSON.stringify(nums)}`;
-          participants = nums;
-        }
-        threadMeta[threadKey] = { type: 'sms', participants };
-      } else {
-        const to = (msg.newValues?.to || msg.newValues?.recipientEmail || '').trim().toLowerCase();
-        const from = (msg.newValues?.from || msg.newValues?.senderEmail || '').trim().toLowerCase();
-        const addrs = [to, from].filter(Boolean).sort();
-        if (addrs.length === 0) {
-          threadKey = `email:__orphan__${msg.id}`;
-          participants = ['Unknown'];
-        } else {
-          threadKey = `email:${JSON.stringify(addrs)}`;
-          participants = addrs;
-        }
-        threadMeta[threadKey] = { type: 'email', participants };
-      }
-      if (!threads[threadKey]) threads[threadKey] = [];
-      threads[threadKey].push(msg);
+  const { data: commData, isLoading: commLoading } = useQuery<CommResponse>({
+    queryKey: [
+      '/api/clients',
+      clientId,
+      'communications',
+      commTypeFilter,
+      commDirectionFilter,
+      deferredCommunicationSearch,
+      commCurrentPage,
+      commItemsPerPage,
+    ],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        type: commTypeFilter,
+        direction: commDirectionFilter,
+        page: String(commCurrentPage),
+        limit: String(commItemsPerPage),
+      });
+      const q = deferredCommunicationSearch.trim();
+      if (q) params.set('search', q);
+      const res = await fetch(
+        `/api/clients/${clientId}/communications?${params.toString()}`,
+        { credentials: 'include' },
+      );
+      if (!res.ok) throw new Error('Failed to fetch communications');
+      return res.json();
+    },
+    enabled: !!clientId,
+  });
+
+  const paginatedThreads: CommThread[] = commData?.threads || [];
+  const totalCommunications = commData?.totalThreads || 0;
+  const totalCommMessages = commData?.totalMessages || 0;
+  const totalCommPages = commData?.totalPages || 1;
+
+  // If the server clamped the requested page (because filters/search shrank
+  // the result set), sync the local state so the pagination label and the
+  // request-on-next-click stay consistent with what the server returned.
+  useEffect(() => {
+    if (commData?.page && commData.page !== commCurrentPage) {
+      setCommCurrentPage(commData.page);
     }
-    return Object.entries(threads).map(([key, msgs]) => ({
-      threadKey: key,
-      messages: msgs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
-      latestTimestamp: Math.max(...msgs.map(m => new Date(m.timestamp).getTime())),
-      type: threadMeta[key].type,
-      participants: threadMeta[key].participants,
-      messageCount: msgs.length,
-    })).sort((a, b) => b.latestTimestamp - a.latestTimestamp);
-  }, [communications]);
+  }, [commData?.page, commCurrentPage]);
 
   const toggleThread = (threadKey: string) => {
     setExpandedThreads(prev => {
@@ -4892,12 +4919,13 @@ export default function EnhancedClientDetail() {
     });
   };
 
-  const totalCommunications = threadedCommunications.length;
-  const totalCommPages = Math.ceil(totalCommunications / commItemsPerPage);
-  const paginatedThreads = threadedCommunications.slice(
-    (commCurrentPage - 1) * commItemsPerPage,
-    commCurrentPage * commItemsPerPage
-  );
+  // Helper: format attachment size for the chips.
+  const formatAttachmentSize = (bytes: number | null) => {
+    if (typeof bytes !== 'number' || bytes <= 0) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   // Reset page when filter changes
   const handleFilterChange = (newFilter: typeof activityFilter) => {
@@ -6032,7 +6060,7 @@ export default function EnhancedClientDetail() {
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="border-b border-gray-200">
-            <TabsList className="grid w-full grid-cols-10 bg-transparent border-0 rounded-none h-auto p-0">
+            <TabsList className="grid w-full grid-cols-9 bg-transparent border-0 rounded-none h-auto p-0">
               <TabsTrigger 
                 value="contact" 
                 className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 -mb-0.5"
@@ -6091,14 +6119,11 @@ export default function EnhancedClientDetail() {
                 <MessageSquare className="h-4 w-4" />
                 Communication
               </TabsTrigger>
-              <TabsTrigger 
-                value="emails" 
-                className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 -mb-0.5"
-                data-testid="tab-emails"
-              >
-                <Mail className="h-4 w-4" />
-                Emails
-              </TabsTrigger>
+              {/* Standalone "Emails" tab is hidden in Phase 2 — Communication
+                  History is now the unified email + SMS + call surface.
+                  The standalone tab content is also removed below; see
+                  client/src/components/client-emails-tab.tsx for the
+                  preserved (currently disabled) implementation. */}
               <TabsTrigger 
                 value="activity" 
                 className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 -mb-0.5"
@@ -8259,19 +8284,54 @@ export default function EnhancedClientDetail() {
                         </button>
                       ))}
                     </div>
-                    <span className="text-xs text-gray-400 ml-1">{communications.length} message{communications.length !== 1 ? 's' : ''} in {threadedCommunications.length} thread{threadedCommunications.length !== 1 ? 's' : ''}</span>
+                    <span className="text-xs text-gray-400 ml-1" data-testid="text-comm-counts">
+                      {commLoading
+                        ? 'Loading…'
+                        : `${totalCommMessages} message${totalCommMessages !== 1 ? 's' : ''} in ${totalCommunications} thread${totalCommunications !== 1 ? 's' : ''}`}
+                    </span>
                   </div>
+                  {commData?.rawFetchCapHit && (
+                    <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1" data-testid="warn-comm-cap">
+                      Showing the most recent {commData.rawFetchCap.toLocaleString()} messages.
+                      Use search or filters to narrow further.
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {paginatedThreads.length > 0 ? (
+                  {commLoading && paginatedThreads.length === 0 ? (
+                    <div className="text-center py-12 text-sm text-gray-500" data-testid="loading-communications">
+                      Loading communication history…
+                    </div>
+                  ) : paginatedThreads.length > 0 ? (
                     <>
                       {paginatedThreads.map((thread) => {
                         const isThreadOpen = expandedThreads.has(thread.threadKey);
-                        const latestMsg = thread.messages[0];
+                        // messages arrive oldest→newest from the server; the
+                        // "latest" preview row is the last entry.
+                        const latestMsg = thread.messages[thread.messages.length - 1];
                         const latestIsInbound = latestMsg.newValues?.direction === 'inbound';
-                        const latestType = latestMsg.entityType || latestMsg.entity_type;
+                        // Bubble icon: 'sms' & 'call' share the chat-bubble visuals,
+                        // 'email' uses the envelope icon.
+                        const isBubbleThread = thread.type === 'sms' || thread.type === 'call';
+                        const previewText = (() => {
+                          if (thread.type === 'email' && latestMsg.email) {
+                            return (
+                              latestMsg.email.subject ||
+                              latestMsg.email.snippet ||
+                              latestMsg.email.bodyText ||
+                              ''
+                            );
+                          }
+                          return latestMsg.newValues?.message || latestMsg.details || '';
+                        })();
+                        const threadLabel =
+                          thread.type === 'email'
+                            ? 'Email'
+                            : thread.type === 'call'
+                              ? 'Call'
+                              : 'SMS';
 
                         return (
                           <div key={thread.threadKey} className="border rounded-lg overflow-hidden" data-testid={`thread-${thread.threadKey}`}>
@@ -8281,22 +8341,27 @@ export default function EnhancedClientDetail() {
                               className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
                             >
                               <div className="flex items-center gap-3">
-                                <div className={`flex items-center justify-center w-8 h-8 rounded-full ${thread.type === 'sms' ? 'bg-teal-100 text-teal-700' : 'bg-blue-100 text-blue-700'}`}>
-                                  {thread.type === 'sms' ? <MessageSquare className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
+                                <div className={`flex items-center justify-center w-8 h-8 rounded-full ${isBubbleThread ? 'bg-teal-100 text-teal-700' : 'bg-blue-100 text-blue-700'}`}>
+                                  {isBubbleThread ? <MessageSquare className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
                                 </div>
                                 <div>
                                   <div className="flex items-center gap-2">
                                     <span className="font-medium text-sm text-gray-900">
-                                      {thread.participants.join(' ↔ ')}
+                                      {thread.participants.length > 0 ? thread.participants.join(' ↔ ') : 'Unknown'}
                                     </span>
-                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">{thread.type === 'sms' ? 'SMS' : 'Email'}</Badge>
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">{threadLabel}</Badge>
                                     {thread.messageCount > 1 && (
                                       <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{thread.messageCount} messages</Badge>
+                                    )}
+                                    {thread.type === 'email' && thread.hasAttachments && (
+                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1" data-testid={`badge-attachment-${thread.threadKey}`}>
+                                        <Paperclip className="h-3 w-3" />
+                                      </Badge>
                                     )}
                                   </div>
                                   <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
                                     {latestIsInbound ? '← ' : '→ '}
-                                    {(latestMsg.newValues?.message || latestMsg.details || '').replace(/<[^>]*>/g, '').slice(0, 100)}
+                                    {previewText.replace(/<[^>]*>/g, '').slice(0, 100)}
                                   </p>
                                 </div>
                               </div>
@@ -8308,24 +8373,23 @@ export default function EnhancedClientDetail() {
 
                             {/* Thread Messages */}
                             {isThreadOpen && (
-                              <div className={`border-t max-h-[500px] overflow-y-auto ${thread.type === 'sms' ? 'bg-gray-50 px-4 py-3 space-y-1' : 'divide-y divide-gray-100'}`}>
+                              <div className={`border-t max-h-[500px] overflow-y-auto ${isBubbleThread ? 'bg-gray-50 px-4 py-3 space-y-1' : 'divide-y divide-gray-100'}`}>
                                 {(() => {
-                                  const sortedMsgs = [...thread.messages].sort(
-                                    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-                                  );
+                                  // Server already returns messages oldest→newest.
                                   let lastDateStr = '';
-                                  return sortedMsgs.map((log) => {
+                                  return thread.messages.map((log) => {
                                     const isInbound = log.newValues?.direction === 'inbound';
-                                    const fullMessage = log.newValues?.message || log.details || '';
-                                    const emailSubject = log.newValues?.subject || '';
-                                    const logType = log.entityType || log.entity_type;
                                     const msgDate = new Date(log.timestamp);
                                     const dateStr = msgDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                                     const timeStr = msgDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
                                     const showDateDivider = dateStr !== lastDateStr;
                                     lastDateStr = dateStr;
 
-                                    if (thread.type === 'sms') {
+                                    if (isBubbleThread) {
+                                      // SMS chat-bubble + call rendering. For
+                                      // calls (no `message`), fall back to the
+                                      // audit-log details string.
+                                      const bubbleText = log.newValues?.message || log.details || '';
                                       return (
                                         <div key={log.id}>
                                           {showDateDivider && (
@@ -8343,7 +8407,7 @@ export default function EnhancedClientDetail() {
                                                   ? 'bg-white border border-gray-200 rounded-bl-md'
                                                   : 'text-white rounded-br-md'
                                               }`} style={!isInbound ? { backgroundColor: 'hsl(179, 100%, 39%)' } : {}}>
-                                                <p className={`text-sm whitespace-pre-wrap ${isInbound ? 'text-gray-800' : 'text-white'}`}>{fullMessage}</p>
+                                                <p className={`text-sm whitespace-pre-wrap ${isInbound ? 'text-gray-800' : 'text-white'}`}>{bubbleText}</p>
                                               </div>
                                               <div className={`flex items-center gap-1.5 mt-1 ${isInbound ? '' : 'justify-end'}`}>
                                                 <span className="text-[10px] text-gray-400">{timeStr}</span>
@@ -8366,6 +8430,29 @@ export default function EnhancedClientDetail() {
                                       );
                                     }
 
+                                    // Email rendering — uses the joined
+                                    // logged_emails payload when available so
+                                    // we get a real subject + sanitized body
+                                    // + attachment chips.
+                                    const email = log.email;
+                                    const subject =
+                                      email?.subject ||
+                                      log.newValues?.subject ||
+                                      '';
+                                    const fromDisplay = email
+                                      ? email.fromName
+                                        ? `${email.fromName} <${email.fromEmail}>`
+                                        : email.fromEmail
+                                      : (isInbound ? (log.newValues?.from || 'Unknown') : (log.userName || 'Agency'));
+                                    const toDisplay = email
+                                      ? (email.toEmails || []).join(', ')
+                                      : log.newValues?.to || '';
+                                    const avatarChar = (
+                                      isInbound
+                                        ? (email?.fromName || email?.fromEmail || log.newValues?.from || 'U')
+                                        : (log.userName || 'A')
+                                    ).charAt(0).toUpperCase();
+
                                     return (
                                       <div key={log.id} className="bg-white" data-testid={`message-card-${log.id}`}>
                                         <div className="px-5 py-4">
@@ -8374,22 +8461,14 @@ export default function EnhancedClientDetail() {
                                               <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold ${
                                                 isInbound ? 'bg-blue-100 text-blue-700' : 'bg-teal-100 text-teal-700'
                                               }`}>
-                                                {isInbound
-                                                  ? (log.newValues?.from || 'U').charAt(0).toUpperCase()
-                                                  : (log.userName || 'A').charAt(0).toUpperCase()
-                                                }
+                                                {avatarChar}
                                               </div>
                                               <div>
                                                 <p className="text-sm font-semibold text-gray-900">
-                                                  {isInbound ? (log.newValues?.from || 'Unknown') : (log.userName || 'Agency')}
+                                                  {fromDisplay}
                                                 </p>
                                                 <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                                                  {isInbound && log.newValues?.to && (
-                                                    <span>To: {log.newValues.to}</span>
-                                                  )}
-                                                  {!isInbound && log.newValues?.to && (
-                                                    <span>To: {log.newValues.to}</span>
-                                                  )}
+                                                  {toDisplay && <span>To: {toDisplay}</span>}
                                                   {log.newValues?.status && (
                                                     <>
                                                       <span className="text-gray-300">·</span>
@@ -8404,10 +8483,67 @@ export default function EnhancedClientDetail() {
                                             </div>
                                             <span className="text-xs text-gray-400 shrink-0">{timeStr} · {dateStr}</span>
                                           </div>
-                                          {emailSubject && (
-                                            <p className="text-sm font-medium text-gray-800 mb-2">{emailSubject}</p>
+                                          {subject && (
+                                            <p className="text-sm font-medium text-gray-800 mb-2" data-testid={`email-subject-${log.id}`}>{subject}</p>
                                           )}
-                                          <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(fullMessage) }} />
+                                          {/* Body: Gmail-sourced rows render the
+                                              real bodyHtml with strict
+                                              DOMPurify (script/style/iframe/
+                                              object/embed/form forbidden,
+                                              on*-handlers stripped); fall back
+                                              to bodyText, then snippet, then
+                                              the legacy details string for
+                                              pre-Gmail-sync emails. */}
+                                          {email && email.bodyHtml ? (
+                                            <div
+                                              className="prose prose-sm max-w-none text-gray-700"
+                                              data-testid={`email-body-html-${log.id}`}
+                                              dangerouslySetInnerHTML={{
+                                                __html: DOMPurify.sanitize(email.bodyHtml, {
+                                                  FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form'],
+                                                  FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus'],
+                                                }),
+                                              }}
+                                            />
+                                          ) : email && email.bodyText ? (
+                                            <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans" data-testid={`email-body-text-${log.id}`}>{email.bodyText}</pre>
+                                          ) : email && email.snippet ? (
+                                            <p className="text-sm text-gray-500 italic" data-testid={`email-body-snippet-${log.id}`}>{email.snippet}</p>
+                                          ) : (
+                                            <div
+                                              className="prose prose-sm max-w-none text-gray-700"
+                                              data-testid={`email-body-legacy-${log.id}`}
+                                              dangerouslySetInnerHTML={{
+                                                __html: DOMPurify.sanitize(log.newValues?.message || log.details || '', {
+                                                  FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form'],
+                                                  FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus'],
+                                                }),
+                                              }}
+                                            />
+                                          )}
+                                          {/* Attachment chips wired to the
+                                              on-demand /api/emails/:id/
+                                              attachments/:id Gmail proxy. */}
+                                          {email && email.attachments && email.attachments.length > 0 && (
+                                            <div className="mt-3 flex flex-wrap gap-2" data-testid={`email-attachments-${log.id}`}>
+                                              {email.attachments.map((a) => (
+                                                <a
+                                                  key={a.id}
+                                                  href={`/api/emails/${email.id}/attachments/${a.id}`}
+                                                  target="_blank"
+                                                  rel="noreferrer"
+                                                  className="inline-flex items-center gap-1.5 text-xs px-2 py-1 border rounded hover:bg-gray-100"
+                                                  data-testid={`attachment-chip-${a.id}`}
+                                                >
+                                                  <Paperclip className="h-3 w-3" />
+                                                  <span className="truncate max-w-[200px]">{a.filename}</span>
+                                                  {typeof a.sizeBytes === 'number' && a.sizeBytes > 0 && (
+                                                    <span className="text-gray-500">({formatAttachmentSize(a.sizeBytes)})</span>
+                                                  )}
+                                                </a>
+                                              ))}
+                                            </div>
+                                          )}
                                           <div className="mt-3 pt-3 border-t border-gray-100">
                                             <Button
                                               variant="default"
@@ -8415,6 +8551,7 @@ export default function EnhancedClientDetail() {
                                               className="text-xs"
                                               style={{ backgroundColor: 'hsl(179, 100%, 39%)' }}
                                               onClick={() => handleReplyToEmail(log)}
+                                              data-testid={`button-reply-${log.id}`}
                                             >
                                               <Reply className="h-3.5 w-3.5 mr-1.5" />
                                               Reply
@@ -8444,7 +8581,7 @@ export default function EnhancedClientDetail() {
                               variant="outline"
                               size="sm"
                               onClick={() => setCommCurrentPage(prev => Math.max(1, prev - 1))}
-                              disabled={commCurrentPage === 1}
+                              disabled={commCurrentPage === 1 || commLoading}
                               data-testid="button-prev-communications"
                             >
                               Previous
@@ -8456,7 +8593,7 @@ export default function EnhancedClientDetail() {
                               variant="outline"
                               size="sm"
                               onClick={() => setCommCurrentPage(prev => Math.min(totalCommPages, prev + 1))}
-                              disabled={commCurrentPage === totalCommPages}
+                              disabled={commCurrentPage === totalCommPages || commLoading}
                               data-testid="button-next-communications"
                             >
                               Next
@@ -8484,9 +8621,10 @@ export default function EnhancedClientDetail() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="emails" className="space-y-6 mt-6">
-            {clientId && <ClientEmailsTab clientId={clientId} />}
-          </TabsContent>
+          {/* Phase 2: standalone "emails" TabsContent removed — Communication
+              History is now the unified email + SMS + call surface. The
+              ClientEmailsTab component is intentionally retained for a
+              possible future return; see client/src/components/client-emails-tab.tsx. */}
 
           <TabsContent value="roadmap" className="space-y-6 mt-6">
             <RoadmapTabContent client={client} queryClient={queryClient} currentUser={currentUser} />
