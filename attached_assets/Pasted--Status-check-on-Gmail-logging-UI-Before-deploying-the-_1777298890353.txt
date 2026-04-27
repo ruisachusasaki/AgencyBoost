@@ -1,0 +1,100 @@
+# Status check on Gmail logging UI
+
+Before deploying the sync feature, I need a written diagnostic of the
+current Communication History UI for emails. Do not modify any code.
+This is a read-only report only.
+
+## Required reading
+
+1. `docs/plans/gmail-sync.md`
+2. `docs/plans/gmail-sync-implementation-report.md`
+3. `docs/PLANNING_CONTEXT.md` (Gmail Sync Pre-Build Briefing section)
+4. `client/src/pages/enhanced-client-detail.tsx` (Communications tab,
+   especially the `threadedCommunications` memo around L4840 and the
+   tab body around L8253+)
+
+## Context
+
+The Gmail sync background worker is built but NOT yet deployed, so
+only a small number of test emails currently exist in the database.
+Before deployment, I want to confirm the UI is correctly wired to
+handle real volume.
+
+I tested the Communication History tab on a real client profile
+(Joe Hupp Inc, ID `de7e1b25-bf33-43ac-a3f7-b250ce270b57`) and can
+see 2 email entries appearing alongside SMS entries, with filter
+chips (All / SMS / Email / Sent / Received), a search box, thread
+counts, and expand chevrons. Looks promising. I need to know what
+is actually wired up vs. what only appears wired up.
+
+## Please answer the following
+
+### 1. Email display
+- How are email entries reaching the Communication History tab today?
+  (Confirm: thin `audit_logs` rows with `entityType='email'`, written
+  during sync? Or some other path?)
+- What fields from the email are shown in the row vs. hidden?
+- When the user clicks the expand chevron on an email row, what
+  actually happens? Inline expand, side panel, modal, or nothing?
+- Is the full email body retrievable and rendered when expanded?
+  If yes, where does the body come from (`audit_logs.newValues`
+  or `logged_emails`)?
+- Is HTML body rendering safe — is the HTML sanitized before render
+  (scripts stripped, only safe tags allowed)?
+
+### 2. Threading
+- For SMS, how are threads grouped today (which fields, which logic)?
+- For emails, are they grouped by Gmail's `thread_id` from
+  `logged_emails`, or by the email-pair heuristic that the original
+  SMS code uses? This matters because real Gmail conversations only
+  thread correctly with `thread_id` — the heuristic will fail on
+  forwarded emails, BCC, and replies that change participants.
+- If multiple emails belong to the same Gmail thread, will the
+  current code group them correctly into one collapsible thread
+  with a message count? Or will they show as separate entries?
+
+### 3. Filters
+- Filter chips visible: All / SMS / Email / All / Sent / Received.
+  Are these all wired up?
+- Specifically, does the "Sent" filter actually filter to outbound
+  emails (where direction='outbound' in the audit_logs row), and
+  does "Received" filter to inbound?
+
+### 4. Search
+- Does the search box query email subject AND body, or only certain
+  fields?
+- If the body is stored in `logged_emails`, does the search reach
+  into that table, or only `audit_logs.newValues`?
+
+### 5. Attachments
+- Are attachment metadata rows being written to the attachments
+  table during sync?
+- Does the UI show an attachment indicator (paperclip icon, chip,
+  count) on rows that have attachments?
+- Is on-demand attachment download from Gmail API wired up, or not
+  yet implemented?
+
+### 6. Permissions
+- Is the Communication History tab gated by any permission today?
+- Can every user who can see a client see the email entries, or is
+  there extra gating on emails specifically?
+
+### 7. Pre-deployment readiness
+- Are there any known issues that you anticipate will break or
+  degrade once real sync starts producing volume (hundreds or
+  thousands of emails per client)?
+- Specifically: is there pagination on the Communication History
+  tab? If a client has 500 emails, will the UI render all 500
+  rows at once, or load progressively?
+
+## Deliverable
+
+Write your findings to a new file:
+`docs/plans/gmail-ui-diagnostic.md`
+
+Use the structure above. Be specific — file paths, line numbers,
+table names, sample query shapes. Where something is missing or
+broken, say so plainly. Where something is working correctly, also
+say so.
+
+Do not make any code changes. Diagnostic only.
